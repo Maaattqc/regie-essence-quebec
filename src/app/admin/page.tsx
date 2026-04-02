@@ -211,7 +211,7 @@ export default function AdminPage() {
           <span className="gov-bar-fleur">⚜</span>
           <div>Administration<div className="gov-bar-subtitle">Essence Qu&eacute;bec</div></div>
         </div>
-        <div className="gov-bar-right">
+        <div className="gov-bar-right" style={{ marginLeft: "auto" }}>
           {readOnly && (
             <Badge variant="secondary" className="bg-white/15 text-white border-0 text-xs font-semibold">
               Lecture seule
