@@ -133,6 +133,10 @@ function formatPopup(props: StationProperties, lat: number, lng: number) {
           style="flex:1;padding:5px 0;background:#7c3aed;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600">
           Historique
         </button>
+        <button onclick="window.__showReviews('${props.Name.replace(/'/g, "\\'")}','${props.Address.replace(/'/g, "\\'")}')"
+          style="flex:1;padding:5px 0;background:#0ea5e9;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600">
+          Avis
+        </button>
         <button onclick="window.__showReport('${props.Name.replace(/'/g, "\\'")}','${props.Address.replace(/'/g, "\\'")}')"
           style="flex:1;padding:5px 0;background:#e63946;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600">
           Signaler
@@ -879,6 +883,159 @@ function ChangelogModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+interface Review {
+  id: number;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+  author: string;
+}
+
+function ReviewModal({
+  stationName,
+  address,
+  onClose,
+}: {
+  stationName: string;
+  address: string;
+  onClose: () => void;
+}) {
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [avg, setAvg] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState("");
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+
+  async function loadReviews() {
+    const res = await fetch(`/api/reviews?station=${encodeURIComponent(stationName)}&address=${encodeURIComponent(address)}`);
+    const data = await res.json();
+    setReviews(data.reviews || []);
+    setAvg(data.avg || 0);
+    setLoading(false);
+  }
+
+  useEffect(() => { loadReviews(); }, [stationName, address]);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setSending(true);
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      setError("Vous devez être connecté pour laisser un avis");
+      setSending(false);
+      return;
+    }
+    const res = await fetch("/api/reviews", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ station_name: stationName, address, rating, comment }),
+    });
+    if (res.ok) {
+      setSuccess(true);
+      setRating(0);
+      setComment("");
+      loadReviews();
+    } else {
+      const data = await res.json();
+      setError(data.error || "Erreur");
+    }
+    setSending(false);
+  }
+
+  const stars = (n: number) => "★".repeat(n) + "☆".repeat(5 - n);
+
+  return (
+    <div className="report-overlay" onClick={onClose}>
+      <div className="report-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "28rem", maxHeight: "85vh", overflowY: "auto" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
+          <h2 style={{ fontSize: "1.0625rem", fontWeight: 700, margin: 0 }}>Avis — {stationName}</h2>
+          <span className="panel-close" onClick={onClose}>x</span>
+        </div>
+
+        {!loading && reviews.length > 0 && (
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1rem", fontSize: "0.875rem" }}>
+            <span style={{ color: "#f59e0b", fontSize: "1.125rem" }}>{stars(Math.round(avg))}</span>
+            <strong>{avg.toFixed(1)}/5</strong>
+            <span style={{ color: "var(--text-muted)" }}>({reviews.length} avis)</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} style={{ marginBottom: "1rem", padding: "0.75rem", background: "var(--bg-input)", borderRadius: "0.5rem" }}>
+          <div style={{ fontSize: "0.8125rem", fontWeight: 600, marginBottom: "0.5rem" }}>Laisser un avis</div>
+          <div style={{ display: "flex", gap: "0.25rem", marginBottom: "0.5rem" }}>
+            {[1, 2, 3, 4, 5].map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setRating(n)}
+                style={{
+                  background: "none", border: "none", cursor: "pointer",
+                  fontSize: "1.5rem", color: n <= rating ? "#f59e0b" : "var(--text-muted)",
+                  padding: 0, lineHeight: 1,
+                }}
+              >
+                ★
+              </button>
+            ))}
+          </div>
+          <textarea
+            className="login-input"
+            placeholder="Votre commentaire (optionnel)"
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            rows={2}
+            style={{ resize: "vertical", marginBottom: "0.5rem" }}
+          />
+          {error && <p className="login-error">{error}</p>}
+          {success && <p style={{ color: "#2d9a2d", fontSize: "0.8125rem", margin: "0 0 0.5rem" }}>Avis publié !</p>}
+          <button className="login-btn" type="submit" disabled={sending || rating === 0} style={{ fontSize: "0.8125rem", padding: "0.5rem" }}>
+            {sending ? "Envoi..." : "Publier"}
+          </button>
+        </form>
+
+        {loading ? (
+          <p style={{ color: "var(--text-muted)", fontSize: "0.8125rem" }}>Chargement...</p>
+        ) : reviews.length === 0 ? (
+          <p style={{ color: "var(--text-muted)", fontSize: "0.8125rem" }}>Aucun avis pour cette station.</p>
+        ) : (
+          <div>
+            {reviews.map((r) => (
+              <div key={r.id} style={{ borderBottom: "1px solid var(--divider)", padding: "0.625rem 0" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div>
+                    <span style={{ color: "#f59e0b", fontSize: "0.8125rem" }}>{stars(r.rating)}</span>
+                    <strong style={{ marginLeft: "0.375rem", fontSize: "0.8125rem" }}>{r.author}</strong>
+                  </div>
+                  <span style={{ color: "var(--text-muted)", fontSize: "0.6875rem" }}>
+                    {new Date(r.created_at).toLocaleDateString("fr-CA")}
+                  </span>
+                </div>
+                {r.comment && (
+                  <p style={{ fontSize: "0.8125rem", margin: "0.25rem 0 0", color: "var(--text-secondary)", lineHeight: 1.4 }}>
+                    {r.comment}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function SiteThemeToggle() {
   const { theme, setTheme } = useTheme();
   const isDark = theme === "dark";
@@ -904,6 +1061,7 @@ export default function Map() {
   const [reportStation, setReportStation] = useState<{ name: string; address: string } | null>(null);
   const [showLogin, setShowLogin] = useState(false);
   const [showChangelog, setShowChangelog] = useState(false);
+  const [reviewStation, setReviewStation] = useState<{ name: string; address: string } | null>(null);
   const [cheapestResults, setCheapestResults] = useState<{ stations: { lat: number; lng: number; price: number; name: string; dist: number }[]; message: string } | null>(null);
   const [radiusKm, setRadiusKm] = useState(5);
   const [userPos, setUserPos] = useState<[number, number] | null>(null);
@@ -956,6 +1114,9 @@ export default function Map() {
     };
     (window as unknown as Record<string, unknown>).__showReport = (name: string, address: string) => {
       setReportStation({ name, address });
+    };
+    (window as unknown as Record<string, unknown>).__showReviews = (name: string, address: string) => {
+      setReviewStation({ name, address });
     };
     const onFavChange = () => setFavs(getFavorites());
     window.addEventListener("favorites-changed", onFavChange);
@@ -1067,13 +1228,10 @@ export default function Map() {
         return;
       }
       const bestPrice = Math.min(...candidates.map((c) => c.price));
-      const best = candidates.filter((c) => c.price === bestPrice).sort((a, b) => a.dist - b.dist);
-      const closest = best[0];
-      const msg = best.length === 1
-        ? `${closest.name} — ${bestPrice.toFixed(1)}¢ à ${closest.dist.toFixed(1)} km`
-        : `${best.length} stations à ${bestPrice.toFixed(1)}¢ — la plus proche à ${closest.dist.toFixed(1)} km`;
-      setCheapestResults({ stations: best, message: msg });
-      setFlyTarget({ center: [closest.lat, closest.lng], zoom: 14 });
+      const closest = candidates.filter((c) => c.price === bestPrice).sort((a, b) => a.dist - b.dist)[0];
+      const msg = `${closest.name} — ${bestPrice.toFixed(1)}¢ à environ ${closest.dist.toFixed(1)} km`;
+      setCheapestResults({ stations: [closest], message: msg });
+      setFlyTarget({ center: [closest.lat, closest.lng], zoom: 15 });
     };
     if (userPos) {
       doSearch(userPos[0], userPos[1]);
@@ -1252,7 +1410,7 @@ export default function Map() {
             key={`cheapest-${i}`}
             position={[s.lat, s.lng]}
             icon={L.divIcon({
-              html: `<div class="cheapest-pulse"><div class="cheapest-label">${s.price.toFixed(1)}¢<br><small>${s.name}</small><br><small>${s.dist.toFixed(1)} km</small></div></div>`,
+              html: `<div class="cheapest-pulse"><div class="cheapest-label">${s.price.toFixed(1)}¢<br><small>${s.name}</small><br><small>~${s.dist.toFixed(1)} km</small></div></div>`,
               className: "",
               iconSize: [140, 70],
               iconAnchor: [70, 35],
@@ -1281,6 +1439,13 @@ export default function Map() {
           stationName={reportStation.name}
           address={reportStation.address}
           onClose={() => setReportStation(null)}
+        />
+      )}
+      {reviewStation && (
+        <ReviewModal
+          stationName={reviewStation.name}
+          address={reviewStation.address}
+          onClose={() => setReviewStation(null)}
         />
       )}
       {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}

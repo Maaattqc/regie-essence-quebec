@@ -4,6 +4,25 @@ import { useEffect, useState } from "react";
 import { createBrowserClient } from "@/lib/auth";
 import type { User } from "@supabase/supabase-js";
 
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import {
+  Users,
+  BarChart3,
+  Clock,
+  Database,
+  Flag,
+  Shield,
+  LogOut,
+  Play,
+  ArrowLeft,
+  AlertCircle,
+} from "lucide-react";
+
 interface Profile {
   id: string;
   email: string;
@@ -37,7 +56,6 @@ export default function AdminPage() {
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"stats" | "cron" | "users" | "reports" | "data">("stats");
   const [reports, setReports] = useState<Report[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [users, setUsers] = useState<Profile[]>([]);
@@ -126,16 +144,23 @@ export default function AdminPage() {
   if (loading) return <div className="admin-center">Chargement...</div>;
   if (!user) return (
     <div className="admin-center">
-      <h2>Accès refusé</h2>
-      <p>Vous devez être connecté.</p>
-      <a href="/login" className="login-btn" style={{ display: "inline-block", marginTop: 12 }}>Se connecter</a>
+      <h2>Acc&egrave;s refus&eacute;</h2>
+      <p>Vous devez &ecirc;tre connect&eacute;.</p>
+      <Button variant="default" render={<a href="/login" />} className="mt-3">
+        <LogOut className="size-4" />
+        Se connecter
+      </Button>
     </div>
   );
   if (!isAdmin) return (
     <div className="admin-center">
-      <h2>Accès refusé</h2>
+      <AlertCircle className="mx-auto size-10 text-destructive mb-2" />
+      <h2>Acc&egrave;s refus&eacute;</h2>
       <p>Vous n&apos;avez pas les droits administrateur.</p>
-      <a href="/" style={{ color: "var(--qc-blue, #003DA5)" }}>&larr; Retour à la carte</a>
+      <Button variant="link" render={<a href="/" />} className="mt-2">
+        <ArrowLeft className="size-4" />
+        Retour &agrave; la carte
+      </Button>
     </div>
   );
 
@@ -144,157 +169,208 @@ export default function AdminPage() {
       <header className="gov-bar">
         <div className="gov-bar-title">
           <span className="gov-bar-fleur">⚜</span>
-          <div>Administration<div className="gov-bar-subtitle">Régie Essence Québec</div></div>
+          <div>Administration<div className="gov-bar-subtitle">R&eacute;gie Essence Qu&eacute;bec</div></div>
         </div>
         <div className="gov-bar-right">
           <span>{user.email}</span>
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => { supabase.auth.signOut(); window.location.href = "/"; }}
-            className="gov-bar-badge"
-            style={{ cursor: "pointer", border: "none" }}
           >
-            Déconnexion
-          </button>
+            <LogOut className="size-4" />
+            D&eacute;connexion
+          </Button>
         </div>
         <div className="gov-bar-accent" />
       </header>
 
-      <div className="admin-tabs">
-        {(["stats", "cron", "users", "reports", "data"] as const).map((t) => (
-          <button
-            key={t}
-            className={`admin-tab ${tab === t ? "admin-tab-active" : ""}`}
-            onClick={() => setTab(t)}
-          >
-            {t === "stats" ? "Statistiques" : t === "cron" ? "Cron / Snapshots" : t === "users" ? "Utilisateurs" : t === "reports" ? `Signalements (${reports.length})` : "Données"}
-          </button>
-        ))}
-      </div>
+      <Tabs defaultValue="stats" className="w-full">
+        <TabsList variant="line" className="w-full justify-start px-4 pt-2">
+          <TabsTrigger value="stats">
+            <BarChart3 className="size-4" />
+            Statistiques
+          </TabsTrigger>
+          <TabsTrigger value="cron">
+            <Clock className="size-4" />
+            Cron / Snapshots
+          </TabsTrigger>
+          <TabsTrigger value="users">
+            <Users className="size-4" />
+            Utilisateurs
+          </TabsTrigger>
+          <TabsTrigger value="reports">
+            <Flag className="size-4" />
+            Signalements ({reports.length})
+          </TabsTrigger>
+          <TabsTrigger value="data">
+            <Database className="size-4" />
+            Donn&eacute;es
+          </TabsTrigger>
+        </TabsList>
 
-      <div className="admin-content">
-        {tab === "stats" && (
-          <div className="admin-grid">
-            <div className="admin-card">
-              <div className="admin-card-label">Stations actives</div>
-              <div className="admin-card-value">{stats?.totalStations ?? "..."}</div>
+        <Separator />
+
+        <div className="admin-content">
+          <TabsContent value="stats">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-muted-foreground">
+                    <Database className="size-4" />
+                    Stations actives
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-3xl font-bold">{stats?.totalStations ?? "..."}</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-muted-foreground">
+                    <BarChart3 className="size-4" />
+                    Snapshots en DB
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-3xl font-bold">{stats?.totalSnapshots?.toLocaleString() ?? "..."}</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-muted-foreground">
+                    <Clock className="size-4" />
+                    Dernier snapshot
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-lg font-bold">{stats?.lastSnapshot ?? "..."}</p>
+                </CardContent>
+              </Card>
             </div>
-            <div className="admin-card">
-              <div className="admin-card-label">Snapshots en DB</div>
-              <div className="admin-card-value">{stats?.totalSnapshots?.toLocaleString() ?? "..."}</div>
+          </TabsContent>
+
+          <TabsContent value="cron">
+            <div className="space-y-4">
+              <p className="text-muted-foreground">D&eacute;clencher manuellement un snapshot des prix.</p>
+              <Button onClick={triggerCron} disabled={cronLoading}>
+                <Play className="size-4" />
+                {cronLoading ? "En cours..." : "Lancer le cron maintenant"}
+              </Button>
+              {cronResult && (
+                <pre className="admin-pre">{cronResult}</pre>
+              )}
             </div>
-            <div className="admin-card">
-              <div className="admin-card-label">Dernier snapshot</div>
-              <div className="admin-card-value" style={{ fontSize: 18 }}>{stats?.lastSnapshot ?? "..."}</div>
-            </div>
-          </div>
-        )}
+          </TabsContent>
 
-        {tab === "cron" && (
-          <div>
-            <p style={{ marginBottom: 12 }}>Déclencher manuellement un snapshot des prix.</p>
-            <button className="login-btn" onClick={triggerCron} disabled={cronLoading} style={{ width: "auto" }}>
-              {cronLoading ? "En cours..." : "Lancer le cron maintenant"}
-            </button>
-            {cronResult && (
-              <pre className="admin-pre">{cronResult}</pre>
-            )}
-          </div>
-        )}
+          <TabsContent value="users">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Email</TableHead>
+                  <TableHead>R&ocirc;le</TableHead>
+                  <TableHead>Inscrit le</TableHead>
+                  <TableHead>Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {users.map((u) => (
+                  <TableRow key={u.id}>
+                    <TableCell>{u.email}</TableCell>
+                    <TableCell>
+                      <Badge variant={u.role === "admin" ? "default" : "secondary"}>
+                        {u.role === "admin" && <Shield className="size-3" />}
+                        {u.role}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{new Date(u.created_at).toLocaleDateString("fr-CA")}</TableCell>
+                    <TableCell>
+                      <Button
+                        variant={u.role === "admin" ? "destructive" : "outline"}
+                        size="sm"
+                        onClick={() => toggleRole(u)}
+                      >
+                        <Shield className="size-3" />
+                        {u.role === "admin" ? "Retirer admin" : "Rendre admin"}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TabsContent>
 
-        {tab === "users" && (
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Email</th>
-                <th>Rôle</th>
-                <th>Inscrit le</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((u) => (
-                <tr key={u.id}>
-                  <td>{u.email}</td>
-                  <td>
-                    <span className={`admin-role ${u.role === "admin" ? "admin-role-admin" : ""}`}>
-                      {u.role}
-                    </span>
-                  </td>
-                  <td>{new Date(u.created_at).toLocaleDateString("fr-CA")}</td>
-                  <td>
-                    <button className="admin-action-btn" onClick={() => toggleRole(u)}>
-                      {u.role === "admin" ? "Retirer admin" : "Rendre admin"}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-
-        {tab === "reports" && (
-          <div>
+          <TabsContent value="reports">
             {reports.length === 0 ? (
-              <p style={{ color: "var(--text-muted)" }}>Aucun signalement.</p>
+              <p className="text-muted-foreground">Aucun signalement.</p>
             ) : (
-              <table className="admin-table">
-                <thead>
-                  <tr>
-                    <th>Station</th>
-                    <th>De</th>
-                    <th>Message</th>
-                    <th>Statut</th>
-                    <th>Date</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Station</TableHead>
+                    <TableHead>De</TableHead>
+                    <TableHead>Message</TableHead>
+                    <TableHead>Statut</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {reports.map((r) => (
-                    <tr key={r.id}>
-                      <td>
-                        <strong>{r.station_name}</strong><br />
-                        <small style={{ color: "var(--text-muted)" }}>{r.address}</small>
-                      </td>
-                      <td>
-                        {r.first_name} {r.last_name}<br />
-                        <small style={{ color: "var(--text-muted)" }}>{r.email}</small>
-                      </td>
-                      <td style={{ maxWidth: 200 }}>{r.message}</td>
-                      <td>
-                        <span className={`admin-role ${r.status === "nouveau" ? "admin-role-admin" : ""}`}>
+                    <TableRow key={r.id}>
+                      <TableCell>
+                        <div className="font-medium">{r.station_name}</div>
+                        <div className="text-xs text-muted-foreground">{r.address}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div>{r.first_name} {r.last_name}</div>
+                        <div className="text-xs text-muted-foreground">{r.email}</div>
+                      </TableCell>
+                      <TableCell className="max-w-[200px] whitespace-normal">{r.message}</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            r.status === "nouveau"
+                              ? "destructive"
+                              : r.status === "en traitement"
+                                ? "outline"
+                                : "secondary"
+                          }
+                        >
+                          {r.status === "nouveau" && <AlertCircle className="size-3" />}
                           {r.status}
-                        </span>
-                      </td>
-                      <td>{new Date(r.created_at).toLocaleDateString("fr-CA")}</td>
-                      <td>
-                        <div style={{ display: "flex", gap: 4, flexDirection: "column" }}>
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{new Date(r.created_at).toLocaleDateString("fr-CA")}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1">
                           {r.status === "nouveau" && (
-                            <button className="admin-action-btn" onClick={() => updateReportStatus(r.id, "en traitement")}>
+                            <Button variant="outline" size="xs" onClick={() => updateReportStatus(r.id, "en traitement")}>
                               En traitement
-                            </button>
+                            </Button>
                           )}
-                          {r.status !== "résolu" && (
-                            <button className="admin-action-btn" onClick={() => updateReportStatus(r.id, "résolu")}>
-                              Résolu
-                            </button>
+                          {r.status !== "r\u00e9solu" && (
+                            <Button variant="secondary" size="xs" onClick={() => updateReportStatus(r.id, "r\u00e9solu")}>
+                              R&eacute;solu
+                            </Button>
                           )}
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             )}
-          </div>
-        )}
+          </TabsContent>
 
-        {tab === "data" && (
-          <div>
-            <p>Gestion des données de stations et de prix.</p>
-            <p style={{ color: "var(--text-muted)", fontSize: 13 }}>Fonctionnalité à venir — modération des stations et correction de prix.</p>
-          </div>
-        )}
-      </div>
+          <TabsContent value="data">
+            <div className="space-y-2">
+              <p>Gestion des donn&eacute;es de stations et de prix.</p>
+              <p className="text-xs text-muted-foreground">Fonctionnalit&eacute; &agrave; venir &mdash; mod&eacute;ration des stations et correction de prix.</p>
+            </div>
+          </TabsContent>
+        </div>
+      </Tabs>
     </div>
   );
 }
