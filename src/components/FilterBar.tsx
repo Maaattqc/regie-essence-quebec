@@ -2,9 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
-import {
-  Search, Star, StarOff, X, User, ChevronDown, MapPin, Building2,
-} from "lucide-react";
+import { Search, Star, StarOff, X, User, ChevronDown, MapPin, Building2 } from "lucide-react";
 import {
   type GasTypeKey,
   GAS_TYPES,
@@ -174,9 +172,9 @@ export default function FilterBar({
 }) {
   return (
     <header className="gov-header">
-      <div className="gov-bar">
 
-        {/* ── Logo ── */}
+      {/* ── Barre 1 : Logo + carburant + nav ── */}
+      <div className="gov-bar">
         <div className="gov-bar-title">
           <span className="gov-bar-fleur">&#9884;</span>
           <div className="gov-bar-title-text">
@@ -185,42 +183,55 @@ export default function FilterBar({
           </div>
         </div>
 
-        {/* ── Séparateur vertical ── */}
         <div className="nb-sep" />
 
-        {/* ── Filtres ── */}
-        <div className="gov-bar-filters">
+        {/* Pills carburant */}
+        <div className="nb-pills">
+          {GAS_TYPES.map((t) => (
+            <button
+              key={t.key}
+              className={`nb-pill${gasType === t.key ? " nb-pill-active" : ""}`}
+              style={gasType === t.key ? { background: t.color, borderColor: t.color } : undefined}
+              onClick={() => onGasTypeChange(t.key)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
 
-          <SearchWithSuggestions
-            search={search}
-            onSearchChange={onSearchChange}
-            onConfirm={onSearchChange}
-            cities={cities}
-            cityCounts={cityCounts}
-          />
+        <div className="gov-bar-right">
+          <NavDropdown onChangelogClick={onChangelogClick} />
+          {currentUser ? (
+            <UserDropdown email={currentUser.email} onLogout={onLogout} />
+          ) : (
+            <button className="nb-login-btn" onClick={onLoginClick}>
+              <User className="size-3.5" />
+              <span className="nb-label-text">Connexion</span>
+            </button>
+          )}
+        </div>
 
-          <NbSelect value={region} onChange={onRegionChange} icon={MapPin}>
-            <option value="">Toutes les régions ({totalStations})</option>
-            {REGIONS.map((r) => (
-              <option key={r} value={r}>{r} ({regionCounts[r] || 0})</option>
-            ))}
-          </NbSelect>
+        <div className="gov-bar-accent" />
+      </div>
 
-          {/* Carburant pills */}
-          <div className="nb-pills">
-            {GAS_TYPES.map((t) => (
-              <button
-                key={t.key}
-                className={`nb-pill${gasType === t.key ? " nb-pill-active" : ""}`}
-                style={gasType === t.key ? { background: t.color, borderColor: t.color } : undefined}
-                onClick={() => onGasTypeChange(t.key)}
-              >
-                <span className="nb-pill-label">{t.label}</span>
-                <span className="nb-pill-short">{t.label[0]}</span>
-              </button>
-            ))}
-          </div>
+      {/* ── Barre 2 : Filtres ── */}
+      <div className="gov-bar-2">
+        <SearchWithSuggestions
+          search={search}
+          onSearchChange={onSearchChange}
+          onConfirm={onSearchChange}
+          cities={cities}
+          cityCounts={cityCounts}
+        />
 
+        <NbSelect value={region} onChange={onRegionChange} icon={MapPin}>
+          <option value="">Toutes les régions ({totalStations})</option>
+          {REGIONS.map((r) => (
+            <option key={r} value={r}>{r} ({regionCounts[r] || 0})</option>
+          ))}
+        </NbSelect>
+
+        <div className="nb-bar2-extra">
           <NbSelect value={brand} onChange={onBrandChange} icon={Building2}>
             <option value="">Toutes les compagnies ({totalStations})</option>
             {BRANDS.map((b) => (
@@ -238,22 +249,8 @@ export default function FilterBar({
             <span className="nb-label-text">Favoris</span>
           </button>
         </div>
-
-        {/* ── Droite ── */}
-        <div className="gov-bar-right">
-          <NavDropdown onChangelogClick={onChangelogClick} />
-          {currentUser ? (
-            <UserDropdown email={currentUser.email} onLogout={onLogout} />
-          ) : (
-            <button className="nb-login-btn" onClick={onLoginClick}>
-              <User className="size-3.5" />
-              <span className="nb-label-text">Connexion</span>
-            </button>
-          )}
-        </div>
-
-        <div className="gov-bar-accent" />
       </div>
+
     </header>
   );
 }

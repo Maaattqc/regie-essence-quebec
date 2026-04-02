@@ -117,6 +117,23 @@ body {
   justify-content: center;
 }
 
+.gov-bar-2 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 1.25rem;
+  background: #002f80;
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+:root.dark .gov-bar-2 { background: #001f55; }
+
+.nb-bar2-extra {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
 .gov-select {
   padding: 0.4375rem 0.625rem;
   border-radius: 0.3125rem;
@@ -196,36 +213,16 @@ body {
 /* ── Responsive: Tablet (768px) ── */
 @media (max-width: 768px) {
   .gov-bar {
-    flex-wrap: wrap;
+    padding: 6px 12px;
+    gap: 0.5rem;
     height: auto;
-    padding: 8px 12px;
-    gap: 0;
   }
-  .gov-bar-title {
-    flex: 1;
-  }
-  .gov-bar-filters {
-    order: 3;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    width: 100%;
-    justify-content: flex-start;
-    padding: 6px 0 4px;
+  .gov-bar-subtitle { display: none; }
+  .gov-bar-2 {
+    padding: 5px 12px;
     gap: 6px;
-    scrollbar-width: none;
   }
-  .gov-bar-filters::-webkit-scrollbar { display: none; }
-  .gov-bar-subtitle {
-    display: none;
-  }
-  .nb-sep { display: none; }
-  .nb-input-wrap { flex-shrink: 0; }
-  .nb-select-wrap { flex-shrink: 0; }
-  .nb-pills { flex-shrink: 0; }
-  .nb-fav { flex-shrink: 0; }
-  .nb-input { width: 130px; }
-  .nb-select { max-width: 150px; }
+  .nb-bar2-extra { display: none; }
   .legend {
     top: auto;
     bottom: 4.5rem;
@@ -259,84 +256,22 @@ body {
 /* ── Responsive: Mobile (480px) ── */
 @media (max-width: 480px) {
   .gov-bar {
-    padding: 6px 10px;
-    gap: 8px;
+    padding: 5px 10px;
+    gap: 6px;
   }
-  .gov-bar-title {
-    font-size: 14px;
-  }
-  .gov-bar-fleur {
-    font-size: 18px;
-  }
-  .gov-bar-right {
-    order: 2;
-    gap: 0.25rem;
-    font-size: 11px;
-  }
-  .gov-bar-right .text-white\/70 {
-    display: none;
-  }
-  .gov-bar-filters {
-    gap: 4px;
-  }
-  .gov-input {
-    width: 100%;
-    flex: 1 1 100%;
-  }
-  .gov-select {
-    flex: 1 1 calc(50% - 4px);
-    font-size: 12px;
-    padding: 6px 6px;
-  }
-  .gov-gas-btn {
-    padding: 6px 8px;
-    font-size: 12px;
-  }
-  /* Mobile: icônes seulement */
-  .nb-pill-label { display: none; }
-  .nb-pill-short { display: inline; }
-  .nb-label-text { display: none; }
-  .nb-pill { padding: 0 9px; }
-
-  /* Selects: icône seulement, texte transparent */
-  .nb-select {
-    width: 34px;
-    padding-left: 0;
-    padding-right: 0;
-    color: transparent;
-    text-indent: -999px;
-  }
-  .nb-select option { color: var(--text, #fff); text-indent: 0; }
-  /* Icône colorée si filtre actif */
-  .nb-select-wrap--active .nb-select-icon-left { color: #FFD700; }
-  .nb-select-icon-right { display: none; }
-
-  /* Search: icône seule, s'agrandit si focus ou valeur */
-  .nb-input-wrap { width: 34px; overflow: hidden; border-radius: 6px; transition: width 0.2s; }
-  .nb-input {
-    width: 34px !important;
-    padding-left: 8px !important;
-    padding-right: 0 !important;
-    color: transparent;
-    caret-color: transparent;
-    transition: width 0.2s, color 0.15s;
-  }
-  .nb-input::placeholder { color: transparent; }
-  .nb-input:focus,
-  .nb-input:not(:placeholder-shown) {
-    width: 140px !important;
-    color: #fff;
-    caret-color: #fff;
-    padding-left: 28px !important;
-  }
-  .nb-input:focus::placeholder { color: rgba(255,255,255,0.5); }
-  .nb-input-wrap:focus-within,
-  .nb-input-wrap:has(.nb-input:not(:placeholder-shown)) { width: 140px; }
-
-  /* Masquer texte du logo */
   .gov-bar-title-text { display: none; }
-
+  .gov-bar-fleur { font-size: 20px; }
+  .nb-sep { display: none; }
+  .nb-pill { font-size: 12px; padding: 0 10px; }
+  .nb-label-text { display: none; }
   .nb-login-btn { padding: 0 10px; }
+
+  /* Barre 2 : search pleine largeur + région flexible */
+  .gov-bar-2 { flex-wrap: wrap; padding: 5px 10px; gap: 5px; }
+  .nb-input-wrap { flex: 1; }
+  .nb-input { width: 100% !important; }
+  .nb-select-wrap { flex: 1; }
+  .nb-select { width: 100%; }
   .map-btn {
     padding: 6px 10px;
     font-size: 12px;
