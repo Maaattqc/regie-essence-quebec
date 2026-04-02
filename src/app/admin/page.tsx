@@ -11,6 +11,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -239,7 +240,41 @@ export default function AdminPage() {
     loadUsers();
   }
 
-  if (loading) return <div className="admin-center">Chargement...</div>;
+  if (loading) return (
+    <div className="admin-page">
+      {/* Navbar skeleton */}
+      <div style={{ background: "#003DA5", height: "auto", padding: "0.5rem 1.25rem", display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+        <Skeleton className="size-7 rounded-lg bg-white/20" />
+        <Skeleton className="h-7 w-36 rounded-md bg-white/20" />
+        <div style={{ display: "flex", gap: "0.25rem", marginLeft: "0.5rem" }}>
+          {[80, 64, 100, 110, 80].map((w, i) => (
+            <Skeleton key={i} className="h-7 rounded-md bg-white/20" style={{ width: w }} />
+          ))}
+        </div>
+        <Skeleton className="h-7 w-24 rounded-full bg-white/20 ml-auto" />
+      </div>
+      {/* Content skeleton */}
+      <div className="admin-content space-y-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[...Array(5)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader>
+                <Skeleton className="h-4 w-32" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-9 w-24" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <div className="space-y-2">
+          {[...Array(6)].map((_, i) => (
+            <Skeleton key={i} className="h-10 w-full rounded-md" />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
   if (!user) return (
     <div className="admin-center">
       <h2>Acc&egrave;s refus&eacute;</h2>
