@@ -323,7 +323,7 @@ async function batchUpsertSnapshots(rows: PriceSnapshotRow[]) {
     const { error } = await supabaseAdmin
       .from("price_snapshots")
       .upsert(batch, {
-        onConflict: "station_name,address,gas_type,snapshot_date",
+        onConflict: "station_name,address,gas_type,snapshot_at",
       });
 
     if (error) {

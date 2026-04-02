@@ -246,35 +246,19 @@ export default function FilterBar({
 
       {/* ── Barre 2 : mobile seulement ── */}
       <div className="gov-bar-2">
-        {search ? (
-          <div className="nb-filter-chip">
-            <MapPin className="size-3 shrink-0" />
-            <span className="truncate">{search}</span>
-            <button className="nb-filter-chip-clear" onMouseDown={() => onSearchChange("")}><X className="size-3" /></button>
-          </div>
-        ) : (
-          <SearchWithSuggestions
-            search={search}
-            onSearchChange={onSearchChange}
-            onConfirm={onSearchChange}
-            cities={cities}
-            cityCounts={cityCounts}
-          />
-        )}
-
-        {region ? (
-          <div className="nb-filter-chip">
-            <span className="truncate">{region}</span>
-            <button className="nb-filter-chip-clear" onMouseDown={() => onRegionChange("")}><X className="size-3" /></button>
-          </div>
-        ) : (
-          <NbSelect value={region} onChange={onRegionChange} icon={MapPin}>
-            <option value="">Toutes les régions ({totalStations})</option>
-            {REGIONS.map((r) => (
-              <option key={r} value={r}>{r} ({regionCounts[r] || 0})</option>
-            ))}
-          </NbSelect>
-        )}
+        <SearchWithSuggestions
+          search={search}
+          onSearchChange={onSearchChange}
+          onConfirm={onSearchChange}
+          cities={cities}
+          cityCounts={cityCounts}
+        />
+        <NbSelect value={region} onChange={onRegionChange} icon={MapPin}>
+          <option value="">Région ({totalStations})</option>
+          {REGIONS.map((r) => (
+            <option key={r} value={r}>{r} ({regionCounts[r] || 0})</option>
+          ))}
+        </NbSelect>
       </div>
 
     </header>

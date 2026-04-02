@@ -19,12 +19,12 @@ export default function UserDropdown({ email, onLogout }: { email: string; onLog
   return (
     <DropdownMenu>
       <DropdownMenuTrigger>
-        <span className="flex items-center gap-1.5 bg-white/12 border border-white/25 rounded-full py-0.5 pr-2.5 pl-0.5 cursor-pointer text-white text-[0.8125rem] font-medium">
+        <span className="flex items-center gap-1.5 bg-white/12 border border-white/25 rounded-full py-0.5 pr-2.5 pl-0.5 cursor-pointer text-white text-[0.8125rem] font-medium sm:pr-2.5 max-sm:pr-0.5 max-sm:border-0 max-sm:bg-transparent">
           <span className="size-6 rounded-full bg-white/25 flex items-center justify-center text-[0.7rem] font-bold">
             {initial}
           </span>
-          {username}
-          <ChevronDown className="size-3 transition-transform group-data-[popup-open]:rotate-180" />
+          <span className="hidden sm:inline">{username}</span>
+          <ChevronDown className="size-3 transition-transform group-data-[popup-open]:rotate-180 hidden sm:block" />
         </span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[16rem]">

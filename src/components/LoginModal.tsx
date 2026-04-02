@@ -1,11 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Mail, ArrowLeft, CheckCircle } from "lucide-react";
 import { createBrowserClient } from "@/lib/auth";
+
+const ERROR_FR: Record<string, string> = {
+  "Token has expired or is invalid": "Le code a expiré ou est invalide. Veuillez en demander un nouveau.",
+  "Invalid login credentials": "Identifiants invalides.",
+  "Email rate limit exceeded": "Trop de tentatives. Réessayez dans quelques minutes.",
+  "For security purposes, you can only request this once every 60 seconds": "Pour des raisons de sécurité, veuillez attendre 60 secondes avant de redemander un code.",
+  "User already registered": "Un compte existe déjà avec ce courriel.",
+  "Email not confirmed": "Courriel non confirmé.",
+  "Invalid email": "Adresse courriel invalide.",
+  "Signups not allowed for otp": "Les inscriptions sont désactivées.",
+  "Network request failed": "Erreur réseau. Vérifiez votre connexion.",
+};
+
+function toFrench(msg: string) {
+  return ERROR_FR[msg] ?? Object.entries(ERROR_FR).find(([k]) => msg.toLowerCase().includes(k.toLowerCase()))?.[1] ?? msg;
+}
 
 export default function LoginModal({ onClose }: { onClose: () => void }) {
   const [email, setEmail] = useState("");
@@ -24,7 +40,7 @@ export default function LoginModal({ onClose }: { onClose: () => void }) {
       options: { shouldCreateUser: true },
     });
     setLoading(false);
-    if (error) setError(error.message);
+    if (error) setError(toFrench(error.message));
     else setStep("code");
   }
 
@@ -39,13 +55,20 @@ export default function LoginModal({ onClose }: { onClose: () => void }) {
       type: "email",
     });
     setLoading(false);
-    if (error) setError(error.message);
+    if (error) setError(toFrench(error.message));
     else setStep("done");
   }
 
+  // Auto-fermer après 2.5s une fois connecté
+  useEffect(() => {
+    if (step !== "done") return;
+    const t = setTimeout(onClose, 2500);
+    return () => clearTimeout(t);
+  }, [step, onClose]);
+
   return (
     <div className="report-overlay" onClick={onClose}>
-      <div className="report-modal max-w-[24rem]" onClick={(e) => e.stopPropagation()}>
+      <div className="report-modal max-w-[24rem]" style={{ overflow: "hidden" }} onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-3">
           <div className="flex items-center gap-2">
             <Mail className="size-4" />

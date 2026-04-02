@@ -19,10 +19,21 @@ async function verifyAdmin(req: NextRequest) {
   return user;
 }
 
+function maskEmail(email: string) {
+  const [name, domain] = email.split("@");
+  if (!domain) return "***@***";
+  return `${name[0]}${"*".repeat(Math.max(name.length - 1, 2))}@${domain[0]}${"*".repeat(Math.max(domain.length - 1, 2))}`;
+}
+
+function maskName(name: string) {
+  if (!name || name.length <= 1) return "***";
+  return `${name[0]}${"*".repeat(name.length - 1)}`;
+}
+
 // GET /api/admin?type=stats|users|reports
 export async function GET(req: NextRequest) {
   const user = await verifyAdmin(req);
-  if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+  const isAdmin = !!user;
 
   const type = req.nextUrl.searchParams.get("type");
 
@@ -51,6 +62,24 @@ export async function GET(req: NextRequest) {
       avgs = data;
     } catch {}
 
+    // Visitor stats from page_views
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+    const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7).toISOString();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+    const [
+      { count: totalPageViews },
+      { count: todayPageViews },
+      { count: weekPageViews },
+      { count: monthPageViews },
+    ] = await Promise.all([
+      supabaseAdmin.from("page_views").select("*", { count: "exact", head: true }),
+      supabaseAdmin.from("page_views").select("*", { count: "exact", head: true }).gte("created_at", todayStart),
+      supabaseAdmin.from("page_views").select("*", { count: "exact", head: true }).gte("created_at", weekStart),
+      supabaseAdmin.from("page_views").select("*", { count: "exact", head: true }).gte("created_at", monthStart),
+    ]);
+
     return NextResponse.json({
       totalSnapshots: totalSnapshots ?? 0,
       lastSnapshot: latest?.[0]?.snapshot_date ?? "Aucun",
@@ -59,6 +88,10 @@ export async function GET(req: NextRequest) {
       avgRegulier: avgs?.regulier ?? 0,
       avgSuper: avgs?.super ?? 0,
       avgDiesel: avgs?.diesel ?? 0,
+      totalPageViews: totalPageViews ?? 0,
+      todayPageViews: todayPageViews ?? 0,
+      weekPageViews: weekPageViews ?? 0,
+      monthPageViews: monthPageViews ?? 0,
     });
   }
 
@@ -73,7 +106,8 @@ export async function GET(req: NextRequest) {
     const enriched = await Promise.all(
       (profiles || []).map(async (p) => {
         const { data: { user: authUser } } = await supabaseAdmin.auth.admin.getUserById(p.id);
-        return { ...p, email: authUser?.email ?? p.email ?? "" };
+        const email = authUser?.email ?? p.email ?? "";
+        return { ...p, email: isAdmin ? email : maskEmail(email) };
       })
     );
     return NextResponse.json(enriched);
@@ -84,7 +118,15 @@ export async function GET(req: NextRequest) {
       .from("reports")
       .select("*")
       .order("created_at", { ascending: false });
-    return NextResponse.json(data ?? []);
+    const reports = (data ?? []).map((r: Record<string, unknown>) =>
+      isAdmin ? r : {
+        ...r,
+        email: typeof r.email === "string" ? maskEmail(r.email) : "***",
+        first_name: typeof r.first_name === "string" ? maskName(r.first_name) : "***",
+        last_name: typeof r.last_name === "string" ? maskName(r.last_name) : "***",
+      }
+    );
+    return NextResponse.json(reports);
   }
 
   if (type === "snapshots") {

@@ -436,6 +436,16 @@ export default function Map() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Track page view
+  useEffect(() => {
+    let sid = sessionStorage.getItem("pv_sid");
+    if (!sid) { sid = crypto.randomUUID(); sessionStorage.setItem("pv_sid", sid); }
+    if (!sessionStorage.getItem("pv_sent")) {
+      fetch("/api/pageview", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sessionId: sid }) });
+      sessionStorage.setItem("pv_sent", "1");
+    }
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     let retryTimer: number | null = null;
@@ -481,6 +491,10 @@ export default function Map() {
     };
 
     void loadStations();
+
+    // Re-fetch toutes les 5 minutes pour détecter les changements de prix
+    const pollInterval = window.setInterval(loadStations, 5 * 60 * 1000);
+
     (window as unknown as Record<string, unknown>).__toggleFav = (id: string) => {
       const updated = toggleFavorite(id);
       setFavs(new Set(updated));
@@ -501,6 +515,7 @@ export default function Map() {
       if (retryTimer !== null) {
         window.clearTimeout(retryTimer);
       }
+      window.clearInterval(pollInterval);
       window.removeEventListener("favorites-changed", onFavChange);
     };
   }, []);

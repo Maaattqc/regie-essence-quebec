@@ -35,6 +35,10 @@ import {
   ChevronDown,
   Sun,
   Moon,
+  Eye,
+  TrendingUp,
+  Calendar,
+  Activity,
 } from "lucide-react";
 
 interface Profile {
@@ -79,6 +83,10 @@ interface Stats {
   avgRegulier: number;
   avgSuper: number;
   avgDiesel: number;
+  totalPageViews: number;
+  todayPageViews: number;
+  weekPageViews: number;
+  monthPageViews: number;
 }
 
 function AdminUserDropdown({ email, onLogout }: { email: string; onLogout: () => void }) {
@@ -149,7 +157,7 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
-    if (!token) return;
+    // Charger les données publiques même sans auth
     loadStats();
     loadUsers();
     loadReports();
@@ -173,6 +181,10 @@ export default function AdminPage() {
       avgRegulier: data.avgRegulier,
       avgSuper: data.avgSuper,
       avgDiesel: data.avgDiesel,
+      totalPageViews: data.totalPageViews,
+      todayPageViews: data.todayPageViews,
+      weekPageViews: data.weekPageViews,
+      monthPageViews: data.monthPageViews,
     });
   }
 
@@ -275,16 +287,6 @@ export default function AdminPage() {
       </div>
     </div>
   );
-  if (!user) return (
-    <div className="admin-center">
-      <h2>Acc&egrave;s refus&eacute;</h2>
-      <p>Vous devez &ecirc;tre connect&eacute;.</p>
-      <a href="/login" className="inline-flex items-center gap-1.5 mt-3 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium">
-        <LogOut className="size-4" />
-        Se connecter
-      </a>
-    </div>
-  );
   const readOnly = !isAdmin;
 
   return (
@@ -330,13 +332,19 @@ export default function AdminPage() {
               Lecture seule
             </Badge>
           )}
-          <AdminUserDropdown email={user.email!} onLogout={() => { supabase.auth.signOut(); window.location.href = "/"; }} />
+          {user ? (
+            <AdminUserDropdown email={user.email!} onLogout={async () => { await supabase.auth.signOut(); setUser(null); setToken(null); setIsAdmin(false); }} />
+          ) : (
+            <a href="/login" className="flex items-center gap-1.5 text-white/80 hover:text-white text-[0.8125rem] font-medium no-underline">
+              <Users className="size-3.5" /> Connexion
+            </a>
+          )}
         </div>
         <div className="gov-bar-accent" />
       </header>
 
         <div className="admin-content">
-          {tab === "stats" && (
+          {tab === "stats" && (<>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <Card>
                 <CardHeader>
@@ -394,7 +402,58 @@ export default function AdminPage() {
                 </CardContent>
               </Card>
             </div>
-          )}
+
+            {/* Visitor Stats */}
+            <h3 className="text-lg font-semibold mt-6 mb-3 flex items-center gap-2">
+              <Eye className="size-5" /> Trafic du site
+            </h3>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-muted-foreground">
+                    <Eye className="size-4" />
+                    Visites totales
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-3xl font-bold">{stats?.totalPageViews?.toLocaleString() ?? "..."}</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-muted-foreground">
+                    <Activity className="size-4" />
+                    Aujourd{"'"}hui
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-3xl font-bold">{stats?.todayPageViews?.toLocaleString() ?? "..."}</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-muted-foreground">
+                    <TrendingUp className="size-4" />
+                    7 derniers jours
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-3xl font-bold">{stats?.weekPageViews?.toLocaleString() ?? "..."}</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-muted-foreground">
+                    <Calendar className="size-4" />
+                    Ce mois-ci
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-3xl font-bold">{stats?.monthPageViews?.toLocaleString() ?? "..."}</p>
+                </CardContent>
+              </Card>
+            </div>
+          </>)}
 
           {tab === "cron" && (
             <div className="space-y-4">

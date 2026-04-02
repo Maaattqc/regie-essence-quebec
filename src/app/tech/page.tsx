@@ -1,10 +1,20 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft, Globe, Server, Database, Cloud, Shield,
-  Zap, Map, BarChart3, Bell, Users, Lock, Smartphone,
+  Zap, Map, BarChart3, Users, Lock, Smartphone,
   RefreshCw, Search, Star, MessageSquare, Flag, Clock,
-  CheckCircle2, Layers, GitBranch, Mail,
+  CheckCircle2, Layers, GitBranch, Mail, Code2, Eye,
 } from "lucide-react";
+import ScrollToTop from "@/components/ScrollToTop";
+
+const BUZZWORDS = [
+  "Rapide", "Performant", "Sécurisé", "Temps réel",
+  "Haute disponibilité", "Mobile-first", "Open Data",
+  "Accessible", "Fiable", "Automatisé",
+];
 
 const STACK = [
   {
@@ -61,74 +71,86 @@ const FEATURES = [
   {
     icon: Map,
     title: "Cartographie interactive temps réel",
-    desc: "Visualisation de 2 000+ stations-service sur l'ensemble du territoire québécois avec prix mis à jour automatiquement via les données officielles de la Régie de l'énergie.",
-    tags: ["Données gouvernementales", "Temps réel", "Géolocalisation"],
+    desc: "Visualisation de 2 000+ stations-service sur l'ensemble du territoire québécois avec prix mis à jour automatiquement.",
+    tags: ["Rapide", "Temps réel", "Géolocalisation"],
+    techTags: ["Données gouvernementales", "Temps réel", "Géolocalisation"],
   },
   {
     icon: Search,
-    title: "Moteur de recherche géospatial",
-    desc: "Localisation de la station la moins chère dans un rayon personnalisable autour de la position de l'utilisateur, avec calcul de distance orthodromique précis.",
-    tags: ["Algorithme Haversine", "Rayon ajustable", "Tri par prix"],
+    title: "Recherche intelligente de la station la moins chère",
+    desc: "Trouvez instantanément la station la moins chère autour de vous grâce à la géolocalisation et un rayon de recherche ajustable.",
+    tags: ["Précis", "Géolocalisation", "Économies"],
+    techTags: ["Algorithme Haversine", "Rayon ajustable", "Tri par prix"],
   },
   {
     icon: Layers,
-    title: "Clustering adaptatif haute performance",
-    desc: "Regroupement intelligent des marqueurs selon le niveau de zoom et les filtres actifs, avec mémoire cache SessionStorage pour un chargement quasi instantané.",
-    tags: ["Cache client", "Rendu différé", "60 fps"],
+    title: "Affichage haute performance",
+    desc: "Chargement quasi instantané des données grâce au cache intelligent et regroupement visuel des stations selon le niveau de zoom.",
+    tags: ["Ultra-rapide", "Fluide", "Intelligent"],
+    techTags: ["Cache client", "Rendu différé", "60 fps"],
   },
   {
     icon: BarChart3,
-    title: "Analyse comparative multi-régions",
-    desc: "Tableau de bord comparatif des prix moyens, minimums, maximums et écarts par région administrative et par ville, avec indicateurs de tendance vs moyenne provinciale.",
-    tags: ["17 régions", "Stats avancées", "Delta vs moyenne"],
+    title: "Comparaison des prix par région et par ville",
+    desc: "Tableau de bord comparatif des prix moyens, minimums et maximums par région administrative et par ville, avec tendances.",
+    tags: ["17 régions", "Comparatif", "Tendances"],
+    techTags: ["17 régions", "Stats avancées", "Delta vs moyenne"],
   },
   {
     icon: Clock,
-    title: "Historique des prix 30 jours",
-    desc: "Graphique SVG d'évolution des prix par station sur les 30 derniers jours, généré côté client sans dépendance externe à une librairie de graphiques.",
-    tags: ["SVG natif", "30 jours", "Par type de carburant"],
+    title: "Historique des prix sur 30 jours",
+    desc: "Consultez l'évolution des prix de chaque station sur les 30 derniers jours grâce à un graphique clair et interactif.",
+    tags: ["30 jours", "Visuel", "Par carburant"],
+    techTags: ["SVG natif", "30 jours", "Par type de carburant"],
   },
   {
     icon: MessageSquare,
-    title: "Système de commentaires communautaire",
-    desc: "Module d'avis avec réponses imbriquées, votes (like/dislike) authentifiés ou anonymes, modération admin avec suppression douce, synchronisation temps réel.",
-    tags: ["Votes anonymes", "Temps réel", "Modération"],
+    title: "Commentaires et avis communautaires",
+    desc: "Partagez votre expérience, votez sur les avis des autres utilisateurs et consultez les retours en temps réel.",
+    tags: ["Communautaire", "Temps réel", "Votes"],
+    techTags: ["Votes anonymes", "Temps réel", "Modération"],
   },
   {
     icon: Flag,
-    title: "Signalement d'inexactitudes",
-    desc: "Formulaire de signalement avec validation Zod, identification de l'utilisateur et workflow de traitement administratif (nouveau → en traitement → résolu).",
-    tags: ["Workflow admin", "Validation stricte", "Traçabilité"],
+    title: "Signalement de prix inexacts",
+    desc: "Signalez un prix erroné en quelques clics. Chaque signalement est traité par l'équipe d'administration.",
+    tags: ["Simple", "Fiable", "Suivi"],
+    techTags: ["Workflow admin", "Validation stricte", "Traçabilité"],
   },
   {
     icon: Shield,
-    title: "Sécurité et conformité",
-    desc: "Authentification sans mot de passe (OTP), Row Level Security PostgreSQL, rate limiting par IP, validation serveur sur tous les endpoints, service role isolé.",
-    tags: ["Sans mot de passe", "RLS PostgreSQL", "Rate limiting"],
+    title: "Sécurité et protection des données",
+    desc: "Connexion sans mot de passe, protection contre les abus et sécurité des données à chaque niveau de l'application.",
+    tags: ["Sécurisé", "Sans mot de passe", "Conforme"],
+    techTags: ["Sans mot de passe", "RLS PostgreSQL", "Rate limiting"],
   },
   {
     icon: Star,
-    title: "Gestion des favoris persistante",
-    desc: "Marquage de stations favorites stocké localement (localStorage), accessible hors connexion, avec vue filtrée dédiée sur la carte.",
-    tags: ["Hors connexion", "Persistance locale", "Filtrage rapide"],
+    title: "Stations favorites",
+    desc: "Sauvegardez vos stations préférées pour y accéder en un clic, même hors connexion.",
+    tags: ["Pratique", "Hors connexion", "Rapide"],
+    techTags: ["Hors connexion", "Persistance locale", "Filtrage rapide"],
   },
   {
     icon: Smartphone,
     title: "Expérience mobile optimisée",
-    desc: "Interface entièrement responsive avec navigation tactile fluide, popups et modals adaptés aux petits écrans, typographie et espacement calibrés pour mobile.",
-    tags: ["Responsive", "Touch-friendly", "Mode sombre/clair"],
+    desc: "Interface fluide et adaptée à tous les écrans — téléphone, tablette ou ordinateur — avec mode sombre.",
+    tags: ["Mobile", "Responsive", "Mode sombre"],
+    techTags: ["Responsive", "Touch-friendly", "Mode sombre/clair"],
   },
   {
     icon: RefreshCw,
-    title: "Synchronisation automatique des données",
-    desc: "Pipeline de capture automatisé via Cron Jobs Vercel, décompression gzip des données GeoJSON de la Régie, déduplication et stockage incrémental en base.",
-    tags: ["Cron automatique", "GeoJSON", "Déduplication"],
+    title: "Données toujours à jour",
+    desc: "Les prix sont synchronisés automatiquement avec la source officielle de la Régie de l'énergie, sans intervention manuelle.",
+    tags: ["Automatisé", "Fiable", "Officiel"],
+    techTags: ["Cron automatique", "GeoJSON", "Déduplication"],
   },
   {
     icon: Lock,
-    title: "Panneau d'administration sécurisé",
-    desc: "Interface de gestion complète avec gestion des rôles utilisateurs, traitement des signalements, déclenchement manuel des snapshots et statistiques d'utilisation.",
-    tags: ["Contrôle d'accès", "Gestion des rôles", "Audit"],
+    title: "Panneau d'administration complet",
+    desc: "Gestion des utilisateurs, traitement des signalements, suivi des données et statistiques d'utilisation en temps réel.",
+    tags: ["Contrôle total", "Statistiques", "Gestion"],
+    techTags: ["Contrôle d'accès", "Gestion des rôles", "Audit"],
   },
 ];
 
@@ -142,6 +164,8 @@ const METRICS = [
 ];
 
 export default function TechPage() {
+  const [detailed, setDetailed] = useState(false);
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       {/* Header */}
@@ -153,12 +177,26 @@ export default function TechPage() {
             </Link>
             <div>
               <div className="text-[10px] font-semibold uppercase tracking-widest text-white/60 mb-0.5">Essence Québec</div>
-              <div className="text-xl font-bold">Fiche technique</div>
+              <div className="text-xl font-bold">À propos</div>
             </div>
           </div>
-          <div className="hidden sm:flex items-center gap-2 text-[12px] text-white/70 border border-white/20 rounded-full px-3 py-1">
-            <CheckCircle2 className="size-3.5 text-green-400" />
-            Production · essence-quebec.ca
+          <div className="flex items-center gap-1 bg-white/10 rounded-lg p-0.5">
+            <button
+              onClick={() => setDetailed(false)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-semibold transition-all border-none cursor-pointer"
+              style={!detailed ? { background: "rgba(255,255,255,0.25)", color: "#fff" } : { background: "transparent", color: "rgba(255,255,255,0.6)" }}
+            >
+              <Eye className="size-3.5" />
+              <span className="hidden sm:inline">Résumé</span>
+            </button>
+            <button
+              onClick={() => setDetailed(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-semibold transition-all border-none cursor-pointer"
+              style={detailed ? { background: "rgba(255,255,255,0.25)", color: "#fff" } : { background: "transparent", color: "rgba(255,255,255,0.6)" }}
+            >
+              <Code2 className="size-3.5" />
+              <span className="hidden sm:inline">Fiche technique</span>
+            </button>
           </div>
         </div>
         {/* Accent bar */}
@@ -170,63 +208,92 @@ export default function TechPage() {
         {/* Hero */}
         <section className="text-center space-y-4">
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white leading-tight">
-            Plateforme de transparence<br className="hidden sm:block" /> des prix de carburant au Québec
+            {detailed
+              ? <>Plateforme de transparence<br className="hidden sm:block" /> des prix de carburant au Québec</>
+              : <>Comparez les prix d{"'"}essence<br className="hidden sm:block" /> partout au Québec</>
+            }
           </h1>
           <p className="text-lg text-gray-500 dark:text-gray-400 max-w-2xl mx-auto leading-relaxed">
-            Application web haute disponibilité exposant en temps réel les données officielles de la Régie de l&apos;énergie du Québec — conçue selon les standards modernes d&apos;architecture cloud et de sécurité gouvernementale.
+            {detailed
+              ? <>Application web haute disponibilité exposant en temps réel les données officielles de la Régie de l{"'"}énergie du Québec — conçue selon les standards modernes d{"'"}architecture cloud et de sécurité gouvernementale.</>
+              : <>Une application rapide, fiable et sécurisée qui affiche en temps réel les prix officiels de la Régie de l{"'"}énergie pour plus de 2 000 stations-service au Québec.</>
+            }
           </p>
+          {/* Buzzwords — résumé seulement */}
+          {!detailed && (
+            <div className="flex flex-wrap justify-center gap-2 pt-2">
+              {BUZZWORDS.map((b) => (
+                <span key={b} className="inline-flex items-center gap-1 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 text-[12px] font-semibold rounded-full px-3 py-1 border border-blue-200 dark:border-blue-800">
+                  <Zap className="size-3" />
+                  {b}
+                </span>
+              ))}
+            </div>
+          )}
         </section>
 
-        {/* Metrics */}
-        <section>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            {METRICS.map((m) => (
-              <div key={m.label} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5 text-center">
-                <div className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white mb-1">{m.value}</div>
-                <div className="text-[12px] text-gray-500 dark:text-gray-400">{m.label}</div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Stack */}
-        <section className="space-y-6">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">Architecture technique</h2>
-            <p className="text-[13px] text-gray-500 dark:text-gray-400">Stack moderne, éprouvée en production, déployée sur infrastructure cloud de niveau entreprise.</p>
-          </div>
-          <div className="grid sm:grid-cols-2 gap-5">
-            {STACK.map((layer) => {
-              const Icon = layer.icon;
-              return (
-                <div key={layer.category} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
-                  <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-800" style={{ borderLeftWidth: 3, borderLeftColor: layer.color }}>
-                    <Icon className="size-4 shrink-0" style={{ color: layer.color }} />
-                    <span className="font-semibold text-[13px] text-gray-900 dark:text-white">{layer.category}</span>
-                  </div>
-                  <ul className="divide-y divide-gray-100 dark:divide-gray-800">
-                    {layer.items.map((item) => (
-                      <li key={item.name} className="px-4 py-2.5 flex flex-col gap-0.5">
-                        <span className="text-[13px] font-semibold text-gray-800 dark:text-gray-200">{item.name}</span>
-                        <span className="text-[11.5px] text-gray-500 dark:text-gray-400">{item.desc}</span>
-                      </li>
-                    ))}
-                  </ul>
+        {/* Metrics — détaillé seulement */}
+        {detailed && (
+          <section>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              {METRICS.map((m) => (
+                <div key={m.label} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5 text-center">
+                  <div className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white mb-1">{m.value}</div>
+                  <div className="text-[12px] text-gray-500 dark:text-gray-400">{m.label}</div>
                 </div>
-              );
-            })}
-          </div>
-        </section>
+              ))}
+            </div>
+          </section>
+        )}
 
-        {/* Features */}
+        {/* Stack — détaillé seulement */}
+        {detailed && (
+          <section className="space-y-6">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">Architecture technique</h2>
+              <p className="text-[13px] text-gray-500 dark:text-gray-400">Stack moderne, éprouvée en production, déployée sur infrastructure cloud de niveau entreprise.</p>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-5">
+              {STACK.map((layer) => {
+                const Icon = layer.icon;
+                return (
+                  <div key={layer.category} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
+                    <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-800" style={{ borderLeftWidth: 3, borderLeftColor: layer.color }}>
+                      <Icon className="size-4 shrink-0" style={{ color: layer.color }} />
+                      <span className="font-semibold text-[13px] text-gray-900 dark:text-white">{layer.category}</span>
+                    </div>
+                    <ul className="divide-y divide-gray-100 dark:divide-gray-800">
+                      {layer.items.map((item) => (
+                        <li key={item.name} className="px-4 py-2.5 flex flex-col gap-0.5">
+                          <span className="text-[13px] font-semibold text-gray-800 dark:text-gray-200">{item.name}</span>
+                          <span className="text-[11.5px] text-gray-500 dark:text-gray-400">{item.desc}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* Features — toujours visible */}
         <section className="space-y-6">
           <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">Fonctionnalités livrées</h2>
-            <p className="text-[13px] text-gray-500 dark:text-gray-400">Chaque fonctionnalité est opérationnelle en production, accessible publiquement sans installation.</p>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
+              {detailed ? "Fonctionnalités livrées" : "Ce que vous pouvez faire"}
+            </h2>
+            <p className="text-[13px] text-gray-500 dark:text-gray-400">
+              {detailed
+                ? "Chaque fonctionnalité est opérationnelle en production, accessible publiquement sans installation."
+                : "Toutes les fonctionnalités sont disponibles gratuitement, sans inscription, directement depuis votre navigateur."
+              }
+            </p>
           </div>
           <div className="grid sm:grid-cols-2 gap-4">
             {FEATURES.map((f) => {
               const Icon = f.icon;
+              const activeTags = detailed ? f.techTags : f.tags;
               return (
                 <div key={f.title} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5 flex gap-4">
                   <div className="size-9 rounded-lg bg-blue-50 dark:bg-blue-950/50 flex items-center justify-center shrink-0">
@@ -236,7 +303,7 @@ export default function TechPage() {
                     <div className="text-[13px] font-semibold text-gray-900 dark:text-white mb-1">{f.title}</div>
                     <div className="text-[12px] text-gray-500 dark:text-gray-400 leading-relaxed mb-2">{f.desc}</div>
                     <div className="flex flex-wrap gap-1">
-                      {f.tags.map((tag) => (
+                      {activeTags.map((tag) => (
                         <span key={tag} className="inline-block bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-[10.5px] font-medium rounded-full px-2 py-0.5">
                           {tag}
                         </span>
@@ -249,44 +316,46 @@ export default function TechPage() {
           </div>
         </section>
 
-        {/* DevOps & CI/CD */}
-        <section className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
-          <div className="flex items-center gap-3">
-            <GitBranch className="size-5 text-gray-500" />
-            <h2 className="text-base font-bold text-gray-900 dark:text-white">Qualité logicielle & pratiques DevOps</h2>
-          </div>
-          <div className="grid sm:grid-cols-2 gap-3 text-[13px]">
-            {[
-              ["Déploiement continu (CI/CD)", "Push sur main → build Turbopack → déploiement production automatique en < 60 s"],
-              ["Preview par branche", "Chaque pull request génère un environnement de prévisualisation isolé avec URL unique"],
-              ["Rollback instantané", "Retour à n'importe quelle version précédente en un clic depuis le tableau de bord Vercel"],
-              ["Variables d'environnement sécurisées", "Secrets injectés au build, jamais exposés côté client — séparation production/preview/dev"],
-              ["Typage statique intégral", "Zero any TypeScript sur tout le codebase — erreurs détectées à la compilation, pas en production"],
-              ["Validation Zod sur tous les endpoints", "Chaque entrée utilisateur est validée et assainie côté serveur avant toute opération base de données"],
-              ["Rate limiting sans infrastructure", "Protection contre les abus implémentée en mémoire Edge, sans Redis ni dépendance externe"],
-              ["Emails transactionnels certifiés", "SPF + DKIM + DMARC configurés sur domaine personnalisé — délivrabilité maximale"],
-            ].map(([title, desc]) => (
-              <div key={title} className="flex gap-2.5">
-                <CheckCircle2 className="size-4 text-green-500 shrink-0 mt-0.5" />
-                <div>
-                  <div className="font-semibold text-gray-800 dark:text-gray-200">{title}</div>
-                  <div className="text-[11.5px] text-gray-500 dark:text-gray-400 mt-0.5">{desc}</div>
+        {/* DevOps & CI/CD — détaillé seulement */}
+        {detailed && (
+          <section className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <GitBranch className="size-5 text-gray-500" />
+              <h2 className="text-base font-bold text-gray-900 dark:text-white">Qualité logicielle & pratiques DevOps</h2>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-3 text-[13px]">
+              {[
+                ["Déploiement continu (CI/CD)", "Push sur main → build Turbopack → déploiement production automatique en < 60 s"],
+                ["Preview par branche", "Chaque pull request génère un environnement de prévisualisation isolé avec URL unique"],
+                ["Rollback instantané", "Retour à n'importe quelle version précédente en un clic depuis le tableau de bord Vercel"],
+                ["Variables d'environnement sécurisées", "Secrets injectés au build, jamais exposés côté client — séparation production/preview/dev"],
+                ["Typage statique intégral", "Zero any TypeScript sur tout le codebase — erreurs détectées à la compilation, pas en production"],
+                ["Validation Zod sur tous les endpoints", "Chaque entrée utilisateur est validée et assainie côté serveur avant toute opération base de données"],
+                ["Rate limiting sans infrastructure", "Protection contre les abus implémentée en mémoire Edge, sans Redis ni dépendance externe"],
+                ["Emails transactionnels certifiés", "SPF + DKIM + DMARC configurés sur domaine personnalisé — délivrabilité maximale"],
+              ].map(([title, desc]) => (
+                <div key={title} className="flex gap-2.5">
+                  <CheckCircle2 className="size-4 text-green-500 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-semibold text-gray-800 dark:text-gray-200">{title}</div>
+                    <div className="text-[11.5px] text-gray-500 dark:text-gray-400 mt-0.5">{desc}</div>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        </section>
+              ))}
+            </div>
+          </section>
+        )}
 
-        {/* Source de données */}
+        {/* Source de données — toujours visible */}
         <section className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 rounded-xl p-6">
           <div className="flex items-start gap-4">
             <div className="size-10 rounded-lg bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center shrink-0">
               <Shield className="size-5 text-blue-700 dark:text-blue-400" />
             </div>
             <div>
-              <h3 className="font-bold text-gray-900 dark:text-white mb-1">Données officielles — Régie de l&apos;énergie du Québec</h3>
+              <h3 className="font-bold text-gray-900 dark:text-white mb-1">Données officielles — Régie de l{"'"}énergie du Québec</h3>
               <p className="text-[13px] text-gray-600 dark:text-gray-400 leading-relaxed">
-                Les prix affichés proviennent exclusivement du flux GeoJSON officiel publié par la Régie de l&apos;énergie du Québec (<strong>REQ</strong>), organisme gouvernemental mandaté par la Loi sur la Régie de l&apos;énergie. Les données sont publiques, open data, et constituent la référence légale des prix planchers des carburants en station. Aucune donnée tierce ou estimée n&apos;est utilisée.
+                Les prix affichés proviennent exclusivement du flux officiel publié par la Régie de l{"'"}énergie du Québec (<strong>REQ</strong>), organisme gouvernemental mandaté par la Loi sur la Régie de l{"'"}énergie. Les données sont publiques, open data, et constituent la référence légale des prix des carburants en station.
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {["Open Data gouvernemental", "Mise à jour automatique", "Données vérifiées REQ", "Conformité loi sur l'énergie"].map((t) => (
@@ -297,7 +366,7 @@ export default function TechPage() {
           </div>
         </section>
 
-        {/* Contact / CTA */}
+        {/* Contact */}
         <section className="text-center space-y-3 pb-4">
           <div className="flex items-center justify-center gap-2 text-gray-400 dark:text-gray-600">
             <div className="h-px flex-1 bg-current" />
@@ -305,7 +374,7 @@ export default function TechPage() {
             <div className="h-px flex-1 bg-current" />
           </div>
           <p className="text-[13px] text-gray-500 dark:text-gray-400">
-            Projet développé par <strong className="text-gray-700 dark:text-gray-300">Mathieu Fournier</strong> · Pour toute question technique ou collaboration
+            Projet développé par <strong className="text-gray-700 dark:text-gray-300">Mathieu Fournier</strong> · Pour toute question ou collaboration
           </p>
           <a href="mailto:mathieufournierqc@outlook.com" className="inline-flex items-center gap-2 text-[13px] font-semibold text-blue-600 dark:text-blue-400 hover:underline">
             <Mail className="size-3.5" /> mathieufournierqc@outlook.com
@@ -313,6 +382,7 @@ export default function TechPage() {
         </section>
 
       </main>
+      <ScrollToTop containerId="tech-scroll-container" />
     </div>
   );
 }
