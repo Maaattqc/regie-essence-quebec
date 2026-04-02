@@ -51,7 +51,7 @@
     "jsdom": "^29.0.1",
     "lint-staged": "^16.4.0",
     "tailwindcss": "^4",
-    "typescript": "^5",
+    "typescript": "^6",
     "vitest": "^4.1.2"
   },
   "lint-staged": {
