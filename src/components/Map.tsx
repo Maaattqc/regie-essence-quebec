@@ -868,7 +868,7 @@ interface Comment {
   my_vote: number;
 }
 
-function CommentItem({ c, replies, onReply, onVote }: { c: Comment; replies: Comment[]; onReply: (id: number) => void; onVote: (id: number, vote: number) => void }) {
+function CommentItem({ c, replies, allComments, onReply, onVote }: { c: Comment; replies: Comment[]; allComments: Comment[]; onReply: (id: number) => void; onVote: (id: number, vote: number) => void }) {
   const timeAgo = (d: string) => {
     const diff = Date.now() - new Date(d).getTime();
     const mins = Math.floor(diff / 60000);
@@ -891,10 +891,10 @@ function CommentItem({ c, replies, onReply, onVote }: { c: Comment; replies: Com
           <p style={{ fontSize: "0.8125rem", margin: "0.25rem 0 0.375rem", lineHeight: 1.4, color: "var(--text)" }}>{c.content}</p>
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", fontSize: "0.75rem" }}>
             <button onClick={() => onVote(c.id, 1)} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "0.25rem", color: c.my_vote === 1 ? "#0ea5e9" : "var(--text-muted)", padding: 0 }}>
-              &#9650; {c.likes > 0 && c.likes}
+              &#128077; {c.likes > 0 && c.likes}
             </button>
             <button onClick={() => onVote(c.id, -1)} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "0.25rem", color: c.my_vote === -1 ? "#e63946" : "var(--text-muted)", padding: 0 }}>
-              &#9660; {c.dislikes > 0 && c.dislikes}
+              &#128078; {c.dislikes > 0 && c.dislikes}
             </button>
             <button onClick={() => onReply(c.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 0, fontWeight: 600, fontSize: "0.75rem" }}>
               Répondre
@@ -903,7 +903,7 @@ function CommentItem({ c, replies, onReply, onVote }: { c: Comment; replies: Com
           {replies.length > 0 && (
             <div style={{ marginLeft: "0.5rem", borderLeft: "2px solid var(--divider)", paddingLeft: "0.75rem", marginTop: "0.375rem" }}>
               {replies.map((r) => (
-                <CommentItem key={r.id} c={r} replies={[]} onReply={onReply} onVote={onVote} />
+                <CommentItem key={r.id} c={r} replies={allComments.filter((x) => x.parent_id === r.id)} allComments={allComments} onReply={onReply} onVote={onVote} />
               ))}
             </div>
           )}
@@ -960,12 +960,26 @@ function CommentsModal({ stationName, address, onClose }: { stationName: string;
   async function handleVote(commentId: number, vote: number) {
     const token = await getToken();
     if (!token) { setError("Connectez-vous pour voter"); return; }
+    // Optimistic update
+    setComments((prev) => prev.map((c) => {
+      if (c.id !== commentId) return c;
+      const wasVote = c.my_vote;
+      if (wasVote === vote) {
+        // Toggle off
+        return { ...c, my_vote: 0, likes: c.likes - (vote === 1 ? 1 : 0), dislikes: c.dislikes - (vote === -1 ? 1 : 0) };
+      }
+      return {
+        ...c,
+        my_vote: vote,
+        likes: c.likes + (vote === 1 ? 1 : 0) - (wasVote === 1 ? 1 : 0),
+        dislikes: c.dislikes + (vote === -1 ? 1 : 0) - (wasVote === -1 ? 1 : 0),
+      };
+    }));
     await fetch("/api/reviews", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ action: "vote", comment_id: commentId, vote }),
     });
-    loadComments();
   }
 
   const topLevel = comments.filter((c) => !c.parent_id);
@@ -1010,7 +1024,7 @@ function CommentsModal({ stationName, address, onClose }: { stationName: string;
             <p style={{ color: "var(--text-muted)", fontSize: "0.8125rem" }}>Aucun commentaire. Soyez le premier !</p>
           ) : (
             topLevel.map((c) => (
-              <CommentItem key={c.id} c={c} replies={getReplies(c.id)} onReply={setReplyTo} onVote={handleVote} />
+              <CommentItem key={c.id} c={c} replies={getReplies(c.id)} allComments={comments} onReply={setReplyTo} onVote={handleVote} />
             ))
           )}
         </div>
