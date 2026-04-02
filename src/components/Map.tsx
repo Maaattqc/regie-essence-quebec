@@ -722,7 +722,7 @@ export default function Map() {
               ? '&copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics'
               : mapStyle === "dark"
               ? '&copy; <a href="https://carto.com/">CARTO</a>'
-              : '&copy; <a href="https://www.linkedin.com/in/mathieu-fournier-4977591bb" target="_blank" title="mathieufournierqc@outlook.com">Mathieu Fournier</a> | <a href="/tech" target="_blank">Informations techniques</a>'
+              : '&copy; <a href="https://www.linkedin.com/in/mathieu-fournier-4977591bb" target="_blank" title="mathieufournierqc@outlook.com">Mathieu Fournier</a> | <a href="/tech" target="_blank">À propos</a>'
           }
           url={
             mapStyle === "satellite"
