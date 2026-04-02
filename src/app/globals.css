@@ -311,24 +311,30 @@ body {
   .nb-select-wrap--active .nb-select-icon-left { color: #FFD700; }
   .nb-select-icon-right { display: none; }
 
-  /* Search: icône seule */
-  .nb-input-wrap { width: 34px; overflow: hidden; border-radius: 6px; }
+  /* Search: icône seule, s'agrandit si focus ou valeur */
+  .nb-input-wrap { width: 34px; overflow: hidden; border-radius: 6px; transition: width 0.2s; }
   .nb-input {
     width: 34px !important;
     padding-left: 8px !important;
     padding-right: 0 !important;
     color: transparent;
     caret-color: transparent;
+    transition: width 0.2s, color 0.15s;
   }
   .nb-input::placeholder { color: transparent; }
-  .nb-input:focus {
+  .nb-input:focus,
+  .nb-input:not(:placeholder-shown) {
     width: 140px !important;
     color: #fff;
     caret-color: #fff;
     padding-left: 28px !important;
   }
   .nb-input:focus::placeholder { color: rgba(255,255,255,0.5); }
-  .nb-input-wrap:focus-within { width: 140px; }
+  .nb-input-wrap:focus-within,
+  .nb-input-wrap:has(.nb-input:not(:placeholder-shown)) { width: 140px; }
+
+  /* Masquer texte du logo */
+  .gov-bar-title-text { display: none; }
 
   .nb-login-btn { padding: 0 10px; }
   .map-btn {

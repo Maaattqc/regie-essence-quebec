@@ -179,7 +179,7 @@ export default function FilterBar({
         {/* ── Logo ── */}
         <div className="gov-bar-title">
           <span className="gov-bar-fleur">&#9884;</span>
-          <div>
+          <div className="gov-bar-title-text">
             Essence Québec
             <div className="gov-bar-subtitle">Prix en temps réel des stations-service</div>
           </div>
