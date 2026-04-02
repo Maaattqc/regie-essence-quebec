@@ -106,6 +106,7 @@ export default function AdminPage() {
   const [users, setUsers] = useState<Profile[]>([]);
   const [cronResult, setCronResult] = useState<string | null>(null);
   const [cronLoading, setCronLoading] = useState(false);
+  const [tab, setTab] = useState<"stats" | "cron" | "users" | "reports" | "data">("stats");
 
   useEffect(() => {
     async function init() {
@@ -203,15 +204,42 @@ export default function AdminPage() {
 
   return (
     <div className="admin-page">
-      <header className="gov-bar">
-        <a href="/" className="flex items-center justify-center size-7 rounded-lg text-white hover:bg-white/15 transition-colors">
-          <ArrowLeft className="size-4" />
-        </a>
-        <div className="gov-bar-title">
-          <span className="gov-bar-fleur">⚜</span>
-          <div>Administration<div className="gov-bar-subtitle">Essence Qu&eacute;bec</div></div>
+      <header className="gov-bar" style={{ height: "auto", flexWrap: "wrap", padding: "0.5rem 1.25rem", gap: "0.5rem", overflow: "visible" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          <a href="/" className="flex items-center justify-center size-7 rounded-lg text-white hover:bg-white/15 transition-colors">
+            <ArrowLeft className="size-4" />
+          </a>
+          <div className="gov-bar-title">
+            <span className="gov-bar-fleur">⚜</span>
+            <div>Administration<div className="gov-bar-subtitle">Essence Qu&eacute;bec</div></div>
+          </div>
         </div>
-        <div className="gov-bar-right" style={{ marginLeft: "auto" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.25rem", flexWrap: "wrap" }}>
+          {([
+            { key: "stats", icon: <BarChart3 className="size-3.5" />, label: "Stats" },
+            { key: "cron", icon: <Clock className="size-3.5" />, label: "Cron" },
+            { key: "users", icon: <Users className="size-3.5" />, label: "Utilisateurs" },
+            { key: "reports", icon: <Flag className="size-3.5" />, label: `Signalements (${reports.length})` },
+            { key: "data", icon: <Database className="size-3.5" />, label: "Données" },
+          ] as const).map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              style={{
+                display: "flex", alignItems: "center", gap: "0.375rem",
+                padding: "0.375rem 0.625rem", borderRadius: "0.375rem", border: "none", cursor: "pointer",
+                fontSize: "0.8125rem", fontWeight: 600, transition: "background 0.15s",
+                background: tab === t.key ? "rgba(255,255,255,0.25)" : "transparent",
+                color: tab === t.key ? "#fff" : "rgba(255,255,255,0.7)",
+              }}
+              onMouseEnter={(e) => { if (tab !== t.key) e.currentTarget.style.background = "rgba(255,255,255,0.12)"; }}
+              onMouseLeave={(e) => { if (tab !== t.key) e.currentTarget.style.background = "transparent"; }}
+            >
+              {t.icon} {t.label}
+            </button>
+          ))}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginLeft: "auto" }}>
           {readOnly && (
             <Badge variant="secondary" className="bg-white/15 text-white border-0 text-xs font-semibold">
               Lecture seule
@@ -222,34 +250,8 @@ export default function AdminPage() {
         <div className="gov-bar-accent" />
       </header>
 
-      <Tabs defaultValue="stats" className="w-full">
-        <TabsList variant="line" className="w-full justify-start px-4 pt-2">
-          <TabsTrigger value="stats">
-            <BarChart3 className="size-4" />
-            Statistiques
-          </TabsTrigger>
-          <TabsTrigger value="cron">
-            <Clock className="size-4" />
-            Cron / Snapshots
-          </TabsTrigger>
-          <TabsTrigger value="users">
-            <Users className="size-4" />
-            Utilisateurs
-          </TabsTrigger>
-          <TabsTrigger value="reports">
-            <Flag className="size-4" />
-            Signalements ({reports.length})
-          </TabsTrigger>
-          <TabsTrigger value="data">
-            <Database className="size-4" />
-            Donn&eacute;es
-          </TabsTrigger>
-        </TabsList>
-
-        <Separator />
-
         <div className="admin-content">
-          <TabsContent value="stats">
+          {tab === "stats" && (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <Card>
                 <CardHeader>
@@ -285,9 +287,9 @@ export default function AdminPage() {
                 </CardContent>
               </Card>
             </div>
-          </TabsContent>
+          )}
 
-          <TabsContent value="cron">
+          {tab === "cron" && (
             <div className="space-y-4">
               <p className="text-muted-foreground">D&eacute;clencher manuellement un snapshot des prix.</p>
               <Button onClick={triggerCron} disabled={cronLoading || readOnly}>
@@ -298,9 +300,9 @@ export default function AdminPage() {
                 <pre className="admin-pre">{cronResult}</pre>
               )}
             </div>
-          </TabsContent>
+          )}
 
-          <TabsContent value="users">
+          {tab === "users" && (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -336,10 +338,10 @@ export default function AdminPage() {
                 ))}
               </TableBody>
             </Table>
-          </TabsContent>
+          )}
 
-          <TabsContent value="reports">
-            {reports.length === 0 ? (
+          {tab === "reports" && (
+            reports.length === 0 ? (
               <p className="text-muted-foreground">Aucun signalement.</p>
             ) : (
               <Table>
@@ -398,17 +400,16 @@ export default function AdminPage() {
                   ))}
                 </TableBody>
               </Table>
-            )}
-          </TabsContent>
+            )
+          )}
 
-          <TabsContent value="data">
+          {tab === "data" && (
             <div className="space-y-2">
               <p>Gestion des donn&eacute;es de stations et de prix.</p>
               <p className="text-xs text-muted-foreground">Fonctionnalit&eacute; &agrave; venir &mdash; mod&eacute;ration des stations et correction de prix.</p>
             </div>
-          </TabsContent>
+          )}
         </div>
-      </Tabs>
     </div>
   );
 }
