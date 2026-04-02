@@ -347,6 +347,8 @@ function FilterBar({
   totalStations,
   onLoginClick,
   onChangelogClick,
+  currentUser,
+  onLogout,
 }: {
   gasType: GasTypeKey;
   onGasTypeChange: (t: GasTypeKey) => void;
@@ -365,6 +367,8 @@ function FilterBar({
   totalStations: number;
   onLoginClick: () => void;
   onChangelogClick: () => void;
+  currentUser: { email: string } | null;
+  onLogout: () => void;
 }) {
   return (
     <header className="gov-header">
@@ -447,9 +451,18 @@ function FilterBar({
           <Button variant="link" size="sm" className="text-white/85 hover:text-white text-[13px] font-medium no-underline hover:no-underline" onClick={onChangelogClick}>
             Changelog
           </Button>
-          <Button variant="link" size="sm" className="text-white/85 hover:text-white text-[13px] font-medium no-underline hover:no-underline" onClick={onLoginClick}>
-            Connexion
-          </Button>
+          {currentUser ? (
+            <>
+              <span className="text-white/70 text-[12px]">{currentUser.email.split("@")[0]}</span>
+              <Button variant="link" size="sm" className="text-white/85 hover:text-white text-[13px] font-medium no-underline hover:no-underline" onClick={onLogout}>
+                Déconnexion
+              </Button>
+            </>
+          ) : (
+            <Button variant="link" size="sm" className="text-white/85 hover:text-white text-[13px] font-medium no-underline hover:no-underline" onClick={onLoginClick}>
+              Connexion
+            </Button>
+          )}
         </div>
         <div className="gov-bar-accent" />
       </div>
@@ -1030,6 +1043,7 @@ export default function Map() {
   const [showLogin, setShowLogin] = useState(false);
   const [showChangelog, setShowChangelog] = useState(false);
   const [commentStation, setCommentStation] = useState<{ name: string; address: string } | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ email: string } | null>(null);
   const [cheapestResults, setCheapestResults] = useState<{ stations: { lat: number; lng: number; price: number; name: string; dist: number }[]; message: string } | null>(null);
   const [radiusKm, setRadiusKm] = useState(5);
   const [userPos, setUserPos] = useState<[number, number] | null>(null);
@@ -1046,6 +1060,18 @@ export default function Map() {
     if (params.get("type")) setGasType(params.get("type") as GasTypeKey);
     if (params.get("brand")) setBrand(params.get("brand")!);
     if (params.get("style")) setMapStyle(params.get("style") as "carte" | "satellite" | "dark");
+  }, []);
+
+  useEffect(() => {
+    import("@supabase/supabase-js").then(({ createClient }) => {
+      const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+      sb.auth.getSession().then(({ data: { session } }) => {
+        if (session?.user?.email) setCurrentUser({ email: session.user.email });
+      });
+      sb.auth.onAuthStateChange((_event, session) => {
+        setCurrentUser(session?.user?.email ? { email: session.user.email } : null);
+      });
+    });
   }, []);
 
   useEffect(() => {
@@ -1272,6 +1298,13 @@ export default function Map() {
         totalStations={totalStations}
         onLoginClick={() => setShowLogin(true)}
         onChangelogClick={() => setShowChangelog(true)}
+        currentUser={currentUser}
+        onLogout={async () => {
+          const { createClient } = await import("@supabase/supabase-js");
+          const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+          await sb.auth.signOut();
+          setCurrentUser(null);
+        }}
       />
       <MapContainer
         center={QUEBEC_CENTER}
