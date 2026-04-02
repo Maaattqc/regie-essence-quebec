@@ -15,11 +15,11 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Carte des prix d'essence au Québec | Essence Québec",
+    default: "Carte des prix d'essence | Essence Québec",
     template: "%s | Essence Québec",
   },
   description:
-    "Carte interactive des prix de l'essence au Québec, mise à jour en temps réel. Trouvez les stations les moins chères près de chez vous et économisez sur le carburant.",
+    "Consultez les prix de l'essence au Québec en temps réel. Comparez les stations-service près de chez vous et économisez sur le carburant.",
   keywords: [
     "prix essence Québec",
     "carte essence Québec",
@@ -34,17 +34,17 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: "https://essence-quebec.ca",
-    title: "Carte des prix d'essence au Québec | Essence Québec",
+    title: "Carte des prix d'essence | Essence Québec",
     description:
-      "Carte interactive des prix de l'essence au Québec, mise à jour en temps réel. Trouvez les stations les moins chères près de chez vous et économisez.",
+      "Consultez les prix de l'essence au Québec en temps réel. Comparez les stations-service près de chez vous et économisez sur le carburant.",
     locale: "fr_CA",
     siteName: "Essence Québec",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Carte des prix d'essence au Québec | Essence Québec",
+    title: "Carte des prix d'essence | Essence Québec",
     description:
-      "Carte interactive des prix de l'essence au Québec, mise à jour en temps réel. Trouvez les stations les moins chères près de chez vous.",
+      "Consultez les prix de l'essence au Québec en temps réel. Comparez les stations-service près de chez vous et économisez.",
   },
   other: {
     "geo.region": "CA-QC",

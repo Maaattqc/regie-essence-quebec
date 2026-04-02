@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, LogOut } from "lucide-react";
+import { ChevronDown, LogOut, Info } from "lucide-react";
 
 export default function UserDropdown({ email, onLogout }: { email: string; onLogout: () => void }) {
   const username = email.split("@")[0];
@@ -29,6 +29,12 @@ export default function UserDropdown({ email, onLogout }: { email: string; onLog
         <DropdownMenuGroup>
           <DropdownMenuLabel>{email}</DropdownMenuLabel>
         </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <a href="/tech" className="flex items-center gap-2 no-underline text-inherit w-full">
+            <Info className="size-3.5" /> Infos techniques
+          </a>
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onClick={onLogout}>
           <LogOut className="size-3.5" /> Déconnexion
