@@ -84,12 +84,7 @@ test.describe("Page d'accueil - carte interactive", () => {
     await page.goto('/')
     await page.locator('.leaflet-container').waitFor({ state: 'visible', timeout: 15000 })
 
-    // The NavDropdown trigger is a gear icon (Settings from lucide-react)
-    // It should be present somewhere in the nav bar
-    const settingsBtn = page.locator('[aria-label*="param"], [aria-label*="menu"], button')
-      .filter({ hasText: '' })
-      .first()
-    // At minimum the body should be visible and stable
+    // At minimum the body should be visible and stable after map loads
     await expect(page.locator('body')).toBeVisible()
   })
 

@@ -1,36 +1,73 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Essence Québec
 
-## Getting Started
+Carte interactive des prix de l'essence au Québec en temps réel.
 
-First, run the development server:
+Les données proviennent de la **Régie de l'énergie du Québec** et sont mises à jour quotidiennement.
+
+**Production** : [essence-quebec.ca](https://essence-quebec.ca)
+
+## Stack technique
+
+| Couche | Technologies |
+|---|---|
+| Frontend | Next.js 16, React 19, TypeScript, Tailwind CSS 4, shadcn/ui |
+| Carte | Leaflet, react-leaflet, react-leaflet-cluster |
+| Backend | API Routes Next.js, Supabase (PostgreSQL + Auth OTP) |
+| Validation | Zod 4 |
+| Monitoring | Sentry (erreurs + session replay) |
+| Tests | Vitest (unitaires/intégration), Playwright (E2E) |
+| CI/CD | GitHub Actions, Vercel |
+
+## Installation
 
 ```bash
+git clone https://github.com/Maaattqc/regie-essence-quebec.git
+cd regie-essence-quebec
+npm install
+cp .env.example .env.local
+# Remplir les valeurs dans .env.local
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Variables d'environnement requises
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Variable | Description |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | URL du projet Supabase |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Clé publique Supabase |
+| `SUPABASE_SERVICE_ROLE_KEY` | Clé service role (serveur uniquement) |
+| `ADMIN_EMAILS` | Emails admin séparés par virgule |
+| `NEXT_PUBLIC_SENTRY_DSN` | DSN Sentry pour le monitoring |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Scripts
 
-## Learn More
+| Commande | Description |
+|---|---|
+| `npm run dev` | Serveur de développement |
+| `npm run build` | Build de production |
+| `npm run lint` | ESLint |
+| `npm run test:run` | Tests unitaires et intégration (Vitest) |
+| `npm run test:coverage` | Tests avec rapport de couverture |
+| `npm run test:e2e` | Tests E2E (Playwright) |
+| `npm run test:all` | Tous les tests |
 
-To learn more about Next.js, take a look at the following resources:
+## Architecture
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+src/
+├── app/                    # Next.js App Router
+│   ├── api/                # API Routes (report, history, reviews, stations, cron, health)
+│   ├── admin/              # Dashboard admin
+│   ├── confidentialite/    # Politique de confidentialité (Loi 25)
+│   ├── tech/               # Fiche technique
+│   └── ...
+├── components/             # Composants React
+│   ├── Map.tsx             # Carte interactive principale
+│   ├── CookieConsent.tsx   # Bannière de consentement Loi 25
+│   └── ui/                 # Composants shadcn/ui
+└── lib/                    # Modules partagés (auth, validation, utilitaires)
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Licence
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Tous droits réservés.
