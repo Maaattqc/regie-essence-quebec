@@ -87,6 +87,60 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(data ?? []);
   }
 
+  if (type === "snapshots") {
+    const { data } = await supabaseAdmin
+      .from("price_snapshots")
+      .select("snapshot_date, gas_type, price")
+      .order("snapshot_date", { ascending: false });
+
+    if (!data) return NextResponse.json([]);
+
+    // Group by date then gas_type
+    const byDate = new Map<string, { date: string; types: Record<string, { nb: number; sum: number; min: number; max: number }> }>();
+    for (const row of data) {
+      if (!byDate.has(row.snapshot_date)) {
+        byDate.set(row.snapshot_date, { date: row.snapshot_date, types: {} });
+      }
+      const entry = byDate.get(row.snapshot_date)!;
+      if (!entry.types[row.gas_type]) {
+        entry.types[row.gas_type] = { nb: 0, sum: 0, min: Infinity, max: -Infinity };
+      }
+      const t = entry.types[row.gas_type];
+      t.nb++;
+      t.sum += Number(row.price);
+      if (Number(row.price) < t.min) t.min = Number(row.price);
+      if (Number(row.price) > t.max) t.max = Number(row.price);
+    }
+
+    const result = Array.from(byDate.values()).map(({ date, types }) => ({
+      date,
+      totalStations: Object.values(types).reduce((s, t) => s + t.nb, 0),
+      types: Object.fromEntries(
+        Object.entries(types).map(([k, t]) => [k, {
+          nb: t.nb,
+          avg: Math.round(t.sum / t.nb * 10) / 10,
+          min: t.min,
+          max: t.max,
+        }])
+      ),
+    }));
+
+    return NextResponse.json(result);
+  }
+
+  if (type === "snapshot_detail") {
+    const date = req.nextUrl.searchParams.get("date");
+    if (!date) return NextResponse.json({ error: "date requis" }, { status: 400 });
+
+    const { data } = await supabaseAdmin
+      .from("price_snapshots")
+      .select("station_name, address, gas_type, price")
+      .eq("snapshot_date", date)
+      .order("price", { ascending: true });
+
+    return NextResponse.json(data ?? []);
+  }
+
   return NextResponse.json({ error: "type requis" }, { status: 400 });
 }
 

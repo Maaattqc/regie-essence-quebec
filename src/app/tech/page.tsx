@@ -169,10 +169,6 @@ export default function TechPage() {
 
         {/* Hero */}
         <section className="text-center space-y-4">
-          <div className="inline-flex items-center gap-2 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-full px-4 py-1.5 text-[12px] font-semibold text-blue-700 dark:text-blue-300 mb-2">
-            <Zap className="size-3.5" />
-            Application web gouvernementale — Données officielles REQ
-          </div>
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white leading-tight">
             Plateforme de transparence<br className="hidden sm:block" /> des prix de carburant au Québec
           </h1>

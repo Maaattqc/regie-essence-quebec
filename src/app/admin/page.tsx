@@ -55,6 +55,19 @@ interface Report {
   created_at: string;
 }
 
+interface SnapshotSummary {
+  date: string;
+  totalStations: number;
+  types: Record<string, { nb: number; avg: number; min: number; max: number }>;
+}
+
+interface SnapshotRow {
+  station_name: string;
+  address: string;
+  gas_type: string;
+  price: number;
+}
+
 interface Stats {
   totalStations: number;
   totalSnapshots: number;
@@ -112,6 +125,12 @@ export default function AdminPage() {
   const [cronResult, setCronResult] = useState<string | null>(null);
   const [cronLoading, setCronLoading] = useState(false);
   const [tab, setTab] = useState<"stats" | "cron" | "users" | "reports" | "data">("stats");
+  const [snapshots, setSnapshots] = useState<SnapshotSummary[]>([]);
+  const [selectedSnapshot, setSelectedSnapshot] = useState<string | null>(null);
+  const [snapshotDetail, setSnapshotDetail] = useState<SnapshotRow[]>([]);
+  const [snapshotDetailLoading, setSnapshotDetailLoading] = useState(false);
+  const [detailGasFilter, setDetailGasFilter] = useState<string>("Tous");
+  const [detailSort, setDetailSort] = useState<"price_asc" | "price_desc" | "name">("price_asc");
 
   useEffect(() => {
     async function init() {
@@ -132,6 +151,7 @@ export default function AdminPage() {
     loadStats();
     loadUsers();
     loadReports();
+    loadSnapshots();
   }, [token]);
 
   function authHeaders() {
@@ -183,6 +203,30 @@ export default function AdminPage() {
     setCronResult(JSON.stringify(json, null, 2));
     setCronLoading(false);
     loadStats();
+  }
+
+  async function loadSnapshots() {
+    const res = await fetch("/api/admin?type=snapshots", { headers: authHeaders() });
+    if (!res.ok) return;
+    setSnapshots(await res.json());
+  }
+
+  async function loadSnapshotDetail(date: string) {
+    setSnapshotDetailLoading(true);
+    setSnapshotDetail([]);
+    const res = await fetch(`/api/admin?type=snapshot_detail&date=${date}`, { headers: authHeaders() });
+    if (res.ok) setSnapshotDetail(await res.json());
+    setSnapshotDetailLoading(false);
+  }
+
+  function handleSelectSnapshot(date: string) {
+    if (selectedSnapshot === date) {
+      setSelectedSnapshot(null);
+      setSnapshotDetail([]);
+    } else {
+      setSelectedSnapshot(date);
+      loadSnapshotDetail(date);
+    }
   }
 
   async function toggleRole(profile: Profile) {
@@ -431,9 +475,121 @@ export default function AdminPage() {
           )}
 
           {tab === "data" && (
-            <div className="space-y-2">
-              <p>Gestion des donn&eacute;es de stations et de prix.</p>
-              <p className="text-xs text-muted-foreground">Fonctionnalit&eacute; &agrave; venir &mdash; mod&eacute;ration des stations et correction de prix.</p>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">{snapshots.length} snapshot{snapshots.length !== 1 ? "s" : ""} en base</p>
+              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead className="text-right">Stations</TableHead>
+                    <TableHead className="text-right">Moy. Régulier</TableHead>
+                    <TableHead className="text-right">Moy. Super</TableHead>
+                    <TableHead className="text-right">Moy. Diesel</TableHead>
+                    <TableHead className="text-right">Min / Max global</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {snapshots.map((s) => {
+                    const allPrices = Object.values(s.types).flatMap(t => [t.min, t.max]);
+                    const globalMin = Math.min(...allPrices);
+                    const globalMax = Math.max(...allPrices);
+                    const isOpen = selectedSnapshot === s.date;
+                    return [
+                      <TableRow
+                        key={s.date}
+                        className="cursor-pointer hover:bg-muted/60"
+                        onClick={() => handleSelectSnapshot(s.date)}
+                      >
+                        <TableCell className="font-medium flex items-center gap-2">
+                          <ChevronDown className={`size-3.5 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                          {s.date}
+                        </TableCell>
+                        <TableCell className="text-right">{s.totalStations.toLocaleString()}</TableCell>
+                        <TableCell className="text-right text-blue-600 dark:text-blue-400 font-mono">
+                          {s.types["Régulier"] ? `${s.types["Régulier"].avg}¢` : "—"}
+                        </TableCell>
+                        <TableCell className="text-right text-purple-600 dark:text-purple-400 font-mono">
+                          {s.types["Super"] ? `${s.types["Super"].avg}¢` : "—"}
+                        </TableCell>
+                        <TableCell className="text-right text-orange-600 dark:text-orange-400 font-mono">
+                          {s.types["Diesel"] ? `${s.types["Diesel"].avg}¢` : "—"}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                          {globalMin}¢ / {globalMax}¢
+                        </TableCell>
+                      </TableRow>,
+                      isOpen && (
+                        <TableRow key={`${s.date}-detail`}>
+                          <TableCell colSpan={6} className="p-0 bg-muted/30">
+                            <div className="p-4 space-y-3">
+                              <div className="flex items-center gap-3 flex-wrap">
+                                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Filtrer :</span>
+                                {["Tous", "Régulier", "Super", "Diesel"].map((g) => (
+                                  <button
+                                    key={g}
+                                    onClick={(e) => { e.stopPropagation(); setDetailGasFilter(g); }}
+                                    className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${detailGasFilter === g ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}
+                                  >
+                                    {g}
+                                  </button>
+                                ))}
+                                <span className="ml-4 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Trier :</span>
+                                {([["price_asc", "Prix ↑"], ["price_desc", "Prix ↓"], ["name", "Nom A→Z"]] as const).map(([val, label]) => (
+                                  <button
+                                    key={val}
+                                    onClick={(e) => { e.stopPropagation(); setDetailSort(val); }}
+                                    className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${detailSort === val ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}
+                                  >
+                                    {label}
+                                  </button>
+                                ))}
+                              </div>
+                              {snapshotDetailLoading ? (
+                                <p className="text-sm text-muted-foreground py-4 text-center">Chargement...</p>
+                              ) : (
+                                <div className="max-h-[400px] overflow-y-auto rounded border">
+                                  <table className="w-full text-sm">
+                                    <thead className="sticky top-0 bg-background border-b">
+                                      <tr>
+                                        <th className="text-left px-3 py-2 font-medium text-muted-foreground">Station</th>
+                                        <th className="text-left px-3 py-2 font-medium text-muted-foreground">Adresse</th>
+                                        <th className="text-left px-3 py-2 font-medium text-muted-foreground">Type</th>
+                                        <th className="text-right px-3 py-2 font-medium text-muted-foreground">Prix</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {snapshotDetail
+                                        .filter(r => detailGasFilter === "Tous" || r.gas_type === detailGasFilter)
+                                        .sort((a, b) => {
+                                          if (detailSort === "price_asc") return a.price - b.price;
+                                          if (detailSort === "price_desc") return b.price - a.price;
+                                          return a.station_name.localeCompare(b.station_name);
+                                        })
+                                        .map((r, i) => (
+                                          <tr key={i} className="border-b last:border-0 hover:bg-muted/40">
+                                            <td className="px-3 py-1.5 font-medium">{r.station_name}</td>
+                                            <td className="px-3 py-1.5 text-muted-foreground text-xs">{r.address}</td>
+                                            <td className="px-3 py-1.5">
+                                              <Badge variant="outline" className="text-xs">{r.gas_type}</Badge>
+                                            </td>
+                                            <td className="px-3 py-1.5 text-right font-mono font-semibold">{r.price}¢</td>
+                                          </tr>
+                                        ))
+                                      }
+                                    </tbody>
+                                  </table>
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ),
+                    ];
+                  })}
+                </TableBody>
+              </Table>
             </div>
           )}
         </div>
