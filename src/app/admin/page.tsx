@@ -2,15 +2,16 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useTheme } from "next-themes";
+import Link from "next/link";
 import { createBrowserClient } from "@/lib/auth";
 import type { User } from "@supabase/supabase-js";
 
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+// Tabs supprimé — non utilisé actuellement (navigation par boutons)
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+// Separator non utilisé actuellement
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   DropdownMenu,
@@ -51,7 +52,6 @@ import {
   AlertTriangle,
   FileBarChart,
   ShieldCheck,
-  Server,
   GitCommit,
 } from "lucide-react";
 
@@ -188,6 +188,7 @@ function ActivityLogPanel() {
     setLoading(false);
   }, []);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { loadLogs(category); }, [category, loadLogs]);
 
   const catColor: Record<string, string> = {
@@ -626,6 +627,7 @@ function ConformitePanel({
   }, [setChecks]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (Object.keys(checks).length === 0) runChecks();
   }, [checks, runChecks]);
 
@@ -750,6 +752,7 @@ export default function AdminPage() {
   const [detailSort, setDetailSort] = useState<"price_asc" | "price_desc" | "name">("price_asc");
   const [healthChecks, setHealthChecks] = useState<Record<string, { status: "loading" | "ok" | "error"; ms: number; detail?: string }>>({});
 
+   
   useEffect(() => {
     async function init() {
       const { data: { session } } = await supabase.auth.getSession();
@@ -764,15 +767,10 @@ export default function AdminPage() {
     init();
   }, []);
 
-  useEffect(() => {
-    // Charger les données publiques même sans auth
-    loadStats();
-    loadUsers();
-    loadReports();
-    loadSnapshots();
-  }, [token]);
+  // L'effet de chargement est déclaré plus bas, après les fonctions qu'il appelle
 
-  function authHeaders() {
+  function authHeaders(): Record<string, string> {
+    if (!token) return {};
     return { Authorization: `Bearer ${token}` };
   }
 
@@ -860,6 +858,10 @@ export default function AdminPage() {
     loadUsers();
   }
 
+  // Charger les données publiques même sans auth (déclaré après les fonctions appelées)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { loadStats(); loadUsers(); loadReports(); loadSnapshots(); }, [token]);
+
   if (loading) return (
     <div className="admin-page">
       {/* Navbar skeleton */}
@@ -901,9 +903,9 @@ export default function AdminPage() {
     <div className="admin-page">
       <header className="gov-bar" style={{ height: "auto", flexWrap: "wrap", padding: "0.5rem 1.25rem", gap: "0.5rem", overflow: "visible" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-          <a href="/" className="flex items-center justify-center size-7 rounded-lg text-white hover:bg-white/15 transition-colors">
+          <Link href="/" className="flex items-center justify-center size-7 rounded-lg text-white hover:bg-white/15 transition-colors">
             <ArrowLeft className="size-4" />
-          </a>
+          </Link>
           <div className="gov-bar-title">
             <span className="gov-bar-fleur">⚜</span>
             <div>Administration<div className="gov-bar-subtitle">Essence Qu&eacute;bec</div></div>
