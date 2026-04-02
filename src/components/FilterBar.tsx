@@ -173,7 +173,7 @@ export default function FilterBar({
   return (
     <header className="gov-header">
 
-      {/* ── Barre 1 : Logo + carburant + nav ── */}
+      {/* ── Barre 1 ── */}
       <div className="gov-bar">
         <div className="gov-bar-title">
           <span className="gov-bar-fleur">&#9884;</span>
@@ -185,7 +185,7 @@ export default function FilterBar({
 
         <div className="nb-sep" />
 
-        {/* Pills carburant */}
+        {/* Pills carburant — toujours visibles */}
         <div className="nb-pills">
           {GAS_TYPES.map((t) => (
             <button
@@ -197,6 +197,36 @@ export default function FilterBar({
               {t.label}
             </button>
           ))}
+        </div>
+
+        {/* Filtres desktop seulement (cachés sur mobile) */}
+        <div className="nb-filters-desktop">
+          <SearchWithSuggestions
+            search={search}
+            onSearchChange={onSearchChange}
+            onConfirm={onSearchChange}
+            cities={cities}
+            cityCounts={cityCounts}
+          />
+          <NbSelect value={region} onChange={onRegionChange} icon={MapPin}>
+            <option value="">Toutes les régions ({totalStations})</option>
+            {REGIONS.map((r) => (
+              <option key={r} value={r}>{r} ({regionCounts[r] || 0})</option>
+            ))}
+          </NbSelect>
+          <NbSelect value={brand} onChange={onBrandChange} icon={Building2}>
+            <option value="">Toutes les compagnies ({totalStations})</option>
+            {BRANDS.map((b) => (
+              <option key={b} value={b}>{b} ({brandCounts[b] || 0})</option>
+            ))}
+          </NbSelect>
+          <button
+            className={`nb-fav${showFavorites ? " nb-fav-active" : ""}`}
+            onClick={onToggleFavorites}
+          >
+            {showFavorites ? <Star className="size-3.5 fill-current" /> : <StarOff className="size-3.5" />}
+            <span className="nb-label-text">Favoris</span>
+          </button>
         </div>
 
         <div className="gov-bar-right">
@@ -214,18 +244,15 @@ export default function FilterBar({
         <div className="gov-bar-accent" />
       </div>
 
-      {/* ── Barre 2 : Filtres ── */}
+      {/* ── Barre 2 : mobile seulement ── */}
       <div className="gov-bar-2">
-
-        {/* Chip ville — mobile seulement quand sélectionnée */}
-        {search && (
+        {search ? (
           <div className="nb-filter-chip">
             <MapPin className="size-3 shrink-0" />
             <span className="truncate">{search}</span>
             <button className="nb-filter-chip-clear" onMouseDown={() => onSearchChange("")}><X className="size-3" /></button>
           </div>
-        )}
-        <div className={search ? "nb-input-hidden-mobile" : ""}>
+        ) : (
           <SearchWithSuggestions
             search={search}
             onSearchChange={onSearchChange}
@@ -233,42 +260,21 @@ export default function FilterBar({
             cities={cities}
             cityCounts={cityCounts}
           />
-        </div>
+        )}
 
-        {/* Chip région — mobile seulement quand sélectionnée */}
-        {region && (
-          <div className="nb-filter-chip nb-filter-chip-region">
+        {region ? (
+          <div className="nb-filter-chip">
             <span className="truncate">{region}</span>
             <button className="nb-filter-chip-clear" onMouseDown={() => onRegionChange("")}><X className="size-3" /></button>
           </div>
-        )}
-        <div className={region ? "nb-select-hidden-mobile" : ""}>
+        ) : (
           <NbSelect value={region} onChange={onRegionChange} icon={MapPin}>
             <option value="">Toutes les régions ({totalStations})</option>
             {REGIONS.map((r) => (
               <option key={r} value={r}>{r} ({regionCounts[r] || 0})</option>
             ))}
           </NbSelect>
-        </div>
-
-        <div className="nb-bar2-extra">
-          <NbSelect value={brand} onChange={onBrandChange} icon={Building2}>
-            <option value="">Toutes les compagnies ({totalStations})</option>
-            {BRANDS.map((b) => (
-              <option key={b} value={b}>{b} ({brandCounts[b] || 0})</option>
-            ))}
-          </NbSelect>
-
-          <button
-            className={`nb-fav${showFavorites ? " nb-fav-active" : ""}`}
-            onClick={onToggleFavorites}
-          >
-            {showFavorites
-              ? <Star className="size-3.5 fill-current" />
-              : <StarOff className="size-3.5" />}
-            <span className="nb-label-text">Favoris</span>
-          </button>
-        </div>
+        )}
       </div>
 
     </header>
