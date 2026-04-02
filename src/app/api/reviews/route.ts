@@ -31,16 +31,17 @@ export async function GET(request: NextRequest) {
   const address = searchParams.get("address");
   if (!station || !address) return NextResponse.json({ error: "station et address requis" }, { status: 400 });
 
-  // Get all comments for this station
+  // Get all comments for this station (exclude soft-deleted)
   const { data: comments } = await supabaseAdmin
     .from("comments")
     .select("*")
     .eq("station_name", station)
     .eq("address", address)
+    .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
   // Get emails
-  const userIds = [...new Set((comments || []).map((c) => c.user_id))];
+  const userIds = [...new Set((comments || []).map((c) => c.user_id).filter(Boolean))];
   const emails: Record<string, string> = {};
   for (const uid of userIds) {
     const { data: u } = await supabaseAdmin.auth.admin.getUserById(uid);
@@ -68,7 +69,9 @@ export async function GET(request: NextRequest) {
     likes: c.likes,
     dislikes: c.dislikes,
     created_at: c.created_at,
-    author: emails[c.user_id] || "Anonyme",
+    author: c.user_id
+      ? (emails[c.user_id] || "Anonyme")
+      : `Anonyme-${(c.anonymous_id || "0000").slice(0, 4)}`,
     user_id: c.user_id,
     my_vote: myVotes[c.id] || 0,
   }));
@@ -81,14 +84,13 @@ export async function POST(request: NextRequest) {
   if (!rateLimit(getIP(request))) return NextResponse.json({ error: "Trop de requêtes" }, { status: 429 });
 
   const token = getToken(request);
-  if (!token) return NextResponse.json({ error: "Non connecté" }, { status: 401 });
-  const user = await getUser(token);
-  if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  const user = token ? await getUser(token) : null;
 
   const body = await request.json();
 
-  // Vote action
+  // Vote action (requires login)
   if (body.action === "vote") {
+    if (!user) return NextResponse.json({ error: "Connectez-vous pour voter" }, { status: 401 });
     const { comment_id, vote } = body;
     if (!comment_id || ![1, -1].includes(vote)) return NextResponse.json({ error: "Invalide" }, { status: 400 });
 
@@ -123,14 +125,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  // New comment
-  const { station_name, address, content, parent_id } = body;
+  // New comment (anonymous or logged in)
+  const { station_name, address, content, parent_id, anonymous_id } = body;
   if (!station_name || !address || !content || content.length < 1) {
     return NextResponse.json({ error: "Contenu requis" }, { status: 400 });
   }
+  if (!user && !anonymous_id) {
+    return NextResponse.json({ error: "Identifiant anonyme requis" }, { status: 400 });
+  }
 
   const { error } = await supabaseAdmin.from("comments").insert({
-    user_id: user.id,
+    user_id: user?.id || null,
+    anonymous_id: user ? null : anonymous_id,
     station_name,
     address,
     content,
@@ -153,14 +159,10 @@ export async function DELETE(request: NextRequest) {
   const { comment_id } = await request.json();
   if (!comment_id) return NextResponse.json({ error: "comment_id requis" }, { status: 400 });
 
-  // Delete child comments (replies) first, then the comment itself
-  await supabaseAdmin.from("comment_votes").delete().in(
-    "comment_id",
-    (await supabaseAdmin.from("comments").select("id").eq("parent_id", comment_id)).data?.map((c) => c.id) || []
-  );
-  await supabaseAdmin.from("comments").delete().eq("parent_id", comment_id);
-  await supabaseAdmin.from("comment_votes").delete().eq("comment_id", comment_id);
-  const { error } = await supabaseAdmin.from("comments").delete().eq("id", comment_id);
+  // Soft delete: mark comment and its replies as deleted
+  const now = new Date().toISOString();
+  await supabaseAdmin.from("comments").update({ deleted_at: now }).eq("parent_id", comment_id);
+  const { error } = await supabaseAdmin.from("comments").update({ deleted_at: now }).eq("id", comment_id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });

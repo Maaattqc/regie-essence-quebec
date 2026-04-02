@@ -7,32 +7,24 @@ import { Marker, Popup, Circle } from "react-leaflet";
 import L from "leaflet";
 import type { Feature, Point } from "geojson";
 import dynamic from "next/dynamic";
-import { useTheme } from "next-themes";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
-import { Badge } from "@/components/ui/badge";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import {
-  X, Star, StarOff, History, Flag, Send, Mail, ArrowLeft,
-  Sun, Moon, Share2, BarChart3, Crosshair, ChevronDown, Shield, FileText, LogOut, User,
+  X, Share2, BarChart3, Crosshair, Users,
 } from "lucide-react";
-import { reportSchema } from "@/lib/schemas";
+import FilterBar from "@/components/FilterBar";
 import { createBrowserClient } from "@/lib/auth";
+import LoginModal from "@/components/LoginModal";
+import ChangelogModal from "@/components/ChangelogModal";
+import ReportModal from "@/components/ReportModal";
+import CommentsModal from "@/components/CommentsModal";
+import RegionPricePanel from "@/components/RegionPricePanel";
+import SiteThemeToggle from "@/components/SiteThemeToggle";
 import {
   type StationProperties,
   type StationPrice,
   type GasTypeKey,
-  GAS_TYPES,
-  BRANDS,
-  REGIONS,
   REGION_CENTERS,
   QUEBEC_CENTER,
   QUEBEC_ZOOM,
@@ -95,35 +87,6 @@ function formatPopup(props: StationProperties, lat: number, lng: number) {
       </div>
     </div>
   `;
-}
-
-function useDisableMapDrag() {
-  const map = useMap();
-  return {
-    onMouseDown: () => map.dragging.disable(),
-    onMouseUp: () => map.dragging.enable(),
-    onTouchStart: () => map.dragging.disable(),
-    onTouchEnd: () => map.dragging.enable(),
-  };
-}
-
-function RadiusSlider({ radiusKm, onChange }: { radiusKm: number; onChange: (v: number) => void }) {
-  const dragProps = useDisableMapDrag();
-  return (
-    <div className="radius-panel" style={{ display: "inline-block" }} {...dragProps}>
-      <div className="text-xs font-semibold mb-1">
-        Rayon : {radiusKm === 0 ? "Tout" : `${radiusKm} km`}
-      </div>
-      <Slider
-        min={0}
-        max={50}
-        step={5}
-        value={[radiusKm]}
-        onValueChange={(v) => onChange(Array.isArray(v) ? v[0] : v)}
-        className="w-[120px]"
-      />
-    </div>
-  );
 }
 
 function FlyTo({ center, zoom }: { center: [number, number]; zoom: number }) {
@@ -243,939 +206,118 @@ const StationsLayer = memo(function StationsLayer({
   );
 });
 
-function SearchWithSuggestions({
-  search,
-  onSearchChange,
-  onConfirm,
-  cities,
-  cityCounts,
-}: {
-  search: string;
-  onSearchChange: (s: string) => void;
-  onConfirm: (s: string) => void;
-  cities: string[];
-  cityCounts: Record<string, number>;
-}) {
-  const [input, setInput] = useState(search);
-  const [focused, setFocused] = useState(false);
-  const [debouncedInput, setDebouncedInput] = useState(input);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+const CURSOR_COLORS = ["#e63946","#457b9d","#2a9d8f","#e9c46a","#f4a261","#264653","#6a4c93","#1982c4","#8ac926","#ff595e"];
 
+function hashColor(id: string) {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = ((h << 5) - h + id.charCodeAt(i)) | 0;
+  return CURSOR_COLORS[Math.abs(h) % CURSOR_COLORS.length];
+}
+
+function getCursorUserId() {
+  let id = localStorage.getItem("cursor_user_id");
+  if (!id) { id = crypto.randomUUID(); localStorage.setItem("cursor_user_id", id); }
+  return id;
+}
+
+function LiveCursors({ showCursors, onOnlineCount }: { showCursors: boolean; onOnlineCount: (n: number) => void }) {
+  const map = useMap();
+  const markersRef = useRef<Record<string, L.Marker>>({});
+  const channelRef = useRef<ReturnType<ReturnType<typeof createBrowserClient>["channel"]> | null>(null);
+  const lastSendRef = useRef(0);
+  const userIdRef = useRef("");
+  const showRef = useRef(showCursors);
+  const cursorsRef = useRef<Record<string, { lat: number; lng: number; color: string; uid: string }>>({});
+
+  showRef.current = showCursors;
+
+  // Show/hide markers when toggle changes
   useEffect(() => {
-    setInput(search);
-    setDebouncedInput(search);
-  }, [search]);
-
-  const handleInput = useCallback((v: string) => {
-    setInput(v);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => setDebouncedInput(v), 200);
-  }, []);
-
-  const suggestions = useMemo(() => {
-    const q = debouncedInput.trim();
-    if (q.length < 2) return [];
-    const norm = normalize(q);
-    return cities.filter((c) => normalize(c).includes(norm)).slice(0, 8);
-  }, [debouncedInput, cities]);
-
-  function select(city: string) {
-    setInput(city);
-    onSearchChange(city);
-    onConfirm(city);
-  }
-
-  function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter") {
-      onSearchChange(input);
-      onConfirm(input);
-      (e.target as HTMLInputElement).blur();
-    }
-  }
-
-  function handleClear() {
-    setInput("");
-    onSearchChange("");
-    onConfirm("");
-  }
-
-  return (
-    <div style={{ position: "relative" }}>
-      <Input
-        type="text"
-        value={input}
-        onChange={(e) => handleInput(e.target.value)}
-        onKeyDown={handleKeyDown}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setTimeout(() => setFocused(false), 150)}
-        placeholder="Ville"
-        className="h-7 w-[180px] border-white/25 bg-white/12 text-white text-[13px] font-medium placeholder:text-white/50 focus-visible:bg-white/20 focus-visible:border-white/50 focus-visible:ring-0"
-        style={{ paddingRight: input ? 24 : 10 }}
-      />
-      {input && (
-        <span className="search-clear" onMouseDown={handleClear}>
-          <X className="size-3" />
-        </span>
-      )}
-      {focused && suggestions.length > 0 && (
-        <div className="suggestions">
-          {suggestions.map((city) => (
-            <div
-              key={city}
-              className="suggestion-item"
-              onMouseDown={() => select(city)}
-            >
-              {city} <span style={{ color: "var(--text-muted)" }}>({cityCounts[city] || 0})</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function UserDropdown({ email, onLogout }: { email: string; onLogout: () => void }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    if (open) document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [open]);
-  const username = email.split("@")[0];
-  const initial = username[0]?.toUpperCase() || "?";
-  return (
-    <div ref={ref} style={{ position: "relative" }}>
-      <button
-        onClick={() => setOpen(!open)}
-        style={{ display: "flex", alignItems: "center", gap: "0.375rem", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: "9999px", padding: "0.2rem 0.625rem 0.2rem 0.2rem", cursor: "pointer", color: "#fff", fontSize: "0.8125rem", fontWeight: 500 }}
-      >
-        <div style={{ width: "1.5rem", height: "1.5rem", borderRadius: "50%", background: "rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem", fontWeight: 700 }}>
-          {initial}
-        </div>
-        {username}
-        <ChevronDown className={`size-3 transition-transform ${open ? "rotate-180" : ""}`} />
-      </button>
-      {open && (
-        <div style={{ position: "absolute", top: "100%", right: 0, marginTop: "0.25rem", background: "var(--bg-panel)", borderRadius: "0.5rem", boxShadow: "0 4px 12px var(--shadow)", minWidth: "12rem", zIndex: 9999, overflow: "hidden", border: "1px solid var(--divider)" }}>
-          <div style={{ padding: "0.625rem 0.75rem", borderBottom: "1px solid var(--divider)" }}>
-            <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--text)" }}>{username}</div>
-            <div style={{ fontSize: "0.6875rem", color: "var(--text-muted)" }}>{email}</div>
-          </div>
-          <button
-            onClick={() => { onLogout(); setOpen(false); }}
-            style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.5rem 0.75rem", color: "#e63946", background: "none", border: "none", cursor: "pointer", fontSize: "0.8125rem", fontWeight: 500, width: "100%" }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-hover)")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-          >
-            <LogOut className="size-3.5" /> Déconnexion
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function NavDropdown({ onChangelogClick }: { onChangelogClick: () => void }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    if (open) document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [open]);
-  return (
-    <div ref={ref} style={{ position: "relative" }}>
-      <Button
-        variant="link"
-        size="sm"
-        className="text-white/85 hover:text-white text-[13px] font-medium no-underline hover:no-underline"
-        onClick={() => setOpen(!open)}
-      >
-        Menu <ChevronDown className={`size-3 transition-transform ${open ? "rotate-180" : ""}`} />
-      </Button>
-      {open && (
-        <div style={{ position: "absolute", top: "100%", right: 0, marginTop: "0.25rem", background: "var(--bg-panel)", borderRadius: "0.5rem", boxShadow: "0 4px 12px var(--shadow)", minWidth: "10rem", zIndex: 9999, overflow: "hidden", border: "1px solid var(--divider)" }}>
-          <a
-            href="/admin"
-            style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.5rem 0.75rem", color: "var(--text)", textDecoration: "none", fontSize: "0.8125rem", fontWeight: 500 }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-hover)")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-          >
-            <Shield className="size-3.5" /> Admin
-          </a>
-          <button
-            onClick={() => { onChangelogClick(); setOpen(false); }}
-            style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.5rem 0.75rem", color: "var(--text)", background: "none", border: "none", cursor: "pointer", fontSize: "0.8125rem", fontWeight: 500, width: "100%" }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-hover)")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-          >
-            <FileText className="size-3.5" /> Changelog
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function FilterBar({
-  gasType,
-  onGasTypeChange,
-  brand,
-  onBrandChange,
-  region,
-  onRegionChange,
-  search,
-  onSearchChange,
-  cities,
-  showFavorites,
-  onToggleFavorites,
-  regionCounts,
-  brandCounts,
-  cityCounts,
-  totalStations,
-  onLoginClick,
-  onChangelogClick,
-  currentUser,
-  onLogout,
-}: {
-  gasType: GasTypeKey;
-  onGasTypeChange: (t: GasTypeKey) => void;
-  brand: string;
-  onBrandChange: (b: string) => void;
-  region: string;
-  onRegionChange: (r: string) => void;
-  search: string;
-  onSearchChange: (s: string) => void;
-  cities: string[];
-  showFavorites: boolean;
-  onToggleFavorites: () => void;
-  regionCounts: Record<string, number>;
-  brandCounts: Record<string, number>;
-  cityCounts: Record<string, number>;
-  totalStations: number;
-  onLoginClick: () => void;
-  onChangelogClick: () => void;
-  currentUser: { email: string } | null;
-  onLogout: () => void;
-}) {
-  return (
-    <header className="gov-header">
-      <div className="gov-bar">
-        <div className="gov-bar-title">
-          <span className="gov-bar-fleur">&#9884;</span>
-          <div>
-            Essence Québec
-            <div className="gov-bar-subtitle">Prix en temps réel des stations-service</div>
-          </div>
-        </div>
-        <div className="gov-bar-filters">
-          <SearchWithSuggestions
-            search={search}
-            onSearchChange={onSearchChange}
-            onConfirm={onSearchChange}
-            cities={cities}
-            cityCounts={cityCounts}
-          />
-          <select
-            className="gov-select"
-            value={region}
-            onChange={(e) => onRegionChange(e.target.value)}
-          >
-            <option value="">Toutes les régions ({totalStations})</option>
-            {REGIONS.map((r) => (
-              <option key={r} value={r}>
-                {r} ({regionCounts[r] || 0})
-              </option>
-            ))}
-          </select>
-          <div className="flex gap-0.5">
-            {GAS_TYPES.map((t) => (
-              <Button
-                key={t.key}
-                variant={gasType === t.key ? "default" : "ghost"}
-                size="sm"
-                className={`text-[13px] font-semibold !text-white !border !border-white/25 ${
-                  gasType === t.key
-                    ? "!border-transparent"
-                    : "!bg-white/12 hover:!bg-white/20"
-                }`}
-                style={gasType === t.key ? { background: t.color } : undefined}
-                onClick={() => onGasTypeChange(t.key)}
-              >
-                {t.label}
-              </Button>
-            ))}
-          </div>
-          <select
-            className="gov-select"
-            value={brand}
-            onChange={(e) => onBrandChange(e.target.value)}
-          >
-            <option value="">Toutes les compagnies ({totalStations})</option>
-            {BRANDS.map((b) => (
-              <option key={b} value={b}>
-                {b} ({brandCounts[b] || 0})
-              </option>
-            ))}
-          </select>
-          <Button
-            variant={showFavorites ? "default" : "ghost"}
-            size="sm"
-            className={`text-[13px] font-semibold !text-white !border !border-white/25 ${
-              showFavorites
-                ? "!border-transparent !bg-[#ff9800] hover:!bg-[#ff9800]/80"
-                : "!bg-white/12 hover:!bg-white/20"
-            }`}
-            onClick={onToggleFavorites}
-          >
-            {showFavorites ? <Star className="size-3.5 fill-current" /> : <StarOff className="size-3.5" />}
-            Favoris
-          </Button>
-        </div>
-        <div className="gov-bar-right">
-          <NavDropdown onChangelogClick={onChangelogClick} />
-          {currentUser ? (
-            <UserDropdown email={currentUser.email} onLogout={onLogout} />
-          ) : (
-            <Button variant="link" size="sm" className="text-white/85 hover:text-white text-[13px] font-medium no-underline hover:no-underline" onClick={onLoginClick}>
-              <User className="size-3.5" /> Connexion
-            </Button>
-          )}
-        </div>
-        <div className="gov-bar-accent" />
-      </div>
-    </header>
-  );
-}
-
-const RegionPricePanel = memo(function RegionPricePanel({
-  data,
-  gasType,
-  visible,
-  onClose,
-}: {
-  data: GeoJSON.FeatureCollection;
-  gasType: GasTypeKey;
-  visible: boolean;
-  onClose: () => void;
-}) {
-  const regionAvgs = useMemo(() => {
-    const map: Record<string, { total: number; count: number }> = {};
-    data.features.forEach((f) => {
-      const props = (f as Feature<Point, StationProperties>).properties;
-      const p = props.Prices.find((pr) => pr.GasType === gasType && pr.IsAvailable);
-      if (!p) return;
-      if (!map[props.Region]) map[props.Region] = { total: 0, count: 0 };
-      map[props.Region].total += parsePrice(p.Price);
-      map[props.Region].count++;
-    });
-    return Object.entries(map)
-      .map(([region, { total, count }]) => ({ region, avg: total / count }))
-      .sort((a, b) => a.avg - b.avg);
-  }, [data, gasType]);
-
-  return (
-    <AnimatePresence>
-      {visible && (
-        <motion.div
-          className="panel"
-          style={{ top: 60, left: 12, width: 280, maxHeight: "70vh", overflowY: "auto" }}
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -20 }}
-          transition={{ duration: 0.2 }}
-        >
-          <div className="flex justify-between items-center mb-2">
-            <strong>Prix moyen par région ({gasType})</strong>
-            <Button variant="ghost" size="icon-xs" onClick={onClose}>
-              <X className="size-3.5" />
-            </Button>
-          </div>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <tbody>
-              {regionAvgs.map(({ region, avg }, i) => (
-                <tr key={region} style={{ background: i % 2 === 0 ? "var(--row-alt)" : "transparent" }}>
-                  <td style={{ padding: "4px 6px" }}>{region}</td>
-                  <td style={{ padding: "4px 6px", textAlign: "right", fontWeight: 600 }}>
-                    {avg.toFixed(1)}¢
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
-});
-
-function ReportModal({
-  stationName,
-  address,
-  onClose,
-}: {
-  stationName: string;
-  address: string;
-  onClose: () => void;
-}) {
-  const [form, setForm] = useState({ first_name: "", last_name: "", email: "", message: "" });
-  const [sending, setSending] = useState(false);
-  const [sent, setSent] = useState(false);
-  const [error, setError] = useState("");
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-    setFieldErrors({});
-
-    const payload = { station_name: stationName, address, ...form };
-    const validation = reportSchema.safeParse(payload);
-    if (!validation.success) {
-      const errs: Record<string, string> = {};
-      validation.error.issues.forEach((issue) => {
-        const key = String(issue.path[0]);
-        if (!errs[key]) errs[key] = issue.message;
-      });
-      setFieldErrors(errs);
-      return;
-    }
-
-    setSending(true);
-    const res = await fetch("/api/report", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    if (res.ok) {
-      setSent(true);
-    } else {
-      const data = await res.json();
-      setError(data.error || "Erreur");
-    }
-    setSending(false);
-  }
-
-  return (
-    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Flag className="size-4 text-destructive" />
-            Signaler une inexactitude
-          </DialogTitle>
-          <DialogDescription>
-            <strong>{stationName}</strong> — {address}
-          </DialogDescription>
-        </DialogHeader>
-
-        {sent ? (
-          <motion.div
-            className="text-center py-5"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-          >
-            <p className="text-[15px] font-semibold">Merci pour votre signalement !</p>
-            <p className="text-[13px] text-muted-foreground">Nous allons examiner votre demande.</p>
-            <Button onClick={onClose} className="mt-3">Fermer</Button>
-          </motion.div>
-        ) : (
-          <form onSubmit={handleSubmit} className="flex flex-col gap-2">
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <Input
-                  placeholder="Prénom"
-                  value={form.first_name}
-                  onChange={(e) => setForm({ ...form, first_name: e.target.value })}
-                  aria-invalid={!!fieldErrors.first_name}
-                />
-                {fieldErrors.first_name && <p className="text-xs text-destructive mt-0.5">{fieldErrors.first_name}</p>}
-              </div>
-              <div className="flex-1">
-                <Input
-                  placeholder="Nom"
-                  value={form.last_name}
-                  onChange={(e) => setForm({ ...form, last_name: e.target.value })}
-                  aria-invalid={!!fieldErrors.last_name}
-                />
-                {fieldErrors.last_name && <p className="text-xs text-destructive mt-0.5">{fieldErrors.last_name}</p>}
-              </div>
-            </div>
-            <div>
-              <Input
-                type="email"
-                placeholder="Courriel"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                aria-invalid={!!fieldErrors.email}
-              />
-              {fieldErrors.email && <p className="text-xs text-destructive mt-0.5">{fieldErrors.email}</p>}
-            </div>
-            <div>
-              <textarea
-                className="flex min-h-[80px] w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 outline-none resize-y"
-                placeholder="Décrivez l'inexactitude..."
-                value={form.message}
-                onChange={(e) => setForm({ ...form, message: e.target.value })}
-                aria-invalid={!!fieldErrors.message}
-                rows={4}
-              />
-              {fieldErrors.message && <p className="text-xs text-destructive mt-0.5">{fieldErrors.message}</p>}
-            </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" disabled={sending} variant="destructive">
-              <Send className="size-3.5" />
-              {sending ? "Envoi..." : "Envoyer le signalement"}
-            </Button>
-          </form>
-        )}
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function LoginModal({ onClose }: { onClose: () => void }) {
-  const [email, setEmail] = useState("");
-  const [code, setCode] = useState("");
-  const [step, setStep] = useState<"email" | "code" | "done">("email");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  async function handleSendCode(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-    const supabase = createBrowserClient();
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { shouldCreateUser: true },
-    });
-    setLoading(false);
-    if (error) setError(error.message);
-    else setStep("code");
-  }
-
-  async function handleVerifyCode(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-    const supabase = createBrowserClient();
-    const { error } = await supabase.auth.verifyOtp({
-      email,
-      token: code,
-      type: "email",
-    });
-    setLoading(false);
-    if (error) setError(error.message);
-    else setStep("done");
-  }
-
-  return (
-    <div className="report-overlay" onClick={onClose}>
-      <div className="report-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "24rem" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            <Mail className="size-4" />
-            <h2 style={{ fontSize: "1rem", fontWeight: 700, margin: 0 }}>Connexion</h2>
-          </div>
-          <span className="panel-close" onClick={onClose}>x</span>
-        </div>
-
-        {step === "email" && (
-          <form onSubmit={handleSendCode} className="flex flex-col gap-3">
-            <p style={{ fontSize: "0.8125rem", color: "var(--text-secondary)", margin: 0 }}>
-              Entrez votre courriel pour recevoir un code de connexion
-            </p>
-            <div>
-              <label style={{ fontSize: "0.75rem", fontWeight: 500, color: "var(--text-muted)", marginBottom: "0.25rem", display: "block" }}>Adresse courriel</label>
-              <input
-                className="login-input"
-                type="email"
-                placeholder="exemple@courriel.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                autoFocus
-              />
-            </div>
-            {error && <p style={{ fontSize: "0.8125rem", color: "#e63946", margin: 0 }}>{error}</p>}
-            <button className="login-btn" type="submit" disabled={loading}>
-              {loading ? "Envoi..." : "Envoyer le code"}
-            </button>
-            <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", margin: 0, lineHeight: 1.5 }}>
-              Aucun mot de passe requis. Un code à 6 chiffres sera envoyé à votre courriel.
-            </p>
-          </form>
-        )}
-
-        {step === "code" && (
-          <form onSubmit={handleVerifyCode} className="flex flex-col gap-3">
-            <p style={{ fontSize: "0.8125rem", color: "var(--text-secondary)", margin: 0 }}>
-              Un code a été envoyé à <strong>{email}</strong>
-            </p>
-            <div>
-              <label style={{ fontSize: "0.75rem", fontWeight: 500, color: "var(--text-muted)", marginBottom: "0.25rem", display: "block" }}>Code de vérification</label>
-              <input
-                className="login-input"
-                style={{ textAlign: "center", fontSize: "1.5rem", letterSpacing: "0.3em", fontFamily: "monospace" }}
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                maxLength={6}
-                placeholder="000000"
-                value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                required
-                autoFocus
-              />
-            </div>
-            {error && <p style={{ fontSize: "0.8125rem", color: "#e63946", margin: 0 }}>{error}</p>}
-            <button className="login-btn" type="submit" disabled={loading || code.length < 6}>
-              {loading ? "Vérification..." : "Vérifier le code"}
-            </button>
-            <button
-              type="button"
-              onClick={() => { setStep("email"); setError(""); setCode(""); }}
-              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", fontSize: "0.8125rem", display: "flex", alignItems: "center", gap: "0.25rem", padding: 0 }}
-            >
-              <ArrowLeft className="size-3" />
-              Changer de courriel
-            </button>
-          </form>
-        )}
-
-        {step === "done" && (
-          <motion.div
-            style={{ textAlign: "center", padding: "1rem 0" }}
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-          >
-            <p style={{ fontSize: "0.9375rem", fontWeight: 600, marginBottom: "0.25rem" }}>Connexion réussie !</p>
-            <p style={{ fontSize: "0.8125rem", color: "var(--text-muted)" }}>
-              Vous êtes maintenant connecté.
-            </p>
-            <button className="login-btn" onClick={onClose} style={{ marginTop: "1rem" }}>Fermer</button>
-          </motion.div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-interface ChangelogCommit {
-  sha: string;
-  date: string;
-  message: string;
-  author: string;
-}
-
-function ChangelogModal({ onClose }: { onClose: () => void }) {
-  const [commits, setCommits] = useState<ChangelogCommit[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetch("/api/changelog")
-      .then((r) => r.json())
-      .then((d) => setCommits(d))
-      .catch(() => setCommits([]))
-      .finally(() => setLoading(false));
-  }, []);
-
-  return (
-    <div className="report-overlay" onClick={onClose}>
-      <div className="report-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "40rem", maxHeight: "80vh", display: "flex", flexDirection: "column" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem", flexShrink: 0 }}>
-          <h2 style={{ fontSize: "1rem", fontWeight: 700, margin: 0, display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            <History className="size-4" /> Changelog
-          </h2>
-          <span className="panel-close" onClick={onClose}>x</span>
-        </div>
-        <div style={{ overflowY: "auto", flex: 1 }}>
-          {loading ? (
-            <div style={{ display: "flex", justifyContent: "center", padding: "2rem 0" }}>
-              <div style={{ width: "1.5rem", height: "1.5rem", border: "2.5px solid var(--divider)", borderTopColor: "var(--text-muted)", borderRadius: "50%", animation: "spin 0.6s linear infinite" }} />
-            </div>
-          ) : commits.length === 0 ? (
-            <p style={{ color: "var(--text-muted)", fontSize: "0.8125rem" }}>Aucun commit trouvé.</p>
-          ) : (
-            <div className="changelog-list">
-              {commits.map((c) => (
-                <div key={c.sha} className="changelog-item">
-                  <div className="changelog-date">
-                    {new Date(c.date).toLocaleDateString("fr-CA", { year: "numeric", month: "long", day: "numeric" })}
-                    {" — "}{c.author}
-                  </div>
-                  <div className="changelog-msg">{c.message}</div>
-                  <div className="changelog-sha">{c.sha.slice(0, 7)}</div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-interface Comment {
-  id: number;
-  content: string;
-  parent_id: number | null;
-  likes: number;
-  dislikes: number;
-  created_at: string;
-  author: string;
-  user_id: string;
-  my_vote: number;
-}
-
-function CommentItem({ c, replies, allComments, onVote, onSubmitReply, isAdmin, onDelete }: { c: Comment; replies: Comment[]; allComments: Comment[]; onVote: (id: number, vote: number) => void; onSubmitReply: (parentId: number, content: string) => Promise<boolean>; isAdmin?: boolean; onDelete?: (id: number) => void }) {
-  const [showReply, setShowReply] = useState(false);
-  const [replyText, setReplyText] = useState("");
-  const [sending, setSending] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const timeAgo = (d: string) => {
-    const diff = Date.now() - new Date(d).getTime();
-    const mins = Math.floor(diff / 60000);
-    if (mins < 60) return `il y a ${mins}m`;
-    const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `il y a ${hrs}h`;
-    return `il y a ${Math.floor(hrs / 24)}j`;
-  };
-  async function handleReply() {
-    if (!replyText.trim()) return;
-    setSending(true);
-    const ok = await onSubmitReply(c.id, replyText);
-    if (ok) { setReplyText(""); setShowReply(false); }
-    setSending(false);
-  }
-  return (
-    <div style={{ padding: "0.5rem 0" }}>
-      <div style={{ display: "flex", gap: "0.5rem", alignItems: "flex-start" }}>
-        <div style={{ width: "1.75rem", height: "1.75rem", borderRadius: "50%", background: "var(--bg-hover)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.75rem", fontWeight: 700, flexShrink: 0, color: "var(--text-secondary)" }}>
-          {c.author[0]?.toUpperCase()}
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: "0.75rem" }}>
-            <strong>{c.author}</strong>
-            <span style={{ color: "var(--text-muted)", marginLeft: "0.375rem" }}>{timeAgo(c.created_at)}</span>
-          </div>
-          <p style={{ fontSize: "0.8125rem", margin: "0.25rem 0 0.375rem", lineHeight: 1.4, color: "var(--text)" }}>{c.content}</p>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", fontSize: "0.75rem" }}>
-            <button onClick={() => onVote(c.id, 1)} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "0.25rem", color: c.my_vote === 1 ? "#0ea5e9" : "var(--text-muted)", padding: 0 }}>
-              &#128077; {c.likes > 0 && c.likes}
-            </button>
-            <button onClick={() => onVote(c.id, -1)} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "0.25rem", color: c.my_vote === -1 ? "#e63946" : "var(--text-muted)", padding: 0 }}>
-              &#128078; {c.dislikes > 0 && c.dislikes}
-            </button>
-            <button onClick={() => setShowReply(!showReply)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 0, fontWeight: 600, fontSize: "0.75rem" }}>
-              Répondre
-            </button>
-            {isAdmin && onDelete && !confirmDelete && (
-              <button onClick={() => setConfirmDelete(true)} style={{ background: "none", border: "none", cursor: "pointer", color: "#e63946", padding: 0, fontWeight: 600, fontSize: "0.75rem" }}>
-                Supprimer
-              </button>
-            )}
-          </div>
-          {confirmDelete && (
-            <div style={{ marginTop: "0.375rem", padding: "0.5rem 0.625rem", background: "var(--bg-hover)", borderRadius: "0.375rem", fontSize: "0.75rem" }}>
-              <p style={{ margin: "0 0 0.375rem", fontWeight: 600 }}>Supprimer ce commentaire ?</p>
-              <div style={{ display: "flex", gap: "0.375rem" }}>
-                <button onClick={() => { onDelete!(c.id); setConfirmDelete(false); }} style={{ padding: "0.25rem 0.625rem", background: "#e63946", color: "#fff", border: "none", borderRadius: "0.25rem", cursor: "pointer", fontWeight: 600, fontSize: "0.75rem" }}>
-                  Confirmer
-                </button>
-                <button onClick={() => setConfirmDelete(false)} style={{ padding: "0.25rem 0.625rem", background: "var(--bg-panel)", color: "var(--text)", border: "1px solid var(--divider)", borderRadius: "0.25rem", cursor: "pointer", fontWeight: 600, fontSize: "0.75rem" }}>
-                  Annuler
-                </button>
-              </div>
-            </div>
-          )}
-          {showReply && (
-            <div style={{ display: "flex", gap: "0.375rem", marginTop: "0.375rem" }}>
-              <input
-                className="login-input"
-                placeholder={`Répondre à ${c.author}...`}
-                value={replyText}
-                onChange={(e) => setReplyText(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") handleReply(); }}
-                style={{ flex: 1, marginBottom: 0, fontSize: "0.75rem" }}
-                autoFocus
-              />
-              <button className="login-btn" onClick={handleReply} disabled={sending || !replyText.trim()} style={{ width: "auto", padding: "0 0.625rem", fontSize: "0.75rem" }}>
-                {sending ? "..." : "Publier"}
-              </button>
-              <button onClick={() => { setShowReply(false); setReplyText(""); }} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", fontSize: "0.75rem", padding: 0 }}>
-                Annuler
-              </button>
-            </div>
-          )}
-          {replies.length > 0 && (
-            <div style={{ marginLeft: "0.5rem", borderLeft: "2px solid var(--divider)", paddingLeft: "0.75rem", marginTop: "0.375rem" }}>
-              {replies.map((r) => (
-                <CommentItem key={r.id} c={r} replies={allComments.filter((x) => x.parent_id === r.id)} allComments={allComments} onVote={onVote} onSubmitReply={onSubmitReply} isAdmin={isAdmin} onDelete={onDelete} />
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-const ADMIN_EMAILS_CLIENT = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
-
-function CommentsModal({ stationName, address, onClose, userEmail }: { stationName: string; address: string; onClose: () => void; userEmail?: string }) {
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [newComment, setNewComment] = useState("");
-  const [sending, setSending] = useState(false);
-  const [error, setError] = useState("");
-  const isAdmin = !!userEmail && ADMIN_EMAILS_CLIENT.includes(userEmail.toLowerCase());
-
-  async function getToken() {
-    const { data: { session } } = await createBrowserClient().auth.getSession();
-    return session?.access_token || null;
-  }
-
-  async function loadComments() {
-    const token = await getToken();
-    const headers: Record<string, string> = {};
-    if (token) headers.Authorization = `Bearer ${token}`;
-    const res = await fetch(`/api/reviews?station=${encodeURIComponent(stationName)}&address=${encodeURIComponent(address)}`, { headers });
-    const data = await res.json();
-    setComments(Array.isArray(data) ? data : []);
-    setLoading(false);
-  }
-
-  useEffect(() => { loadComments(); }, [stationName, address]);
-
-  async function submitComment(content: string, parentId: number | null): Promise<boolean> {
-    const token = await getToken();
-    if (!token) { setError("Connectez-vous pour commenter"); return false; }
-    const res = await fetch("/api/reviews", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ station_name: stationName, address, content, parent_id: parentId }),
-    });
-    if (res.ok) { loadComments(); return true; }
-    const d = await res.json();
-    setError(d.error || "Erreur");
-    return false;
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!newComment.trim()) return;
-    setError("");
-    setSending(true);
-    const ok = await submitComment(newComment, null);
-    if (ok) setNewComment("");
-    setSending(false);
-  }
-
-  async function handleReply(parentId: number, content: string): Promise<boolean> {
-    return submitComment(content, parentId);
-  }
-
-  async function handleVote(commentId: number, vote: number) {
-    const token = await getToken();
-    if (!token) { setError("Connectez-vous pour voter"); return; }
-    setComments((prev) => prev.map((c) => {
-      if (c.id !== commentId) return c;
-      const wasVote = c.my_vote;
-      if (wasVote === vote) {
-        return { ...c, my_vote: 0, likes: c.likes - (vote === 1 ? 1 : 0), dislikes: c.dislikes - (vote === -1 ? 1 : 0) };
+    if (showCursors) {
+      for (const [uid, data] of Object.entries(cursorsRef.current)) {
+        if (!markersRef.current[uid]) {
+          const icon = L.divIcon({
+            html: `<div style="width:12px;height:12px;background:${data.color};border:2px solid #fff;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.3);"></div>`,
+            className: "",
+            iconSize: [50, 30],
+            iconAnchor: [25, 6],
+          });
+          markersRef.current[uid] = L.marker([data.lat, data.lng], { icon, interactive: false, zIndexOffset: 9999 }).addTo(map);
+        }
       }
-      return {
-        ...c,
-        my_vote: vote,
-        likes: c.likes + (vote === 1 ? 1 : 0) - (wasVote === 1 ? 1 : 0),
-        dislikes: c.dislikes + (vote === -1 ? 1 : 0) - (wasVote === -1 ? 1 : 0),
-      };
-    }));
-    await fetch("/api/reviews", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ action: "vote", comment_id: commentId, vote }),
+    } else {
+      Object.values(markersRef.current).forEach((m) => m.remove());
+      markersRef.current = {};
+    }
+  }, [showCursors, map]);
+
+  // Always connect: broadcast own cursor + receive others
+  useEffect(() => {
+    const userId = getCursorUserId();
+    userIdRef.current = userId;
+    const color = hashColor(userId);
+    const supabase = createBrowserClient();
+    const channel = supabase.channel("live-cursors", { config: { broadcast: { self: false } } });
+    channelRef.current = channel;
+
+    channel.on("broadcast", { event: "cursor" }, ({ payload }) => {
+      const { user_id, lat, lng, color: c } = payload as { user_id: string; lat: number; lng: number; color: string };
+      if (user_id === userId) return;
+      cursorsRef.current[user_id] = { lat, lng, color: c, uid: user_id };
+      if (!showRef.current) return;
+      const existing = markersRef.current[user_id];
+      if (existing) {
+        existing.setLatLng([lat, lng]);
+      } else {
+        const icon = L.divIcon({
+          html: `<div style="width:12px;height:12px;background:${c};border:2px solid #fff;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.3);"></div>`,
+          className: "",
+          iconSize: [50, 30],
+          iconAnchor: [25, 6],
+        });
+        markersRef.current[user_id] = L.marker([lat, lng], { icon, interactive: false, zIndexOffset: 9999 }).addTo(map);
+      }
     });
-  }
 
-  async function handleDelete(commentId: number) {
-    const token = await getToken();
-    if (!token) return;
-    const res = await fetch("/api/reviews", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ comment_id: commentId }),
+    channel.on("broadcast", { event: "leave" }, ({ payload }) => {
+      const { user_id } = payload as { user_id: string };
+      delete cursorsRef.current[user_id];
+      markersRef.current[user_id]?.remove();
+      delete markersRef.current[user_id];
     });
-    if (res.ok) loadComments();
-  }
 
-  const topLevel = comments.filter((c) => !c.parent_id);
-  const getReplies = (id: number) => comments.filter((c) => c.parent_id === id);
+    channel.on("presence", { event: "sync" }, () => {
+      const state = channel.presenceState();
+      onOnlineCount(Object.keys(state).length);
+    });
 
-  return (
-    <div className="report-overlay" onClick={onClose}>
-      <div className="report-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "30rem", maxHeight: "85vh", display: "flex", flexDirection: "column" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem", flexShrink: 0 }}>
-          <h2 style={{ fontSize: "1.0625rem", fontWeight: 700, margin: 0 }}>Commentaires — {stationName}</h2>
-          <span className="panel-close" onClick={onClose}>x</span>
-        </div>
-        <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: "0.75rem" }}>{comments.length} commentaire{comments.length !== 1 ? "s" : ""}</div>
+    channel.subscribe(async (status) => {
+      if (status === "SUBSCRIBED") {
+        await channel.track({ user_id: userId, color });
+      }
+    });
 
-        <form onSubmit={handleSubmit} style={{ flexShrink: 0, marginBottom: "0.75rem" }}>
-          <div style={{ display: "flex", gap: "0.375rem" }}>
-            <input
-              className="login-input"
-              placeholder="Ajouter un commentaire..."
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              style={{ flex: 1, marginBottom: 0 }}
-            />
-            <button className="login-btn" type="submit" disabled={sending || !newComment.trim()} style={{ width: "auto", padding: "0 0.75rem", fontSize: "0.8125rem" }}>
-              {sending ? "..." : "Publier"}
-            </button>
-          </div>
-          {error && <p className="login-error" style={{ marginTop: "0.25rem" }}>{error}</p>}
-        </form>
+    const onMouseMove = (e: L.LeafletMouseEvent) => {
+      const now = Date.now();
+      if (now - lastSendRef.current < 60) return;
+      lastSendRef.current = now;
+      channel.send({ type: "broadcast", event: "cursor", payload: { user_id: userId, lat: e.latlng.lat, lng: e.latlng.lng, color } });
+    };
 
-        <div style={{ overflowY: "auto", flex: 1 }}>
-          {loading ? (
-            <div style={{ display: "flex", justifyContent: "center", padding: "2rem 0" }}>
-              <div style={{ width: "1.5rem", height: "1.5rem", border: "2.5px solid var(--divider)", borderTopColor: "var(--text-muted)", borderRadius: "50%", animation: "spin 0.6s linear infinite" }} />
-            </div>
-          ) : topLevel.length === 0 ? (
-            <p style={{ color: "var(--text-muted)", fontSize: "0.8125rem" }}>Aucun commentaire. Soyez le premier !</p>
-          ) : (
-            topLevel.map((c) => (
-              <CommentItem key={c.id} c={c} replies={getReplies(c.id)} allComments={comments} onVote={handleVote} onSubmitReply={handleReply} isAdmin={isAdmin} onDelete={handleDelete} />
-            ))
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
+    map.on("mousemove", onMouseMove);
 
-function SiteThemeToggle() {
-  const { theme, setTheme } = useTheme();
-  const isDark = theme === "dark";
-  return (
-    <Button
-      variant="outline"
-      size="sm"
-      className="mt-1.5 shadow-md !bg-[var(--bg-panel)] !text-[var(--text)] !border-0 font-semibold text-[13px]"
-      onClick={() => setTheme(isDark ? "light" : "dark")}
-    >
-      {isDark ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
-      {isDark ? "Mode clair" : "Mode sombre"}
-    </Button>
-  );
+    return () => {
+      map.off("mousemove", onMouseMove);
+      channel.send({ type: "broadcast", event: "leave", payload: { user_id: userId } });
+      Object.values(markersRef.current).forEach((m) => m.remove());
+      markersRef.current = {};
+      cursorsRef.current = {};
+      supabase.removeChannel(channel);
+      channelRef.current = null;
+    };
+  }, [map, onOnlineCount]);
+
+  return null;
 }
 
 export default function Map() {
@@ -1199,6 +341,9 @@ export default function Map() {
   const [data, setData] = useState<GeoJSON.FeatureCollection | null>(null);
   const [geoReady, setGeoReady] = useState(false);
   const [flyTarget, setFlyTarget] = useState<{ center: [number, number]; zoom: number } | null>(null);
+  const [showCursors, setShowCursors] = useState(false);
+  const [onlineCount, setOnlineCount] = useState(0);
+  const handleOnlineCount = useCallback((n: number) => setOnlineCount(n), []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -1490,13 +635,13 @@ export default function Map() {
             </div>
           ))}
         </div>
-        <div style={{ position: "absolute", bottom: 30, left: 12, zIndex: 1000 }}>
-          <div className="mb-1.5">
+        <div className="flex flex-col gap-1.5 leaflet-control" style={{ position: "absolute", bottom: 30, left: 12, zIndex: 1000, width: 170 }}>
+          <div>
             <Button
               variant={cheapestResults ? "outline" : "default"}
               size="sm"
               className={`w-full shadow-md font-semibold text-[13px] ${!cheapestResults ? "!bg-[#2d9a2d] hover:!bg-[#2d9a2d]/90 !text-white" : "!bg-[var(--bg-panel)] !text-[var(--text)]"}`}
-              onClick={() => { if (cheapestResults) setCheapestResults(null); else findCheapestNearby(); }}
+              onClick={() => { if (cheapestResults) { setCheapestResults(null); setRadiusKm(0); } else findCheapestNearby(); }}
             >
               <Crosshair className="size-3.5" />
               {cheapestResults ? "Masquer" : "Meilleur prix proche"}
@@ -1514,41 +659,39 @@ export default function Map() {
               )}
             </AnimatePresence>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mb-1.5 w-full shadow-md !bg-[var(--bg-panel)] !text-[var(--text)] !border-0 font-semibold text-[13px]"
-            onClick={() => setShowRegionPanel((v) => !v)}
-          >
+          <Button variant="outline" size="sm" className="w-full shadow-md !bg-[var(--bg-panel)] !text-[var(--text)] !border-0 font-semibold text-[13px]" onClick={() => setShowRegionPanel((v) => !v)}>
             <BarChart3 className="size-3.5" />
             Prix par région
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mb-1.5 w-full shadow-md !bg-[var(--bg-panel)] !text-[var(--text)] !border-0 font-semibold text-[13px]"
-            onClick={shareLink}
-          >
+          <Button variant="outline" size="sm" className="w-full shadow-md !bg-[var(--bg-panel)] !text-[var(--text)] !border-0 font-semibold text-[13px]" onClick={shareLink}>
             <Share2 className="size-3.5" />
             Partager
           </Button>
-          <div className="map-style-group">
-            {(["carte", "satellite", "dark"] as const).map((s) => (
-              <button
-                key={s}
-                className={`map-style-btn ${mapStyle === s ? "map-style-btn-active" : ""}`}
-                onClick={() => setMapStyle(s)}
-              >
-                {s === "carte" ? "Carte" : s === "satellite" ? "Satellite" : "Dark"}
-              </button>
-            ))}
-          </div>
+          <Button variant="outline" size="sm" className="w-full shadow-md !bg-[var(--bg-panel)] !text-[var(--text)] !border-0 font-semibold text-[13px]" onClick={() => setMapStyle(mapStyle === "satellite" ? "carte" : "satellite")}>
+            {mapStyle === "satellite" ? "Carte" : "Satellite"}
+          </Button>
+          <Button variant="outline" size="sm" className={`w-full shadow-md font-semibold text-[13px] ${showCursors ? "!bg-[#457b9d] !text-white" : "!bg-[var(--bg-panel)] !text-[var(--text)]"} !border-0`} onClick={() => setShowCursors((v) => !v)}>
+            <Users className="size-3.5" />
+            {showCursors ? `En ligne (${onlineCount})` : "Visiteurs"}
+          </Button>
+          {userPos && (
+            <div className="bg-[var(--bg-panel)] rounded-md shadow-md px-3 py-2">
+              <div className="text-xs font-semibold mb-1">
+                Rayon : {radiusKm === 0 ? "Tout" : `${radiusKm} km`}
+              </div>
+              <Slider
+                min={0}
+                max={50}
+                step={5}
+                value={[radiusKm]}
+                onValueChange={(v) => setRadiusKm(Array.isArray(v) ? v[0] : v)}
+                className="w-full"
+              />
+            </div>
+          )}
           <SiteThemeToggle />
         </div>
         <AttributionControl position="bottomleft" />
-        {userPos && (
-          <RadiusSlider radiusKm={radiusKm} onChange={setRadiusKm} />
-        )}
         {userPos && radiusKm > 0 && (
           <Circle
             center={userPos}
@@ -1564,6 +707,7 @@ export default function Map() {
             onClose={() => setShowRegionPanel(false)}
           />
         )}
+        <LiveCursors showCursors={showCursors} onOnlineCount={handleOnlineCount} />
         {flyTarget && <FlyTo center={flyTarget.center} zoom={flyTarget.zoom} />}
         <AnimatePresence>
           {(!data || !geoReady) && (

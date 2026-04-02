@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { createBrowserClient } from "@/lib/auth";
 import type { User } from "@supabase/supabase-js";
 
@@ -10,6 +10,14 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import {
   Users,
   BarChart3,
@@ -53,46 +61,27 @@ interface Stats {
 }
 
 function AdminUserDropdown({ email, onLogout }: { email: string; onLogout: () => void }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    if (open) document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [open]);
   const username = email.split("@")[0];
   const initial = username[0]?.toUpperCase() || "?";
   return (
-    <div ref={ref} style={{ position: "relative" }}>
-      <button
-        onClick={() => setOpen(!open)}
-        style={{ display: "flex", alignItems: "center", gap: "0.375rem", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: "9999px", padding: "0.2rem 0.625rem 0.2rem 0.2rem", cursor: "pointer", color: "#fff", fontSize: "0.8125rem", fontWeight: 500 }}
-      >
-        <div style={{ width: "1.5rem", height: "1.5rem", borderRadius: "50%", background: "rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem", fontWeight: 700 }}>
-          {initial}
-        </div>
-        {username}
-        <ChevronDown className={`size-3 transition-transform ${open ? "rotate-180" : ""}`} />
-      </button>
-      {open && (
-        <div style={{ position: "absolute", top: "100%", right: 0, marginTop: "0.25rem", background: "var(--bg-panel)", borderRadius: "0.5rem", boxShadow: "0 4px 12px var(--shadow)", minWidth: "12rem", zIndex: 9999, overflow: "hidden", border: "1px solid var(--divider)" }}>
-          <div style={{ padding: "0.625rem 0.75rem", borderBottom: "1px solid var(--divider)" }}>
-            <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--text)" }}>{username}</div>
-            <div style={{ fontSize: "0.6875rem", color: "var(--text-muted)" }}>{email}</div>
+    <DropdownMenu>
+      <DropdownMenuTrigger>
+        <button className="flex items-center gap-1.5 bg-white/12 border border-white/25 rounded-full py-0.5 pr-2.5 pl-0.5 cursor-pointer text-white text-[0.8125rem] font-medium">
+          <div className="w-6 h-6 rounded-full bg-white/25 flex items-center justify-center text-[0.7rem] font-bold">
+            {initial}
           </div>
-          <button
-            onClick={() => { onLogout(); setOpen(false); }}
-            style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.5rem 0.75rem", color: "#e63946", background: "none", border: "none", cursor: "pointer", fontSize: "0.8125rem", fontWeight: 500, width: "100%" }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-hover)")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-          >
-            <LogOut className="size-3.5" /> D&eacute;connexion
-          </button>
-        </div>
-      )}
-    </div>
+          {username}
+          <ChevronDown className="size-3 transition-transform group-data-[popup-open]:rotate-180" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuLabel>{email}</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem variant="destructive" onClick={onLogout}>
+          <LogOut className="size-3.5" /> Déconnexion
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 

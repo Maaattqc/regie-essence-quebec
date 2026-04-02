@@ -6,6 +6,11 @@
 ## Règles UI
 - **Jamais** de `window.confirm()`, `window.alert()` ou `window.prompt()` — utiliser des confirmations inline stylées (Tailwind/shadcn) cohérentes avec le design du site
 
+## Outils CLI disponibles
+- **Supabase CLI** (`npx supabase`) — projet lié : `dpjmmnkhlhwluytfaclz` (`regie-essence-quebec`). Utiliser `npx supabase db query --linked "SQL"` pour exécuter des migrations.
+- **Vercel CLI** — projet déployé sur Vercel
+- **GitHub** — repo connecté, utiliser `gh` pour les PRs/issues
+
 ## Stack technique
 
 ### Frontend
