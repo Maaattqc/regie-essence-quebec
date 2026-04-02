@@ -66,6 +66,8 @@
   --row-alt: #252525;
 }
 
+@keyframes spin { to { transform: rotate(360deg); } }
+
 /* ── Base ── */
 html,
 body {
@@ -226,7 +228,6 @@ body {
     height: 0.4rem;
   }
   .radius-panel {
-    top: auto;
     bottom: 60px;
     right: 6px;
   }
@@ -254,6 +255,11 @@ body {
     font-size: 18px;
   }
   .gov-bar-right {
+    order: 2;
+    gap: 0.25rem;
+    font-size: 11px;
+  }
+  .gov-bar-right .text-white\/70 {
     display: none;
   }
   .gov-bar-filters {
@@ -303,7 +309,6 @@ body {
     height: 0.35rem;
   }
   .radius-panel {
-    top: auto;
     bottom: 3rem;
     right: 0.5rem;
   }
@@ -604,7 +609,7 @@ body {
 /* ── Radius slider panel ── */
 .radius-panel {
   position: absolute;
-  top: 11rem;
+  bottom: 2rem;
   right: 0.75rem;
   z-index: 1000;
   background: var(--bg-panel);

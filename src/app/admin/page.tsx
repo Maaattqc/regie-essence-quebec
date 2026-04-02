@@ -67,12 +67,14 @@ export default function AdminPage() {
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
       if (user) {
+        const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
+        const emailIsAdmin = !!user.email && adminEmails.includes(user.email.toLowerCase());
         const { data } = await supabase
           .from("profiles")
           .select("role")
           .eq("id", user.id)
           .single();
-        setIsAdmin(data?.role === "admin");
+        setIsAdmin(data?.role === "admin" || emailIsAdmin);
       }
       setLoading(false);
     }
@@ -80,11 +82,11 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!user) return;
     loadStats();
     loadUsers();
     loadReports();
-  }, [isAdmin]);
+  }, [user]);
 
   async function loadStats() {
     const { count: totalSnapshots } = await supabase
@@ -152,26 +154,24 @@ export default function AdminPage() {
       </Button>
     </div>
   );
-  if (!isAdmin) return (
-    <div className="admin-center">
-      <AlertCircle className="mx-auto size-10 text-destructive mb-2" />
-      <h2>Acc&egrave;s refus&eacute;</h2>
-      <p>Vous n&apos;avez pas les droits administrateur.</p>
-      <Button variant="link" render={<a href="/" />} className="mt-2">
-        <ArrowLeft className="size-4" />
-        Retour &agrave; la carte
-      </Button>
-    </div>
-  );
+  const readOnly = !isAdmin;
 
   return (
     <div className="admin-page">
       <header className="gov-bar">
+        <Button variant="ghost" size="icon-sm" render={<a href="/" />} className="!text-white hover:!bg-white/15">
+          <ArrowLeft className="size-4" />
+        </Button>
         <div className="gov-bar-title">
           <span className="gov-bar-fleur">⚜</span>
-          <div>Administration<div className="gov-bar-subtitle">R&eacute;gie Essence Qu&eacute;bec</div></div>
+          <div>Administration<div className="gov-bar-subtitle">Essence Qu&eacute;bec</div></div>
         </div>
         <div className="gov-bar-right">
+          {readOnly && (
+            <Badge variant="secondary" className="bg-white/15 text-white border-0 text-xs font-semibold">
+              Lecture seule
+            </Badge>
+          )}
           <span>{user.email}</span>
           <Button
             variant="ghost"
@@ -253,7 +253,7 @@ export default function AdminPage() {
           <TabsContent value="cron">
             <div className="space-y-4">
               <p className="text-muted-foreground">D&eacute;clencher manuellement un snapshot des prix.</p>
-              <Button onClick={triggerCron} disabled={cronLoading}>
+              <Button onClick={triggerCron} disabled={cronLoading || readOnly}>
                 <Play className="size-4" />
                 {cronLoading ? "En cours..." : "Lancer le cron maintenant"}
               </Button>
@@ -289,6 +289,7 @@ export default function AdminPage() {
                         variant={u.role === "admin" ? "destructive" : "outline"}
                         size="sm"
                         onClick={() => toggleRole(u)}
+                        disabled={readOnly}
                       >
                         <Shield className="size-3" />
                         {u.role === "admin" ? "Retirer admin" : "Rendre admin"}
@@ -345,12 +346,12 @@ export default function AdminPage() {
                       <TableCell>
                         <div className="flex flex-col gap-1">
                           {r.status === "nouveau" && (
-                            <Button variant="outline" size="xs" onClick={() => updateReportStatus(r.id, "en traitement")}>
+                            <Button variant="outline" size="xs" onClick={() => updateReportStatus(r.id, "en traitement")} disabled={readOnly}>
                               En traitement
                             </Button>
                           )}
                           {r.status !== "r\u00e9solu" && (
-                            <Button variant="secondary" size="xs" onClick={() => updateReportStatus(r.id, "r\u00e9solu")}>
+                            <Button variant="secondary" size="xs" onClick={() => updateReportStatus(r.id, "r\u00e9solu")} disabled={readOnly}>
                               R&eacute;solu
                             </Button>
                           )}

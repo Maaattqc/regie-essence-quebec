@@ -3,6 +3,9 @@
 ## Convention de commits
 - Tous les messages de commit doivent être en **français**
 
+## Règles UI
+- **Jamais** de `window.confirm()`, `window.alert()` ou `window.prompt()` — utiliser des confirmations inline stylées (Tailwind/shadcn) cohérentes avec le design du site
+
 ## Stack technique
 
 ### Frontend

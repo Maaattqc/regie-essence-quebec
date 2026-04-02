@@ -222,15 +222,15 @@ host = "smtp.resend.com"
 port = 465
 user = "resend"
 pass = "env(RESEND_API_KEY)"
-admin_email = "onboarding@resend.dev"
-sender_name = "Régie Essence Québec"
+admin_email = "noreply@essence-quebec.ca"
+sender_name = "Essence Québec"
 
 [auth.email.template.magic_link]
-subject = "Votre lien de connexion — Régie Essence Québec"
+subject = "Votre lien de connexion — Essence Québec"
 content_path = "./supabase/templates/magic_link.html"
 
 [auth.email.template.confirmation]
-subject = "Confirmez votre courriel — Régie Essence Québec"
+subject = "Confirmez votre courriel — Essence Québec"
 content_path = "./supabase/templates/confirmation.html"
 
 # Uncomment to customize notification email template

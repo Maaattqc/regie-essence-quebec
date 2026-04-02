@@ -22,9 +22,10 @@ import {
 } from "@/components/ui/dialog";
 import {
   X, Star, StarOff, History, Flag, Send, Mail, ArrowLeft,
-  Sun, Moon, Share2, BarChart3, Crosshair,
+  Sun, Moon, Share2, BarChart3, Crosshair, ChevronDown, Shield, FileText, LogOut, User,
 } from "lucide-react";
 import { reportSchema } from "@/lib/schemas";
+import { createBrowserClient } from "@/lib/auth";
 import {
   type StationProperties,
   type StationPrice,
@@ -109,7 +110,7 @@ function useDisableMapDrag() {
 function RadiusSlider({ radiusKm, onChange }: { radiusKm: number; onChange: (v: number) => void }) {
   const dragProps = useDisableMapDrag();
   return (
-    <div className="radius-panel" {...dragProps}>
+    <div className="radius-panel" style={{ display: "inline-block" }} {...dragProps}>
       <div className="text-xs font-semibold mb-1">
         Rayon : {radiusKm === 0 ? "Tout" : `${radiusKm} km`}
       </div>
@@ -333,6 +334,94 @@ function SearchWithSuggestions({
   );
 }
 
+function UserDropdown({ email, onLogout }: { email: string; onLogout: () => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    if (open) document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+  const username = email.split("@")[0];
+  const initial = username[0]?.toUpperCase() || "?";
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button
+        onClick={() => setOpen(!open)}
+        style={{ display: "flex", alignItems: "center", gap: "0.375rem", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: "9999px", padding: "0.2rem 0.625rem 0.2rem 0.2rem", cursor: "pointer", color: "#fff", fontSize: "0.8125rem", fontWeight: 500 }}
+      >
+        <div style={{ width: "1.5rem", height: "1.5rem", borderRadius: "50%", background: "rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem", fontWeight: 700 }}>
+          {initial}
+        </div>
+        {username}
+        <ChevronDown className={`size-3 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div style={{ position: "absolute", top: "100%", right: 0, marginTop: "0.25rem", background: "var(--bg-panel)", borderRadius: "0.5rem", boxShadow: "0 4px 12px var(--shadow)", minWidth: "12rem", zIndex: 9999, overflow: "hidden", border: "1px solid var(--divider)" }}>
+          <div style={{ padding: "0.625rem 0.75rem", borderBottom: "1px solid var(--divider)" }}>
+            <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--text)" }}>{username}</div>
+            <div style={{ fontSize: "0.6875rem", color: "var(--text-muted)" }}>{email}</div>
+          </div>
+          <button
+            onClick={() => { onLogout(); setOpen(false); }}
+            style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.5rem 0.75rem", color: "#e63946", background: "none", border: "none", cursor: "pointer", fontSize: "0.8125rem", fontWeight: 500, width: "100%" }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-hover)")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+          >
+            <LogOut className="size-3.5" /> Déconnexion
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NavDropdown({ onChangelogClick }: { onChangelogClick: () => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    if (open) document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <Button
+        variant="link"
+        size="sm"
+        className="text-white/85 hover:text-white text-[13px] font-medium no-underline hover:no-underline"
+        onClick={() => setOpen(!open)}
+      >
+        Menu <ChevronDown className={`size-3 transition-transform ${open ? "rotate-180" : ""}`} />
+      </Button>
+      {open && (
+        <div style={{ position: "absolute", top: "100%", right: 0, marginTop: "0.25rem", background: "var(--bg-panel)", borderRadius: "0.5rem", boxShadow: "0 4px 12px var(--shadow)", minWidth: "10rem", zIndex: 9999, overflow: "hidden", border: "1px solid var(--divider)" }}>
+          <a
+            href="/admin"
+            style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.5rem 0.75rem", color: "var(--text)", textDecoration: "none", fontSize: "0.8125rem", fontWeight: 500 }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-hover)")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+          >
+            <Shield className="size-3.5" /> Admin
+          </a>
+          <button
+            onClick={() => { onChangelogClick(); setOpen(false); }}
+            style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.5rem 0.75rem", color: "var(--text)", background: "none", border: "none", cursor: "pointer", fontSize: "0.8125rem", fontWeight: 500, width: "100%" }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-hover)")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+          >
+            <FileText className="size-3.5" /> Changelog
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function FilterBar({
   gasType,
   onGasTypeChange,
@@ -380,7 +469,7 @@ function FilterBar({
         <div className="gov-bar-title">
           <span className="gov-bar-fleur">&#9884;</span>
           <div>
-            Régie Essence Québec
+            Essence Québec
             <div className="gov-bar-subtitle">Prix en temps réel des stations-service</div>
           </div>
         </div>
@@ -410,10 +499,10 @@ function FilterBar({
                 key={t.key}
                 variant={gasType === t.key ? "default" : "ghost"}
                 size="sm"
-                className={`text-[13px] font-semibold text-white border border-white/25 ${
+                className={`text-[13px] font-semibold !text-white !border !border-white/25 ${
                   gasType === t.key
-                    ? "border-transparent"
-                    : "bg-white/12 hover:bg-white/20 hover:text-white"
+                    ? "!border-transparent"
+                    : "!bg-white/12 hover:!bg-white/20"
                 }`}
                 style={gasType === t.key ? { background: t.color } : undefined}
                 onClick={() => onGasTypeChange(t.key)}
@@ -437,10 +526,10 @@ function FilterBar({
           <Button
             variant={showFavorites ? "default" : "ghost"}
             size="sm"
-            className={`text-[13px] font-semibold text-white border border-white/25 ${
+            className={`text-[13px] font-semibold !text-white !border !border-white/25 ${
               showFavorites
-                ? "border-transparent bg-[#ff9800] hover:bg-[#ff9800]/80"
-                : "bg-white/12 hover:bg-white/20 hover:text-white"
+                ? "!border-transparent !bg-[#ff9800] hover:!bg-[#ff9800]/80"
+                : "!bg-white/12 hover:!bg-white/20"
             }`}
             onClick={onToggleFavorites}
           >
@@ -449,22 +538,12 @@ function FilterBar({
           </Button>
         </div>
         <div className="gov-bar-right">
-          <Badge variant="secondary" className="bg-white/15 text-white border-0 text-xs font-semibold tracking-wide">
-            EN DIRECT
-          </Badge>
-          <Button variant="link" size="sm" className="text-white/85 hover:text-white text-[13px] font-medium no-underline hover:no-underline" onClick={onChangelogClick}>
-            Changelog
-          </Button>
+          <NavDropdown onChangelogClick={onChangelogClick} />
           {currentUser ? (
-            <>
-              <span className="text-white/70 text-[12px]">{currentUser.email.split("@")[0]}</span>
-              <Button variant="link" size="sm" className="text-white/85 hover:text-white text-[13px] font-medium no-underline hover:no-underline" onClick={onLogout}>
-                Déconnexion
-              </Button>
-            </>
+            <UserDropdown email={currentUser.email} onLogout={onLogout} />
           ) : (
             <Button variant="link" size="sm" className="text-white/85 hover:text-white text-[13px] font-medium no-underline hover:no-underline" onClick={onLoginClick}>
-              Connexion
+              <User className="size-3.5" /> Connexion
             </Button>
           )}
         </div>
@@ -667,19 +746,11 @@ function LoginModal({ onClose }: { onClose: () => void }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function getSupabase() {
-    const { createClient } = await import("@supabase/supabase-js");
-    return createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-  }
-
   async function handleSendCode(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setLoading(true);
-    const supabase = await getSupabase();
+    const supabase = createBrowserClient();
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: { shouldCreateUser: true },
@@ -693,7 +764,7 @@ function LoginModal({ onClose }: { onClose: () => void }) {
     e.preventDefault();
     setError("");
     setLoading(true);
-    const supabase = await getSupabase();
+    const supabase = createBrowserClient();
     const { error } = await supabase.auth.verifyOtp({
       email,
       token: code,
@@ -705,101 +776,94 @@ function LoginModal({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="sm:max-w-sm">
-        <img src="/quebec-logo.svg" alt="Québec" className="login-modal-logo" />
+    <div className="report-overlay" onClick={onClose}>
+      <div className="report-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "24rem" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <Mail className="size-4" />
+            <h2 style={{ fontSize: "1rem", fontWeight: 700, margin: 0 }}>Connexion</h2>
+          </div>
+          <span className="panel-close" onClick={onClose}>x</span>
+        </div>
 
         {step === "email" && (
-          <>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Mail className="size-4" />
-                Connexion
-              </DialogTitle>
-              <DialogDescription>
-                Entrez votre courriel pour recevoir un code de connexion
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleSendCode} className="flex flex-col gap-3">
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">Adresse courriel</label>
-                <Input
-                  type="email"
-                  placeholder="exemple@courriel.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  autoFocus
-                />
-              </div>
-              {error && <p className="text-sm text-destructive">{error}</p>}
-              <Button type="submit" disabled={loading}>
-                {loading ? "Envoi..." : "Envoyer le code"}
-              </Button>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Aucun mot de passe requis. Un code à 6 chiffres sera envoyé à votre courriel.
-              </p>
-            </form>
-          </>
+          <form onSubmit={handleSendCode} className="flex flex-col gap-3">
+            <p style={{ fontSize: "0.8125rem", color: "var(--text-secondary)", margin: 0 }}>
+              Entrez votre courriel pour recevoir un code de connexion
+            </p>
+            <div>
+              <label style={{ fontSize: "0.75rem", fontWeight: 500, color: "var(--text-muted)", marginBottom: "0.25rem", display: "block" }}>Adresse courriel</label>
+              <input
+                className="login-input"
+                type="email"
+                placeholder="exemple@courriel.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoFocus
+              />
+            </div>
+            {error && <p style={{ fontSize: "0.8125rem", color: "#e63946", margin: 0 }}>{error}</p>}
+            <button className="login-btn" type="submit" disabled={loading}>
+              {loading ? "Envoi..." : "Envoyer le code"}
+            </button>
+            <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", margin: 0, lineHeight: 1.5 }}>
+              Aucun mot de passe requis. Un code à 6 chiffres sera envoyé à votre courriel.
+            </p>
+          </form>
         )}
 
         {step === "code" && (
-          <>
-            <DialogHeader>
-              <DialogTitle>Vérification</DialogTitle>
-              <DialogDescription>
-                Un code a été envoyé à <strong>{email}</strong>
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleVerifyCode} className="flex flex-col gap-3">
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">Code de vérification</label>
-                <Input
-                  className="text-center text-2xl tracking-[0.3em] font-mono"
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  maxLength={6}
-                  placeholder="000000"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                  required
-                  autoFocus
-                />
-              </div>
-              {error && <p className="text-sm text-destructive">{error}</p>}
-              <Button type="submit" disabled={loading || code.length < 6}>
-                {loading ? "Vérification..." : "Vérifier le code"}
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="text-muted-foreground"
-                onClick={() => { setStep("email"); setError(""); setCode(""); }}
-              >
-                <ArrowLeft className="size-3" />
-                Changer de courriel
-              </Button>
-            </form>
-          </>
+          <form onSubmit={handleVerifyCode} className="flex flex-col gap-3">
+            <p style={{ fontSize: "0.8125rem", color: "var(--text-secondary)", margin: 0 }}>
+              Un code a été envoyé à <strong>{email}</strong>
+            </p>
+            <div>
+              <label style={{ fontSize: "0.75rem", fontWeight: 500, color: "var(--text-muted)", marginBottom: "0.25rem", display: "block" }}>Code de vérification</label>
+              <input
+                className="login-input"
+                style={{ textAlign: "center", fontSize: "1.5rem", letterSpacing: "0.3em", fontFamily: "monospace" }}
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={6}
+                placeholder="000000"
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                required
+                autoFocus
+              />
+            </div>
+            {error && <p style={{ fontSize: "0.8125rem", color: "#e63946", margin: 0 }}>{error}</p>}
+            <button className="login-btn" type="submit" disabled={loading || code.length < 6}>
+              {loading ? "Vérification..." : "Vérifier le code"}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setStep("email"); setError(""); setCode(""); }}
+              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", fontSize: "0.8125rem", display: "flex", alignItems: "center", gap: "0.25rem", padding: 0 }}
+            >
+              <ArrowLeft className="size-3" />
+              Changer de courriel
+            </button>
+          </form>
         )}
 
         {step === "done" && (
           <motion.div
-            className="text-center py-4"
+            style={{ textAlign: "center", padding: "1rem 0" }}
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
           >
-            <p className="text-[15px] font-semibold mb-1">Connexion réussie !</p>
-            <p className="text-[13px] text-muted-foreground">
+            <p style={{ fontSize: "0.9375rem", fontWeight: 600, marginBottom: "0.25rem" }}>Connexion réussie !</p>
+            <p style={{ fontSize: "0.8125rem", color: "var(--text-muted)" }}>
               Vous êtes maintenant connecté.
             </p>
-            <Button onClick={onClose} className="mt-4">Fermer</Button>
+            <button className="login-btn" onClick={onClose} style={{ marginTop: "1rem" }}>Fermer</button>
           </motion.div>
         )}
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 }
 
@@ -868,10 +932,11 @@ interface Comment {
   my_vote: number;
 }
 
-function CommentItem({ c, replies, allComments, onVote, onSubmitReply }: { c: Comment; replies: Comment[]; allComments: Comment[]; onVote: (id: number, vote: number) => void; onSubmitReply: (parentId: number, content: string) => Promise<boolean> }) {
+function CommentItem({ c, replies, allComments, onVote, onSubmitReply, isAdmin, onDelete }: { c: Comment; replies: Comment[]; allComments: Comment[]; onVote: (id: number, vote: number) => void; onSubmitReply: (parentId: number, content: string) => Promise<boolean>; isAdmin?: boolean; onDelete?: (id: number) => void }) {
   const [showReply, setShowReply] = useState(false);
   const [replyText, setReplyText] = useState("");
   const [sending, setSending] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const timeAgo = (d: string) => {
     const diff = Date.now() - new Date(d).getTime();
     const mins = Math.floor(diff / 60000);
@@ -909,7 +974,25 @@ function CommentItem({ c, replies, allComments, onVote, onSubmitReply }: { c: Co
             <button onClick={() => setShowReply(!showReply)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 0, fontWeight: 600, fontSize: "0.75rem" }}>
               Répondre
             </button>
+            {isAdmin && onDelete && !confirmDelete && (
+              <button onClick={() => setConfirmDelete(true)} style={{ background: "none", border: "none", cursor: "pointer", color: "#e63946", padding: 0, fontWeight: 600, fontSize: "0.75rem" }}>
+                Supprimer
+              </button>
+            )}
           </div>
+          {confirmDelete && (
+            <div style={{ marginTop: "0.375rem", padding: "0.5rem 0.625rem", background: "var(--bg-hover)", borderRadius: "0.375rem", fontSize: "0.75rem" }}>
+              <p style={{ margin: "0 0 0.375rem", fontWeight: 600 }}>Supprimer ce commentaire ?</p>
+              <div style={{ display: "flex", gap: "0.375rem" }}>
+                <button onClick={() => { onDelete!(c.id); setConfirmDelete(false); }} style={{ padding: "0.25rem 0.625rem", background: "#e63946", color: "#fff", border: "none", borderRadius: "0.25rem", cursor: "pointer", fontWeight: 600, fontSize: "0.75rem" }}>
+                  Confirmer
+                </button>
+                <button onClick={() => setConfirmDelete(false)} style={{ padding: "0.25rem 0.625rem", background: "var(--bg-panel)", color: "var(--text)", border: "1px solid var(--divider)", borderRadius: "0.25rem", cursor: "pointer", fontWeight: 600, fontSize: "0.75rem" }}>
+                  Annuler
+                </button>
+              </div>
+            </div>
+          )}
           {showReply && (
             <div style={{ display: "flex", gap: "0.375rem", marginTop: "0.375rem" }}>
               <input
@@ -932,7 +1015,7 @@ function CommentItem({ c, replies, allComments, onVote, onSubmitReply }: { c: Co
           {replies.length > 0 && (
             <div style={{ marginLeft: "0.5rem", borderLeft: "2px solid var(--divider)", paddingLeft: "0.75rem", marginTop: "0.375rem" }}>
               {replies.map((r) => (
-                <CommentItem key={r.id} c={r} replies={allComments.filter((x) => x.parent_id === r.id)} allComments={allComments} onVote={onVote} onSubmitReply={onSubmitReply} />
+                <CommentItem key={r.id} c={r} replies={allComments.filter((x) => x.parent_id === r.id)} allComments={allComments} onVote={onVote} onSubmitReply={onSubmitReply} isAdmin={isAdmin} onDelete={onDelete} />
               ))}
             </div>
           )}
@@ -942,17 +1025,18 @@ function CommentItem({ c, replies, allComments, onVote, onSubmitReply }: { c: Co
   );
 }
 
-function CommentsModal({ stationName, address, onClose }: { stationName: string; address: string; onClose: () => void }) {
+const ADMIN_EMAILS_CLIENT = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
+
+function CommentsModal({ stationName, address, onClose, userEmail }: { stationName: string; address: string; onClose: () => void; userEmail?: string }) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
   const [newComment, setNewComment] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const isAdmin = !!userEmail && ADMIN_EMAILS_CLIENT.includes(userEmail.toLowerCase());
 
   async function getToken() {
-    const { createClient } = await import("@supabase/supabase-js");
-    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await createBrowserClient().auth.getSession();
     return session?.access_token || null;
   }
 
@@ -1019,6 +1103,17 @@ function CommentsModal({ stationName, address, onClose }: { stationName: string;
     });
   }
 
+  async function handleDelete(commentId: number) {
+    const token = await getToken();
+    if (!token) return;
+    const res = await fetch("/api/reviews", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ comment_id: commentId }),
+    });
+    if (res.ok) loadComments();
+  }
+
   const topLevel = comments.filter((c) => !c.parent_id);
   const getReplies = (id: number) => comments.filter((c) => c.parent_id === id);
 
@@ -1049,12 +1144,14 @@ function CommentsModal({ stationName, address, onClose }: { stationName: string;
 
         <div style={{ overflowY: "auto", flex: 1 }}>
           {loading ? (
-            <p style={{ color: "var(--text-muted)", fontSize: "0.8125rem" }}>Chargement...</p>
+            <div style={{ display: "flex", justifyContent: "center", padding: "2rem 0" }}>
+              <div style={{ width: "1.5rem", height: "1.5rem", border: "2.5px solid var(--divider)", borderTopColor: "var(--text-muted)", borderRadius: "50%", animation: "spin 0.6s linear infinite" }} />
+            </div>
           ) : topLevel.length === 0 ? (
             <p style={{ color: "var(--text-muted)", fontSize: "0.8125rem" }}>Aucun commentaire. Soyez le premier !</p>
           ) : (
             topLevel.map((c) => (
-              <CommentItem key={c.id} c={c} replies={getReplies(c.id)} allComments={comments} onVote={handleVote} onSubmitReply={handleReply} />
+              <CommentItem key={c.id} c={c} replies={getReplies(c.id)} allComments={comments} onVote={handleVote} onSubmitReply={handleReply} isAdmin={isAdmin} onDelete={handleDelete} />
             ))
           )}
         </div>
@@ -1070,7 +1167,7 @@ function SiteThemeToggle() {
     <Button
       variant="outline"
       size="sm"
-      className="mt-1.5 shadow-md bg-[var(--bg-panel)] text-[var(--text)] border-0 font-semibold text-[13px]"
+      className="mt-1.5 shadow-md !bg-[var(--bg-panel)] !text-[var(--text)] !border-0 font-semibold text-[13px]"
       onClick={() => setTheme(isDark ? "light" : "dark")}
     >
       {isDark ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
@@ -1093,7 +1190,7 @@ export default function Map() {
   const [commentStation, setCommentStation] = useState<{ name: string; address: string } | null>(null);
   const [currentUser, setCurrentUser] = useState<{ email: string } | null>(null);
   const [cheapestResults, setCheapestResults] = useState<{ stations: { lat: number; lng: number; price: number; name: string; dist: number }[]; message: string } | null>(null);
-  const [radiusKm, setRadiusKm] = useState(5);
+  const [radiusKm, setRadiusKm] = useState(0);
   const [userPos, setUserPos] = useState<[number, number] | null>(null);
   const [showFavorites, setShowFavorites] = useState(false);
   const [favs, setFavs] = useState<Set<string>>(new Set());
@@ -1111,15 +1208,14 @@ export default function Map() {
   }, []);
 
   useEffect(() => {
-    import("@supabase/supabase-js").then(({ createClient }) => {
-      const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
-      sb.auth.getSession().then(({ data: { session } }) => {
-        if (session?.user?.email) setCurrentUser({ email: session.user.email });
-      });
-      sb.auth.onAuthStateChange((_event, session) => {
-        setCurrentUser(session?.user?.email ? { email: session.user.email } : null);
-      });
+    const sb = createBrowserClient();
+    sb.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user?.email) setCurrentUser({ email: session.user.email });
     });
+    const { data: { subscription } } = sb.auth.onAuthStateChange((_event, session) => {
+      setCurrentUser(session?.user?.email ? { email: session.user.email } : null);
+    });
+    return () => subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -1247,6 +1343,7 @@ export default function Map() {
 
   function findCheapestNearby() {
     if (!data) return;
+    if (radiusKm === 0) setRadiusKm(5);
     const doSearch = (latitude: number, longitude: number) => {
       const r = radiusKm > 0 ? radiusKm : 5;
       const candidates: { lat: number; lng: number; price: number; name: string; dist: number }[] = [];
@@ -1348,9 +1445,7 @@ export default function Map() {
         onChangelogClick={() => setShowChangelog(true)}
         currentUser={currentUser}
         onLogout={async () => {
-          const { createClient } = await import("@supabase/supabase-js");
-          const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
-          await sb.auth.signOut();
+          await createBrowserClient().auth.signOut();
           setCurrentUser(null);
         }}
       />
@@ -1398,7 +1493,7 @@ export default function Map() {
             <Button
               variant={cheapestResults ? "outline" : "default"}
               size="sm"
-              className={`w-full shadow-md font-semibold text-[13px] ${!cheapestResults ? "bg-[#2d9a2d] hover:bg-[#2d9a2d]/90 text-white" : "bg-[var(--bg-panel)] text-[var(--text)]"}`}
+              className={`w-full shadow-md font-semibold text-[13px] ${!cheapestResults ? "!bg-[#2d9a2d] hover:!bg-[#2d9a2d]/90 !text-white" : "!bg-[var(--bg-panel)] !text-[var(--text)]"}`}
               onClick={() => { if (cheapestResults) setCheapestResults(null); else findCheapestNearby(); }}
             >
               <Crosshair className="size-3.5" />
@@ -1420,7 +1515,7 @@ export default function Map() {
           <Button
             variant="outline"
             size="sm"
-            className="mb-1.5 w-full shadow-md bg-[var(--bg-panel)] text-[var(--text)] border-0 font-semibold text-[13px]"
+            className="mb-1.5 w-full shadow-md !bg-[var(--bg-panel)] !text-[var(--text)] !border-0 font-semibold text-[13px]"
             onClick={() => setShowRegionPanel((v) => !v)}
           >
             <BarChart3 className="size-3.5" />
@@ -1429,7 +1524,7 @@ export default function Map() {
           <Button
             variant="outline"
             size="sm"
-            className="mb-1.5 w-full shadow-md bg-[var(--bg-panel)] text-[var(--text)] border-0 font-semibold text-[13px]"
+            className="mb-1.5 w-full shadow-md !bg-[var(--bg-panel)] !text-[var(--text)] !border-0 font-semibold text-[13px]"
             onClick={shareLink}
           >
             <Share2 className="size-3.5" />
@@ -1529,7 +1624,7 @@ export default function Map() {
         />
       )}
       {commentStation && (
-        <CommentsModal stationName={commentStation.name} address={commentStation.address} onClose={() => setCommentStation(null)} />
+        <CommentsModal stationName={commentStation.name} address={commentStation.address} onClose={() => setCommentStation(null)} userEmail={currentUser?.email} />
       )}
       {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
       {showChangelog && <ChangelogModal onClose={() => setShowChangelog(false)} />}

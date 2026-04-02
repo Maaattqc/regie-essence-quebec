@@ -7,6 +7,12 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
+
+function isAdmin(email: string | undefined) {
+  return !!email && ADMIN_EMAILS.includes(email.toLowerCase());
+}
+
 function getToken(req: NextRequest) {
   return req.headers.get("authorization")?.replace("Bearer ", "") || null;
 }
@@ -130,6 +136,31 @@ export async function POST(request: NextRequest) {
     content,
     parent_id: parent_id || null,
   });
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ ok: true });
+}
+
+// DELETE comment (admin only)
+export async function DELETE(request: NextRequest) {
+  if (!rateLimit(getIP(request))) return NextResponse.json({ error: "Trop de requêtes" }, { status: 429 });
+
+  const token = getToken(request);
+  if (!token) return NextResponse.json({ error: "Non connecté" }, { status: 401 });
+  const user = await getUser(token);
+  if (!user || !isAdmin(user.email)) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+
+  const { comment_id } = await request.json();
+  if (!comment_id) return NextResponse.json({ error: "comment_id requis" }, { status: 400 });
+
+  // Delete child comments (replies) first, then the comment itself
+  await supabaseAdmin.from("comment_votes").delete().in(
+    "comment_id",
+    (await supabaseAdmin.from("comments").select("id").eq("parent_id", comment_id)).data?.map((c) => c.id) || []
+  );
+  await supabaseAdmin.from("comments").delete().eq("parent_id", comment_id);
+  await supabaseAdmin.from("comment_votes").delete().eq("comment_id", comment_id);
+  const { error } = await supabaseAdmin.from("comments").delete().eq("id", comment_id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
