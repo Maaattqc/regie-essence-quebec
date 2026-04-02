@@ -708,23 +708,46 @@ function ReportModal({
 
 function LoginModal({ onClose }: { onClose: () => void }) {
   const [email, setEmail] = useState("");
-  const [sent, setSent] = useState(false);
+  const [code, setCode] = useState("");
+  const [step, setStep] = useState<"email" | "code" | "done">("email");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
+  async function getSupabase() {
     const { createClient } = await import("@supabase/supabase-js");
-    const supabase = createClient(
+    return createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
+  }
+
+  async function handleSendCode(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    const supabase = await getSupabase();
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      options: { shouldCreateUser: true },
     });
+    setLoading(false);
     if (error) setError(error.message);
-    else setSent(true);
+    else setStep("code");
+  }
+
+  async function handleVerifyCode(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    const supabase = await getSupabase();
+    const { error } = await supabase.auth.verifyOtp({
+      email,
+      token: code,
+      type: "email",
+    });
+    setLoading(false);
+    if (error) setError(error.message);
+    else setStep("done");
   }
 
   return (
@@ -733,38 +756,72 @@ function LoginModal({ onClose }: { onClose: () => void }) {
         <span className="panel-close" onClick={onClose} style={{ position: "absolute", top: "1rem", right: "1rem" }}>x</span>
 
         <img src="/quebec-logo.svg" alt="Québec" className="login-modal-logo" />
-        <p className="login-modal-subtitle">Entrez votre courriel pour recevoir un lien de connexion sécurisé</p>
 
-        {sent ? (
+        {step === "email" && (
+          <>
+            <p className="login-modal-subtitle">Entrez votre courriel pour recevoir un code de connexion</p>
+            <form onSubmit={handleSendCode}>
+              <label className="login-label">Adresse courriel</label>
+              <input
+                className="login-input"
+                type="email"
+                placeholder="exemple@courriel.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoFocus
+              />
+              {error && <p className="login-error">{error}</p>}
+              <button className="login-btn" type="submit" disabled={loading}>
+                {loading ? "Envoi..." : "Envoyer le code"}
+              </button>
+              <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "1rem", lineHeight: 1.4 }}>
+                Aucun mot de passe requis. Un code à 6 chiffres sera envoyé à votre courriel.
+              </p>
+            </form>
+          </>
+        )}
+
+        {step === "code" && (
+          <>
+            <p className="login-modal-subtitle">Un code a été envoyé à <strong>{email}</strong></p>
+            <form onSubmit={handleVerifyCode}>
+              <label className="login-label">Code de vérification</label>
+              <input
+                className="login-input login-code-input"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={6}
+                placeholder="000000"
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                required
+                autoFocus
+              />
+              {error && <p className="login-error">{error}</p>}
+              <button className="login-btn" type="submit" disabled={loading || code.length < 6}>
+                {loading ? "Vérification..." : "Vérifier le code"}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setStep("email"); setError(""); setCode(""); }}
+                style={{ background: "none", border: "none", color: "var(--text-muted)", fontSize: "0.8125rem", cursor: "pointer", marginTop: "0.75rem", display: "block", width: "100%", textAlign: "center" }}
+              >
+                Changer de courriel
+              </button>
+            </form>
+          </>
+        )}
+
+        {step === "done" && (
           <div className="login-success">
-            <div style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>&#9993;</div>
-            <p style={{ fontSize: "0.9375rem", fontWeight: 600, margin: "0 0 0.5rem" }}>Courriel envoyé !</p>
+            <p style={{ fontSize: "0.9375rem", fontWeight: 600, margin: "0 0 0.5rem" }}>Connexion réussie !</p>
             <p style={{ fontSize: "0.8125rem", color: "var(--text-muted)", margin: 0 }}>
-              Un lien de connexion a été envoyé à <strong>{email}</strong>.
-              Vérifiez votre boîte de réception et vos courriels indésirables.
+              Vous êtes maintenant connecté.
             </p>
             <button className="login-btn" onClick={onClose} style={{ marginTop: "1rem" }}>Fermer</button>
           </div>
-        ) : (
-          <form onSubmit={handleSubmit}>
-            <label className="login-label">Adresse courriel</label>
-            <input
-              className="login-input"
-              type="email"
-              placeholder="exemple@courriel.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoFocus
-            />
-            {error && <p className="login-error">{error}</p>}
-            <button className="login-btn" type="submit">
-              Envoyer le lien de connexion
-            </button>
-            <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "1rem", lineHeight: 1.4 }}>
-              Aucun mot de passe requis. Vous recevrez un lien sécurisé par courriel.
-            </p>
-          </form>
         )}
       </div>
     </div>
