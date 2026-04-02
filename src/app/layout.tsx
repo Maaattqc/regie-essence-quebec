@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Carte des prix d'essence | Essence Québec",
+    default: "Carte des prix d'Essence Québec",
     template: "%s | Essence Québec",
   },
   description:
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: "https://essence-quebec.ca",
-    title: "Carte des prix d'essence | Essence Québec",
+    title: "Carte des prix d'Essence Québec",
     description:
       "Consultez les prix de l'essence au Québec en temps réel. Comparez les stations-service près de chez vous et économisez sur le carburant.",
     locale: "fr_CA",
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Carte des prix d'essence | Essence Québec",
+    title: "Carte des prix d'Essence Québec",
     description:
       "Consultez les prix de l'essence au Québec en temps réel. Comparez les stations-service près de chez vous et économisez.",
   },
