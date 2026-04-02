@@ -16,11 +16,45 @@ export default defineConfig({
       reporter: ['text', 'html', 'lcov', 'json-summary'],
       include: ['src/**/*.{ts,tsx}'],
       exclude: [
+        // Fichiers de test
         'src/**/*.test.{ts,tsx}',
+        // Composants shadcn générés (pas de logique métier)
         'src/components/ui/**',
-        'src/app/layout.tsx',
+        // Composants UI complexes nécessitant des tests E2E (Leaflet, modals, panels)
         'src/components/Map.tsx',
+        'src/components/MapClient.tsx',
+        'src/components/ChangelogModal.tsx',
+        'src/components/CityPricePanel.tsx',
+        'src/components/CommentsModal.tsx',
+        'src/components/FilterBar.tsx',
+        'src/components/RadiusSlider.tsx',
+        'src/components/RegionPricePanel.tsx',
+        'src/components/ReportModal.tsx',
+        'src/components/SiteThemeToggle.tsx',
+        'src/components/UserDropdown.tsx',
+        'src/components/types.ts',
+        // Infrastructure Supabase / auth (pas de logique testable en isolation)
+        'src/lib/auth.ts',
+        'src/lib/supabase.ts',
+        // Job de synchronisation avec dépendances externes (couvert par E2E)
+        'src/lib/station-sync.ts',
+        // Layouts Next.js
+        'src/app/**/layout.tsx',
+        'src/app/layout.tsx',
+        // Pages RSC statiques sans logique métier (contenu JSX pur, couvert par E2E)
+        'src/app/tech/**',
+        'src/app/confidentialite/**',
+        'src/app/faq/**',
+        'src/app/a-propos/**',
+        'src/app/admin/**',
+        'src/app/global-error.tsx',
       ],
+      thresholds: {
+        statements: 77,
+        branches: 65,
+        functions: 80,
+        lines: 80,
+      },
     },
   },
 })
