@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTheme } from "next-themes";
 import { createBrowserClient } from "@/lib/auth";
 import type { User } from "@supabase/supabase-js";
 
@@ -31,6 +32,8 @@ import {
   ArrowLeft,
   AlertCircle,
   ChevronDown,
+  Sun,
+  Moon,
 } from "lucide-react";
 
 interface Profile {
@@ -56,6 +59,8 @@ interface Stats {
   totalStations: number;
   totalSnapshots: number;
   lastSnapshot: string;
+  totalReports: number;
+  totalUsers: number;
   avgRegulier: number;
   avgSuper: number;
   avgDiesel: number;
@@ -64,6 +69,8 @@ interface Stats {
 function AdminUserDropdown({ email, onLogout }: { email: string; onLogout: () => void }) {
   const username = email.split("@")[0];
   const initial = username[0]?.toUpperCase() || "?";
+  const { resolvedTheme, setTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
   return (
     <DropdownMenu>
       <DropdownMenuTrigger>
@@ -80,6 +87,11 @@ function AdminUserDropdown({ email, onLogout }: { email: string; onLogout: () =>
           <DropdownMenuLabel>{email}</DropdownMenuLabel>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => setTheme(isDark ? "light" : "dark")}>
+          {isDark ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
+          {isDark ? "Mode clair" : "Mode sombre"}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onClick={onLogout}>
           <LogOut className="size-3.5" /> Déconnexion
         </DropdownMenuItem>
@@ -91,6 +103,7 @@ function AdminUserDropdown({ email, onLogout }: { email: string; onLogout: () =>
 export default function AdminPage() {
   const supabase = createBrowserClient();
   const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [reports, setReports] = useState<Report[]>([]);
@@ -102,17 +115,12 @@ export default function AdminPage() {
 
   useEffect(() => {
     async function init() {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-      if (user) {
+      const { data: { session } } = await supabase.auth.getSession();
+      setUser(session?.user ?? null);
+      setToken(session?.access_token ?? null);
+      if (session?.user) {
         const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
-        const emailIsAdmin = !!user.email && adminEmails.includes(user.email.toLowerCase());
-        const { data } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", user.id)
-          .single();
-        setIsAdmin(data?.role === "admin" || emailIsAdmin);
+        setIsAdmin(!!session.user.email && adminEmails.includes(session.user.email.toLowerCase()));
       }
       setLoading(false);
     }
@@ -120,48 +128,50 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
-    if (!user) return;
+    if (!token) return;
     loadStats();
     loadUsers();
     loadReports();
-  }, [user]);
+  }, [token]);
+
+  function authHeaders() {
+    return { Authorization: `Bearer ${token}` };
+  }
 
   async function loadStats() {
-    const { count: totalSnapshots } = await supabase
-      .from("price_snapshots")
-      .select("*", { count: "exact", head: true });
-
-    const { data: latest } = await supabase
-      .from("price_snapshots")
-      .select("snapshot_date")
-      .order("snapshot_date", { ascending: false })
-      .limit(1);
-
-    let avgs = null;
-    try { const res = await supabase.rpc("get_avg_prices"); avgs = res.data; } catch {}
-
+    const res = await fetch("/api/admin?type=stats", { headers: authHeaders() });
+    if (!res.ok) return;
+    const data = await res.json();
     setStats({
       totalStations: 2288,
-      totalSnapshots: totalSnapshots || 0,
-      lastSnapshot: latest?.[0]?.snapshot_date || "Aucun",
-      avgRegulier: avgs?.regulier || 0,
-      avgSuper: avgs?.super || 0,
-      avgDiesel: avgs?.diesel || 0,
+      totalSnapshots: data.totalSnapshots,
+      lastSnapshot: data.lastSnapshot,
+      totalReports: data.totalReports,
+      totalUsers: data.totalUsers,
+      avgRegulier: data.avgRegulier,
+      avgSuper: data.avgSuper,
+      avgDiesel: data.avgDiesel,
     });
   }
 
   async function loadUsers() {
-    const { data } = await supabase.from("profiles").select("*").order("created_at", { ascending: false });
-    setUsers(data || []);
+    const res = await fetch("/api/admin?type=users", { headers: authHeaders() });
+    if (!res.ok) return;
+    setUsers(await res.json());
   }
 
   async function loadReports() {
-    const { data } = await supabase.from("reports").select("*").order("created_at", { ascending: false });
-    setReports(data || []);
+    const res = await fetch("/api/admin?type=reports", { headers: authHeaders() });
+    if (!res.ok) return;
+    setReports(await res.json());
   }
 
   async function updateReportStatus(id: number, status: string) {
-    await supabase.from("reports").update({ status }).eq("id", id);
+    await fetch("/api/admin", {
+      method: "PATCH",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "report_status", id, status }),
+    });
     loadReports();
   }
 
@@ -176,8 +186,11 @@ export default function AdminPage() {
   }
 
   async function toggleRole(profile: Profile) {
-    const newRole = profile.role === "admin" ? "user" : "admin";
-    await supabase.from("profiles").update({ role: newRole }).eq("id", profile.id);
+    await fetch("/api/admin", {
+      method: "PATCH",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "toggle_role", id: profile.id, currentRole: profile.role }),
+    });
     loadUsers();
   }
 
@@ -276,6 +289,28 @@ export default function AdminPage() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-lg font-bold">{stats?.lastSnapshot ?? "..."}</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-muted-foreground">
+                    <Users className="size-4" />
+                    Utilisateurs inscrits
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-3xl font-bold">{stats?.totalUsers ?? "..."}</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-muted-foreground">
+                    <Flag className="size-4" />
+                    Signalements
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-3xl font-bold">{stats?.totalReports ?? "..."}</p>
                 </CardContent>
               </Card>
             </div>
