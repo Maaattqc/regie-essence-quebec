@@ -307,8 +307,8 @@ export default function TechPage() {
           <p className="text-[13px] text-gray-500 dark:text-gray-400">
             Projet développé par <strong className="text-gray-700 dark:text-gray-300">Mathieu Fournier</strong> · Pour toute question technique ou collaboration
           </p>
-          <a href="mailto:noreply@essence-quebec.ca" className="inline-flex items-center gap-2 text-[13px] font-semibold text-blue-600 dark:text-blue-400 hover:underline">
-            <Mail className="size-3.5" /> noreply@essence-quebec.ca
+          <a href="mailto:mathieufournierqc@outlook.com" className="inline-flex items-center gap-2 text-[13px] font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+            <Mail className="size-3.5" /> mathieufournierqc@outlook.com
           </a>
         </section>
 
