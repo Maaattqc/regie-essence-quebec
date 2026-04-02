@@ -199,23 +199,33 @@ body {
     flex-wrap: wrap;
     height: auto;
     padding: 8px 12px;
+    gap: 0;
+  }
+  .gov-bar-title {
+    flex: 1;
   }
   .gov-bar-filters {
     order: 3;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
     width: 100%;
     justify-content: flex-start;
-    padding-top: 6px;
+    padding: 6px 0 4px;
+    gap: 6px;
+    scrollbar-width: none;
   }
+  .gov-bar-filters::-webkit-scrollbar { display: none; }
   .gov-bar-subtitle {
     display: none;
   }
-  .gov-input {
-    width: 140px;
-  }
   .nb-sep { display: none; }
+  .nb-input-wrap { flex-shrink: 0; }
+  .nb-select-wrap { flex-shrink: 0; }
+  .nb-pills { flex-shrink: 0; }
+  .nb-fav { flex-shrink: 0; }
   .nb-input { width: 130px; }
-  .nb-select { max-width: 140px; }
+  .nb-select { max-width: 150px; }
   .legend {
     top: auto;
     bottom: 4.5rem;
@@ -282,12 +292,8 @@ body {
     padding: 6px 8px;
     font-size: 12px;
   }
-  .nb-input { width: 100%; flex: 1 1 100%; }
-  .nb-input-wrap { flex: 1 1 100%; }
-  .nb-select-wrap { flex: 1 1 calc(50% - 4px); }
-  .nb-select { width: 100%; font-size: 12px; }
   .nb-pill { font-size: 12px; padding: 0 8px; }
-  .nb-fav, .nb-login-btn { font-size: 12px; padding: 0 10px; }
+  .nb-login-btn { font-size: 12px; padding: 0 10px; }
   .map-btn {
     padding: 6px 10px;
     font-size: 12px;
