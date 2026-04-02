@@ -148,10 +148,10 @@ export default function AdminPage() {
     <div className="admin-center">
       <h2>Acc&egrave;s refus&eacute;</h2>
       <p>Vous devez &ecirc;tre connect&eacute;.</p>
-      <Button variant="default" render={<a href="/login" />} className="mt-3">
+      <a href="/login" className="inline-flex items-center gap-1.5 mt-3 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium">
         <LogOut className="size-4" />
         Se connecter
-      </Button>
+      </a>
     </div>
   );
   const readOnly = !isAdmin;
@@ -159,9 +159,9 @@ export default function AdminPage() {
   return (
     <div className="admin-page">
       <header className="gov-bar">
-        <Button variant="ghost" size="icon-sm" render={<a href="/" />} className="!text-white hover:!bg-white/15">
+        <a href="/" className="flex items-center justify-center size-7 rounded-lg text-white hover:bg-white/15 transition-colors">
           <ArrowLeft className="size-4" />
-        </Button>
+        </a>
         <div className="gov-bar-title">
           <span className="gov-bar-fleur">⚜</span>
           <div>Administration<div className="gov-bar-subtitle">Essence Qu&eacute;bec</div></div>
