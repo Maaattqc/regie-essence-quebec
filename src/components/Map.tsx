@@ -887,19 +887,21 @@ function ChangelogModal({ onClose }: { onClose: () => void }) {
   }, []);
 
   return (
-    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="sm:max-w-[40rem] max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <History className="size-4" />
-            Changelog
-          </DialogTitle>
-        </DialogHeader>
-        <div>
+    <div className="report-overlay" onClick={onClose}>
+      <div className="report-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "40rem", maxHeight: "80vh", display: "flex", flexDirection: "column" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem", flexShrink: 0 }}>
+          <h2 style={{ fontSize: "1rem", fontWeight: 700, margin: 0, display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <History className="size-4" /> Changelog
+          </h2>
+          <span className="panel-close" onClick={onClose}>x</span>
+        </div>
+        <div style={{ overflowY: "auto", flex: 1 }}>
           {loading ? (
-            <p className="text-muted-foreground">Chargement...</p>
+            <div style={{ display: "flex", justifyContent: "center", padding: "2rem 0" }}>
+              <div style={{ width: "1.5rem", height: "1.5rem", border: "2.5px solid var(--divider)", borderTopColor: "var(--text-muted)", borderRadius: "50%", animation: "spin 0.6s linear infinite" }} />
+            </div>
           ) : commits.length === 0 ? (
-            <p className="text-muted-foreground">Aucun commit trouvé.</p>
+            <p style={{ color: "var(--text-muted)", fontSize: "0.8125rem" }}>Aucun commit trouvé.</p>
           ) : (
             <div className="changelog-list">
               {commits.map((c) => (
@@ -915,8 +917,8 @@ function ChangelogModal({ onClose }: { onClose: () => void }) {
             </div>
           )}
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 }
 
