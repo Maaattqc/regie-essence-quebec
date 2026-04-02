@@ -1,10 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Star, StarOff, X, User,
+  Search, Star, StarOff, X, User, ChevronDown, MapPin, Building2,
 } from "lucide-react";
 import {
   type GasTypeKey,
@@ -74,22 +73,25 @@ function SearchWithSuggestions({
 
   return (
     <div className="relative">
-      <Input
-        type="text"
-        value={input}
-        onChange={(e) => handleInput(e.target.value)}
-        onKeyDown={handleKeyDown}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setTimeout(() => setFocused(false), 150)}
-        placeholder="Ville"
-        className="h-7 w-[180px] border-white/25 bg-white/12 text-white text-[13px] font-medium placeholder:text-white/50 focus-visible:bg-white/20 focus-visible:border-white/50 focus-visible:ring-0"
-        style={{ paddingRight: input ? 24 : 10 }}
-      />
-      {input && (
-        <span className="search-clear" onMouseDown={handleClear}>
-          <X className="size-3" />
-        </span>
-      )}
+      <div className="nb-input-wrap">
+        <Search className="nb-input-icon" />
+        <Input
+          type="text"
+          value={input}
+          onChange={(e) => handleInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setTimeout(() => setFocused(false), 150)}
+          placeholder="Ville…"
+          className="nb-input"
+          style={{ paddingRight: input ? 28 : 10 }}
+        />
+        {input && (
+          <span className="nb-input-clear" onMouseDown={handleClear}>
+            <X className="size-3" />
+          </span>
+        )}
+      </div>
       {focused && suggestions.length > 0 && (
         <div className="suggestions">
           {suggestions.map((city) => (
@@ -103,6 +105,28 @@ function SearchWithSuggestions({
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function NbSelect({
+  value,
+  onChange,
+  icon: Icon,
+  children,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  icon: React.ElementType;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="nb-select-wrap">
+      <Icon className="nb-select-icon-left" />
+      <select className="nb-select" value={value} onChange={(e) => onChange(e.target.value)}>
+        {children}
+      </select>
+      <ChevronDown className="nb-select-icon-right" />
     </div>
   );
 }
@@ -151,6 +175,8 @@ export default function FilterBar({
   return (
     <header className="gov-header">
       <div className="gov-bar">
+
+        {/* ── Logo ── */}
         <div className="gov-bar-title">
           <span className="gov-bar-fleur">&#9884;</span>
           <div>
@@ -158,7 +184,13 @@ export default function FilterBar({
             <div className="gov-bar-subtitle">Prix en temps réel des stations-service</div>
           </div>
         </div>
+
+        {/* ── Séparateur vertical ── */}
+        <div className="nb-sep" />
+
+        {/* ── Filtres ── */}
         <div className="gov-bar-filters">
+
           <SearchWithSuggestions
             search={search}
             onSearchChange={onSearchChange}
@@ -166,72 +198,59 @@ export default function FilterBar({
             cities={cities}
             cityCounts={cityCounts}
           />
-          <select
-            className="gov-select"
-            value={region}
-            onChange={(e) => onRegionChange(e.target.value)}
-          >
+
+          <NbSelect value={region} onChange={onRegionChange} icon={MapPin}>
             <option value="">Toutes les régions ({totalStations})</option>
             {REGIONS.map((r) => (
-              <option key={r} value={r}>
-                {r} ({regionCounts[r] || 0})
-              </option>
+              <option key={r} value={r}>{r} ({regionCounts[r] || 0})</option>
             ))}
-          </select>
-          <div className="flex gap-0.5">
+          </NbSelect>
+
+          {/* Carburant pills */}
+          <div className="nb-pills">
             {GAS_TYPES.map((t) => (
-              <Button
+              <button
                 key={t.key}
-                variant={gasType === t.key ? "default" : "ghost"}
-                size="sm"
-                className={`text-[13px] font-semibold !text-white !border !border-white/25 ${
-                  gasType === t.key
-                    ? "!border-transparent"
-                    : "!bg-white/12 hover:!bg-white/20"
-                }`}
-                style={gasType === t.key ? { background: t.color } : undefined}
+                className={`nb-pill${gasType === t.key ? " nb-pill-active" : ""}`}
+                style={gasType === t.key ? { background: t.color, borderColor: t.color } : undefined}
                 onClick={() => onGasTypeChange(t.key)}
               >
                 {t.label}
-              </Button>
+              </button>
             ))}
           </div>
-          <select
-            className="gov-select"
-            value={brand}
-            onChange={(e) => onBrandChange(e.target.value)}
-          >
+
+          <NbSelect value={brand} onChange={onBrandChange} icon={Building2}>
             <option value="">Toutes les compagnies ({totalStations})</option>
             {BRANDS.map((b) => (
-              <option key={b} value={b}>
-                {b} ({brandCounts[b] || 0})
-              </option>
+              <option key={b} value={b}>{b} ({brandCounts[b] || 0})</option>
             ))}
-          </select>
-          <Button
-            variant={showFavorites ? "default" : "ghost"}
-            size="sm"
-            className={`text-[13px] font-semibold !text-white !border !border-white/25 ${
-              showFavorites
-                ? "!border-transparent !bg-[#ff9800] hover:!bg-[#ff9800]/80"
-                : "!bg-white/12 hover:!bg-white/20"
-            }`}
+          </NbSelect>
+
+          <button
+            className={`nb-fav${showFavorites ? " nb-fav-active" : ""}`}
             onClick={onToggleFavorites}
           >
-            {showFavorites ? <Star className="size-3.5 fill-current" /> : <StarOff className="size-3.5" />}
+            {showFavorites
+              ? <Star className="size-3.5 fill-current" />
+              : <StarOff className="size-3.5" />}
             Favoris
-          </Button>
+          </button>
         </div>
+
+        {/* ── Droite ── */}
         <div className="gov-bar-right">
           <NavDropdown onChangelogClick={onChangelogClick} />
           {currentUser ? (
             <UserDropdown email={currentUser.email} onLogout={onLogout} />
           ) : (
-            <Button variant="link" size="sm" className="text-white/85 hover:text-white text-[13px] font-medium no-underline hover:no-underline" onClick={onLoginClick}>
-              <User className="size-3.5" /> Connexion
-            </Button>
+            <button className="nb-login-btn" onClick={onLoginClick}>
+              <User className="size-3.5" />
+              Connexion
+            </button>
           )}
         </div>
+
         <div className="gov-bar-accent" />
       </div>
     </header>

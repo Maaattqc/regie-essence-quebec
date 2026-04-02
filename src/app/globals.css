@@ -213,6 +213,9 @@ body {
   .gov-input {
     width: 140px;
   }
+  .nb-sep { display: none; }
+  .nb-input { width: 130px; }
+  .nb-select { max-width: 140px; }
   .legend {
     top: auto;
     bottom: 4.5rem;
@@ -279,6 +282,12 @@ body {
     padding: 6px 8px;
     font-size: 12px;
   }
+  .nb-input { width: 100%; flex: 1 1 100%; }
+  .nb-input-wrap { flex: 1 1 100%; }
+  .nb-select-wrap { flex: 1 1 calc(50% - 4px); }
+  .nb-select { width: 100%; font-size: 12px; }
+  .nb-pill { font-size: 12px; padding: 0 8px; }
+  .nb-fav, .nb-login-btn { font-size: 12px; padding: 0 10px; }
   .map-btn {
     padding: 6px 10px;
     font-size: 12px;
@@ -383,6 +392,165 @@ body {
   font-weight: 600;
   letter-spacing: 0.03em;
 }
+
+/* ── Navbar controls ── */
+
+.nb-sep {
+  width: 1px;
+  height: 1.5rem;
+  background: rgba(255,255,255,0.2);
+  flex-shrink: 0;
+}
+
+/* Input avec icône */
+.nb-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.nb-input-icon {
+  position: absolute;
+  left: 8px;
+  width: 13px;
+  height: 13px;
+  color: rgba(255,255,255,0.5);
+  pointer-events: none;
+  flex-shrink: 0;
+}
+.nb-input {
+  height: 30px;
+  width: 160px;
+  padding-left: 28px !important;
+  border: 1px solid rgba(255,255,255,0.22);
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  border-radius: 6px;
+  transition: background 0.15s, border-color 0.15s;
+}
+.nb-input::placeholder { color: rgba(255,255,255,0.45); }
+.nb-input:focus { background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.5); outline: none; box-shadow: none; }
+.nb-input-clear {
+  position: absolute;
+  right: 6px;
+  cursor: pointer;
+  color: rgba(255,255,255,0.55);
+  display: flex;
+  align-items: center;
+}
+.nb-input-clear:hover { color: #fff; }
+
+/* Select avec icônes */
+.nb-select-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.nb-select-icon-left {
+  position: absolute;
+  left: 8px;
+  width: 12px;
+  height: 12px;
+  color: rgba(255,255,255,0.5);
+  pointer-events: none;
+  flex-shrink: 0;
+}
+.nb-select-icon-right {
+  position: absolute;
+  right: 7px;
+  width: 12px;
+  height: 12px;
+  color: rgba(255,255,255,0.55);
+  pointer-events: none;
+  flex-shrink: 0;
+}
+.nb-select {
+  height: 30px;
+  padding: 0 26px 0 26px;
+  border: 1px solid rgba(255,255,255,0.22);
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  border-radius: 6px;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  transition: background 0.15s, border-color 0.15s;
+}
+.nb-select:hover { background: rgba(255,255,255,0.16); border-color: rgba(255,255,255,0.35); }
+.nb-select:focus { background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.5); outline: none; }
+.nb-select option { background: var(--bg-panel, #1e293b); color: var(--text, #fff); }
+
+/* Carburant pills */
+.nb-pills {
+  display: flex;
+  gap: 2px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 7px;
+  padding: 2px;
+}
+.nb-pill {
+  padding: 0 10px;
+  height: 24px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: rgba(255,255,255,0.7);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.nb-pill:hover { background: rgba(255,255,255,0.12); color: #fff; }
+.nb-pill-active { color: #fff; }
+
+/* Favoris */
+.nb-fav {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid rgba(255,255,255,0.22);
+  border-radius: 6px;
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.8);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.nb-fav:hover { background: rgba(255,255,255,0.18); color: #fff; }
+.nb-fav-active {
+  background: #ff9800;
+  border-color: #ff9800;
+  color: #fff;
+}
+.nb-fav-active:hover { background: #e68900; border-color: #e68900; }
+
+/* Connexion */
+.nb-login-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 6px;
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.85);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.nb-login-btn:hover { background: rgba(255,255,255,0.18); color: #fff; }
 
 @media (max-width: 640px) {
   .gov-bar {
