@@ -904,6 +904,7 @@ export default function Map() {
   const [reportStation, setReportStation] = useState<{ name: string; address: string } | null>(null);
   const [showLogin, setShowLogin] = useState(false);
   const [showChangelog, setShowChangelog] = useState(false);
+  const [cheapest, setCheapest] = useState<{ lat: number; lng: number; price: number; name: string } | null>(null);
   const [radiusKm, setRadiusKm] = useState(0);
   const [userPos, setUserPos] = useState<[number, number] | null>(null);
   const [showFavorites, setShowFavorites] = useState(false);
@@ -1048,26 +1049,33 @@ export default function Map() {
 
   function findCheapestNearby() {
     if (!data) return;
-    navigator.geolocation.getCurrentPosition((pos) => {
-      const { latitude, longitude } = pos.coords;
-      let best: { lat: number; lng: number; price: number; props: StationProperties } | null = null;
+    const pos = userPos;
+    const doSearch = (latitude: number, longitude: number) => {
+      let best: { lat: number; lng: number; price: number; name: string } | null = null as { lat: number; lng: number; price: number; name: string } | null;
       data.features.forEach((f) => {
         const feature = f as Feature<Point, StationProperties>;
         const props = feature.properties;
         const [lng, lat] = feature.geometry.coordinates;
+        const r = radiusKm > 0 ? radiusKm : 15;
         const dist = distanceKm(latitude, longitude, lat, lng);
-        if (dist > 15) return;
+        if (dist > r) return;
         const p = props.Prices.find((pr) => pr.GasType === gasType && pr.IsAvailable);
         if (!p) return;
         const val = parsePrice(p.Price);
         if (!best || val < best.price) {
-          best = { lat, lng, price: val, props };
+          best = { lat, lng, price: val, name: props.Name };
         }
       });
       if (best) {
-        setFlyTarget({ center: [(best as { lat: number }).lat, (best as { lng: number }).lng], zoom: 15 });
+        setCheapest(best);
+        setFlyTarget({ center: [best.lat, best.lng], zoom: 15 });
       }
-    });
+    };
+    if (pos) {
+      doSearch(pos[0], pos[1]);
+    } else {
+      navigator.geolocation.getCurrentPosition((p) => doSearch(p.coords.latitude, p.coords.longitude));
+    }
   }
 
   const cities = useMemo(() => {
@@ -1180,8 +1188,8 @@ export default function Map() {
           ))}
         </div>
         <div style={{ position: "absolute", bottom: 30, left: 12, zIndex: 1000 }}>
-          <button className="map-btn map-btn-primary" onClick={findCheapestNearby} style={{ marginBottom: 6, display: "block" }}>
-            Moins cher près de moi
+          <button className="map-btn map-btn-primary" onClick={() => { if (cheapest) setCheapest(null); else findCheapestNearby(); }} style={{ marginBottom: 6, display: "block" }}>
+            {cheapest ? "Masquer le meilleur prix" : "Moins cher près de moi"}
           </button>
           <button className="map-btn map-btn-default" onClick={() => setShowRegionPanel((v) => !v)} style={{ marginBottom: 6, display: "block" }}>
             Prix par région
@@ -1228,6 +1236,17 @@ export default function Map() {
           </div>
         )}
         {filtered && geoReady && <StationsLayer gasType={gasType} data={filtered} hasFilter={!!(search || region || brand || showFavorites || radiusKm > 0)} />}
+        {cheapest && (
+          <Marker
+            position={[cheapest.lat, cheapest.lng]}
+            icon={L.divIcon({
+              html: `<div class="cheapest-pulse"><div class="cheapest-label">${cheapest.price.toFixed(1)}¢<br><small>${cheapest.name}</small></div></div>`,
+              className: "",
+              iconSize: [120, 60],
+              iconAnchor: [60, 30],
+            })}
+          />
+        )}
       </MapContainer>
       {historyStation && (
         <div className="panel" style={{ bottom: 60, right: 12, width: 320 }}>
