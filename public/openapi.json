@@ -1,0 +1,429 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Essence Québec — API",
+    "description": "API publique de la plateforme Essence Québec. Expose les données de prix de carburant des stations-service du Québec, issues de la Régie de l'énergie du Québec (REQ).",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Mathieu Fournier",
+      "email": "mathieufournierqc@outlook.com"
+    },
+    "license": {
+      "name": "Données source : Open Data — Régie de l'énergie du Québec"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://essence-quebec.ca",
+      "description": "Production"
+    }
+  ],
+  "tags": [
+    { "name": "Stations", "description": "Données des stations-service" },
+    { "name": "Prix", "description": "Historique des prix" },
+    { "name": "Signalements", "description": "Signalement de prix inexacts" },
+    { "name": "Avis", "description": "Commentaires et votes communautaires" },
+    { "name": "Système", "description": "Endpoints internes (changelog, visites)" }
+  ],
+  "paths": {
+    "/api/stations": {
+      "get": {
+        "tags": ["Stations"],
+        "summary": "Liste des stations-service",
+        "description": "Retourne l'ensemble des stations-service du Québec avec leurs prix actuels. Les données proviennent du flux officiel de la Régie de l'énergie du Québec et sont mises en cache. Si les données sont périmées, une synchronisation est déclenchée en arrière-plan.",
+        "responses": {
+          "200": {
+            "description": "Données disponibles",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Station" }
+                    },
+                    "meta": { "$ref": "#/components/schemas/FeedMeta" }
+                  }
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Données non encore disponibles — synchronisation en cours",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "example": false },
+                    "data": { "type": "null" },
+                    "meta": { "$ref": "#/components/schemas/FeedMeta" }
+                  }
+                }
+              }
+            }
+          },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/api/history": {
+      "get": {
+        "tags": ["Prix"],
+        "summary": "Historique des prix d'une station",
+        "description": "Retourne l'historique des prix d'une station pour un type de carburant donné, sur une période de 1 à 90 jours.",
+        "parameters": [
+          {
+            "name": "station",
+            "in": "query",
+            "required": true,
+            "description": "Nom de la station-service",
+            "schema": { "type": "string", "example": "Ultramar" }
+          },
+          {
+            "name": "address",
+            "in": "query",
+            "required": true,
+            "description": "Adresse complète de la station",
+            "schema": { "type": "string", "example": "123 rue Principale, Québec, QC" }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "description": "Type de carburant",
+            "schema": {
+              "type": "string",
+              "enum": ["Régulier", "Super", "Diesel", "Éthanol"],
+              "default": "Régulier"
+            }
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "description": "Nombre de jours d'historique (max 90)",
+            "schema": { "type": "integer", "minimum": 1, "maximum": 90, "default": 30 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Historique des prix",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "price": { "type": "number", "example": 175.9 },
+                      "snapshot_date": { "type": "string", "format": "date", "example": "2026-04-01" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" },
+          "500": { "$ref": "#/components/responses/ServerError" }
+        }
+      }
+    },
+    "/api/report": {
+      "post": {
+        "tags": ["Signalements"],
+        "summary": "Signaler un prix inexact",
+        "description": "Soumet un signalement de prix incorrect pour une station. Le signalement est transmis à l'équipe d'administration.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ReportInput" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Signalement enregistré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "ok": { "type": "boolean", "example": true } }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" },
+          "500": { "$ref": "#/components/responses/ServerError" }
+        }
+      }
+    },
+    "/api/reviews": {
+      "get": {
+        "tags": ["Avis"],
+        "summary": "Avis d'une station",
+        "description": "Retourne les commentaires et avis communautaires pour une station donnée.",
+        "parameters": [
+          {
+            "name": "station",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "address",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Liste des commentaires",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Comment" }
+                }
+              }
+            }
+          },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      },
+      "post": {
+        "tags": ["Avis"],
+        "summary": "Poster un commentaire ou voter",
+        "description": "Soumet un nouveau commentaire sur une station, ou enregistre un vote (like/dislike) sur un commentaire existant.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  { "$ref": "#/components/schemas/CommentInput" },
+                  { "$ref": "#/components/schemas/VoteInput" }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Opération réussie",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "ok": { "type": "boolean", "example": true } }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" },
+          "500": { "$ref": "#/components/responses/ServerError" }
+        }
+      }
+    },
+    "/api/changelog": {
+      "get": {
+        "tags": ["Système"],
+        "summary": "Historique des commits Git",
+        "description": "Retourne les 50 derniers commits du dépôt GitHub.",
+        "responses": {
+          "200": {
+            "description": "Liste des commits",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "sha": { "type": "string" },
+                      "message": { "type": "string" },
+                      "date": { "type": "string", "format": "date-time" },
+                      "author": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/pageview": {
+      "post": {
+        "tags": ["Système"],
+        "summary": "Enregistrer une visite anonyme",
+        "description": "Incrémente le compteur de visites avec un identifiant de session anonyme (UUID). Utilisé pour les statistiques agrégées uniquement.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["sessionId"],
+                "properties": {
+                  "sessionId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Visite enregistrée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "ok": { "type": "boolean", "example": true } }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Station": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string", "example": "Ultramar" },
+          "address": { "type": "string", "example": "123 rue Principale, Québec, QC" },
+          "city": { "type": "string", "example": "Québec" },
+          "region": { "type": "string", "example": "Capitale-Nationale" },
+          "lat": { "type": "number", "example": 46.8139 },
+          "lng": { "type": "number", "example": -71.2082 },
+          "prices": {
+            "type": "object",
+            "properties": {
+              "Régulier": { "type": "number", "example": 175.9 },
+              "Super": { "type": "number", "example": 189.9 },
+              "Diesel": { "type": "number", "example": 172.4 },
+              "Éthanol": { "type": "number", "example": 162.3 }
+            }
+          }
+        }
+      },
+      "FeedMeta": {
+        "type": "object",
+        "properties": {
+          "lastFetched": { "type": "string", "format": "date-time" },
+          "stale": { "type": "boolean" },
+          "stationCount": { "type": "integer", "example": 2034 }
+        }
+      },
+      "ReportInput": {
+        "type": "object",
+        "required": ["station_name", "address", "first_name", "last_name", "email", "message"],
+        "properties": {
+          "station_name": { "type": "string", "minLength": 1, "example": "Ultramar" },
+          "address": { "type": "string", "minLength": 1, "example": "123 rue Principale, Québec, QC" },
+          "first_name": { "type": "string", "minLength": 2, "example": "Marie" },
+          "last_name": { "type": "string", "minLength": 2, "example": "Tremblay" },
+          "email": { "type": "string", "format": "email", "example": "marie.tremblay@example.com" },
+          "message": { "type": "string", "minLength": 10, "maxLength": 2000, "example": "Le prix affiché est 175.9¢ mais la pompe indique 179.9¢." }
+        }
+      },
+      "CommentInput": {
+        "type": "object",
+        "required": ["station_name", "address", "content"],
+        "properties": {
+          "station_name": { "type": "string", "maxLength": 200 },
+          "address": { "type": "string", "maxLength": 300 },
+          "content": { "type": "string", "minLength": 1, "maxLength": 1000 },
+          "parent_id": { "type": "integer", "nullable": true },
+          "anonymous_id": { "type": "string", "format": "uuid" }
+        }
+      },
+      "VoteInput": {
+        "type": "object",
+        "required": ["action", "comment_id", "vote"],
+        "properties": {
+          "action": { "type": "string", "enum": ["vote"] },
+          "comment_id": { "type": "integer" },
+          "vote": { "type": "integer", "enum": [1, -1] },
+          "anonymous_id": { "type": "string", "format": "uuid" }
+        }
+      },
+      "Comment": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "content": { "type": "string" },
+          "author": { "type": "string", "example": "M. T." },
+          "created_at": { "type": "string", "format": "date-time" },
+          "likes": { "type": "integer" },
+          "dislikes": { "type": "integer" },
+          "parent_id": { "type": "integer", "nullable": true }
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Paramètres invalides",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": { "error": { "type": "string", "example": "Données invalides" } }
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Authentification requise",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": { "error": { "type": "string", "example": "Non authentifié" } }
+            }
+          }
+        }
+      },
+      "TooManyRequests": {
+        "description": "Trop de requêtes — rate limiting actif",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": { "error": { "type": "string", "example": "Trop de requêtes, réessayez plus tard" } }
+            }
+          }
+        }
+      },
+      "ServerError": {
+        "description": "Erreur interne du serveur",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": { "error": { "type": "string", "example": "Erreur serveur" } }
+            }
+          }
+        }
+      }
+    }
+  }
+}

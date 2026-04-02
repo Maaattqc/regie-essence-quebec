@@ -9,7 +9,7 @@ import {
   Zap, Map, BarChart3, Users, Lock, Smartphone,
   RefreshCw, Search, Star, MessageSquare, Flag, Clock,
   CheckCircle2, Layers, GitBranch, Mail, Code2, Eye,
-  Sun, Moon,
+  Sun, Moon, ShieldCheck, TestTube2,
 } from "lucide-react";
 import ScrollToTop from "@/components/ScrollToTop";
 
@@ -164,6 +164,27 @@ const FEATURES = [
     tags: ["Contrôle total", "Statistiques", "Gestion"],
     techTags: ["Contrôle d'accès", "Gestion des rôles", "Audit"],
   },
+];
+
+const SECURITY: [string, string][] = [
+  ["Auth sans mot de passe (OTP)", "Connexion par code à usage unique envoyé par email — aucun stockage de mot de passe, aucune vulnérabilité liée"],
+  ["Row Level Security (RLS)", "Chaque requête PostgreSQL est filtrée au niveau de la base de données selon l'identité de l'utilisateur"],
+  ["Rate limiting par IP", "Protection contre les abus sur tous les endpoints API, implémentée sans Redis ni infrastructure externe"],
+  ["Validation Zod sur tous les endpoints", "Toutes les données entrantes sont validées et typées côté serveur avant tout traitement ou écriture"],
+  ["Séparation client / serveur stricte", "La clé service_role Supabase est confinée aux API Routes — jamais exposée dans le bundle JavaScript client"],
+  ["Secrets hors bundle navigateur", "Variables d'environnement injectées au build Vercel, inaccessibles depuis le code exécuté dans le navigateur"],
+  ["HTTPS universel", "TLS forcé sur tous les domaines Vercel, y compris les environnements de prévisualisation par branche"],
+  ["Emails certifiés SPF / DKIM / DMARC", "Authentification email complète configurée sur domaine personnalisé — anti-usurpation, délivrabilité maximale"],
+];
+
+const TESTS: [string, string][] = [
+  ["Vitest 4.1.2", "Runner de tests ultrarapide, natif ESM — intégré au pipeline sans configuration Babel ni Jest"],
+  ["@testing-library/react", "Tests de composants React axés sur le comportement utilisateur réel, pas sur l'implémentation interne"],
+  ["@testing-library/jest-dom", "Matchers DOM sémantiques pour des assertions lisibles et précises"],
+  ["9 fichiers — API Routes", "Chaque endpoint serveur est testé indépendamment : signalement, historique, cron, avis, admin, auth, pages vues"],
+  ["6 fichiers — Composants React", "Composants UI testés avec rendu réel : PriceChart, NavDropdown, LoginModal, ScrollToTop, pages Login et Changelog"],
+  ["5 fichiers — Utilitaires", "Fonctions pures et modules partagés : stations, rate limiting, schémas Zod, journal d'activité"],
+  ["93 tests — 20 fichiers", "Couverture complète en une seule passe, exécutée en < 8 s"],
 ];
 
 const METRICS = [
@@ -363,6 +384,48 @@ export default function TechPage() {
               ].map(([title, desc]) => (
                 <div key={title} className="flex gap-2.5">
                   <CheckCircle2 className="size-4 text-green-500 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-semibold text-gray-800 dark:text-gray-200">{title}</div>
+                    <div className="text-[11.5px] text-gray-500 dark:text-gray-400 mt-0.5">{desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Sécurité applicative — détaillé seulement */}
+        {detailed && (
+          <section className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <ShieldCheck className="size-5 text-green-500" />
+              <h2 className="text-base font-bold text-gray-900 dark:text-white">Sécurité applicative</h2>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-3 text-[13px]">
+              {SECURITY.map(([title, desc]) => (
+                <div key={title} className="flex gap-2.5">
+                  <CheckCircle2 className="size-4 text-green-500 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-semibold text-gray-800 dark:text-gray-200">{title}</div>
+                    <div className="text-[11.5px] text-gray-500 dark:text-gray-400 mt-0.5">{desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Couverture de tests — détaillé seulement */}
+        {detailed && (
+          <section className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <TestTube2 className="size-5 text-purple-500" />
+              <h2 className="text-base font-bold text-gray-900 dark:text-white">Couverture de tests</h2>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-3 text-[13px]">
+              {TESTS.map(([title, desc]) => (
+                <div key={title} className="flex gap-2.5">
+                  <CheckCircle2 className="size-4 text-purple-500 shrink-0 mt-0.5" />
                   <div>
                     <div className="font-semibold text-gray-800 dark:text-gray-200">{title}</div>
                     <div className="text-[11.5px] text-gray-500 dark:text-gray-400 mt-0.5">{desc}</div>

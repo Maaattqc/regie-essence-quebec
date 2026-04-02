@@ -6,7 +6,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import { Settings, Shield, FileText, Info } from "lucide-react";
+import { Settings, Shield, FileText, Info, Lock } from "lucide-react";
 
 export default function NavDropdown({ onChangelogClick }: { onChangelogClick: () => void }) {
   return (
@@ -28,6 +28,11 @@ export default function NavDropdown({ onChangelogClick }: { onChangelogClick: ()
         <DropdownMenuItem>
           <a href="/tech" className="flex items-center gap-2 w-full no-underline text-inherit">
             <Info className="size-3.5" /> À propos
+          </a>
+        </DropdownMenuItem>
+        <DropdownMenuItem>
+          <a href="/confidentialite" className="flex items-center gap-2 w-full no-underline text-inherit">
+            <Lock className="size-3.5" /> Confidentialité
           </a>
         </DropdownMenuItem>
       </DropdownMenuContent>
