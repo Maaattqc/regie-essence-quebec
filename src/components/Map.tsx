@@ -465,6 +465,8 @@ function FilterBar({
   brandCounts,
   cityCounts,
   totalStations,
+  onLoginClick,
+  onChangelogClick,
 }: {
   gasType: GasTypeKey;
   onGasTypeChange: (t: GasTypeKey) => void;
@@ -481,6 +483,8 @@ function FilterBar({
   brandCounts: Record<string, number>;
   cityCounts: Record<string, number>;
   totalStations: number;
+  onLoginClick: () => void;
+  onChangelogClick: () => void;
 }) {
   return (
     <header className="gov-header">
@@ -546,8 +550,8 @@ function FilterBar({
         </div>
         <div className="gov-bar-right">
           <span className="gov-bar-badge">EN DIRECT</span>
-          <a href="/changelog" className="gov-bar-link">Changelog</a>
-          <a href="/login" className="gov-bar-link">Connexion</a>
+          <button onClick={onChangelogClick} className="gov-bar-link" style={{ background: "none", border: "none", cursor: "pointer" }}>Changelog</button>
+          <button onClick={onLoginClick} className="gov-bar-link" style={{ background: "none", border: "none", cursor: "pointer" }}>Connexion</button>
         </div>
         <div className="gov-bar-accent" />
       </div>
@@ -702,6 +706,122 @@ function ReportModal({
   );
 }
 
+function LoginModal({ onClose }: { onClose: () => void }) {
+  const [email, setEmail] = useState("");
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+    });
+    if (error) setError(error.message);
+    else setSent(true);
+  }
+
+  return (
+    <div className="report-overlay" onClick={onClose}>
+      <div className="login-modal" onClick={(e) => e.stopPropagation()}>
+        <span className="panel-close" onClick={onClose} style={{ position: "absolute", top: "1rem", right: "1rem" }}>x</span>
+
+        <img src="/quebec-logo.svg" alt="Québec" className="login-modal-logo" />
+        <p className="login-modal-subtitle">Entrez votre courriel pour recevoir un lien de connexion sécurisé</p>
+
+        {sent ? (
+          <div className="login-success">
+            <div style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>&#9993;</div>
+            <p style={{ fontSize: "0.9375rem", fontWeight: 600, margin: "0 0 0.5rem" }}>Courriel envoyé !</p>
+            <p style={{ fontSize: "0.8125rem", color: "var(--text-muted)", margin: 0 }}>
+              Un lien de connexion a été envoyé à <strong>{email}</strong>.
+              Vérifiez votre boîte de réception et vos courriels indésirables.
+            </p>
+            <button className="login-btn" onClick={onClose} style={{ marginTop: "1rem" }}>Fermer</button>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit}>
+            <label className="login-label">Adresse courriel</label>
+            <input
+              className="login-input"
+              type="email"
+              placeholder="exemple@courriel.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              autoFocus
+            />
+            {error && <p className="login-error">{error}</p>}
+            <button className="login-btn" type="submit">
+              Envoyer le lien de connexion
+            </button>
+            <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "1rem", lineHeight: 1.4 }}>
+              Aucun mot de passe requis. Vous recevrez un lien sécurisé par courriel.
+            </p>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface ChangelogCommit {
+  sha: string;
+  date: string;
+  message: string;
+  author: string;
+}
+
+function ChangelogModal({ onClose }: { onClose: () => void }) {
+  const [commits, setCommits] = useState<ChangelogCommit[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/changelog")
+      .then((r) => r.json())
+      .then((d) => setCommits(d))
+      .catch(() => setCommits([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  return (
+    <div className="report-overlay" onClick={onClose}>
+      <div className="report-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "40rem", maxHeight: "80vh", overflowY: "auto", display: "flex", flexDirection: "column" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexShrink: 0 }}>
+          <h2 style={{ fontSize: "1.125rem", fontWeight: 700, margin: 0 }}>Changelog</h2>
+          <span className="panel-close" onClick={onClose}>x</span>
+        </div>
+        <div>
+          {loading ? (
+            <p style={{ color: "var(--text-muted)" }}>Chargement...</p>
+          ) : commits.length === 0 ? (
+            <p style={{ color: "var(--text-muted)" }}>Aucun commit trouvé.</p>
+          ) : (
+            <div className="changelog-list">
+              {commits.map((c) => (
+                <div key={c.sha} className="changelog-item">
+                  <div className="changelog-date">
+                    {new Date(c.date).toLocaleDateString("fr-CA", { year: "numeric", month: "long", day: "numeric" })}
+                    {" — "}{c.author}
+                  </div>
+                  <div className="changelog-msg">{c.message}</div>
+                  <div className="changelog-sha">{c.sha.slice(0, 7)}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SiteThemeToggle() {
   const { theme, setTheme } = useTheme();
   const isDark = theme === "dark";
@@ -725,6 +845,8 @@ export default function Map() {
   const [showRegionPanel, setShowRegionPanel] = useState(false);
   const [historyStation, setHistoryStation] = useState<{ name: string; address: string } | null>(null);
   const [reportStation, setReportStation] = useState<{ name: string; address: string } | null>(null);
+  const [showLogin, setShowLogin] = useState(false);
+  const [showChangelog, setShowChangelog] = useState(false);
   const [radiusKm, setRadiusKm] = useState(0);
   const [userPos, setUserPos] = useState<[number, number] | null>(null);
   const [showFavorites, setShowFavorites] = useState(false);
@@ -958,6 +1080,8 @@ export default function Map() {
         brandCounts={brandCounts}
         cityCounts={cityCounts}
         totalStations={totalStations}
+        onLoginClick={() => setShowLogin(true)}
+        onChangelogClick={() => setShowChangelog(true)}
       />
       <MapContainer
         center={QUEBEC_CENTER}
@@ -992,8 +1116,8 @@ export default function Map() {
             { color: "#ef8a17", label: "Élevé" },
             { color: "#e63946", label: "Très élevé" },
           ].map((item) => (
-            <div key={item.color} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ display: "inline-block", width: 12, height: 12, borderRadius: 3, background: item.color }} />
+            <div key={item.color} className="legend-item">
+              <span className="legend-dot" style={{ background: item.color }} />
               {item.label}
             </div>
           ))}
@@ -1071,6 +1195,8 @@ export default function Map() {
           onClose={() => setReportStation(null)}
         />
       )}
+      {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
+      {showChangelog && <ChangelogModal onClose={() => setShowChangelog(false)} />}
     </div>
   );
 }

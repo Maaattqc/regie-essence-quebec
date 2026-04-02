@@ -50,7 +50,7 @@ export default function LoginPage() {
           </form>
         )}
 
-        <a href="/" className="login-back">Retour à la carte</a>
+        <a href="/" className="login-back">&larr; Retour à la carte</a>
       </div>
     </div>
   );

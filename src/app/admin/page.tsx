@@ -135,7 +135,7 @@ export default function AdminPage() {
     <div className="admin-center">
       <h2>Accès refusé</h2>
       <p>Vous n&apos;avez pas les droits administrateur.</p>
-      <a href="/" style={{ color: "var(--qc-blue, #003DA5)" }}>Retour à la carte</a>
+      <a href="/" style={{ color: "var(--qc-blue, #003DA5)" }}>&larr; Retour à la carte</a>
     </div>
   );
 

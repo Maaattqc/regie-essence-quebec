@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
+import { rateLimit, getIP } from "@/lib/rateLimit";
 
 const STATIONS_URL = "https://regieessencequebec.ca/stations.geojson.gz";
 
@@ -18,6 +19,9 @@ interface StationFeature {
 }
 
 export async function GET(request: Request) {
+  if (!rateLimit(getIP(request))) {
+    return NextResponse.json({ error: "Trop de requêtes" }, { status: 429 });
+  }
   // Verify cron secret in production
   const authHeader = request.headers.get("authorization");
   if (

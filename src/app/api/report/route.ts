@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { rateLimit, getIP } from "@/lib/rateLimit";
 
 export async function POST(request: NextRequest) {
+  if (!rateLimit(getIP(request))) {
+    return NextResponse.json({ error: "Trop de requêtes, réessayez plus tard" }, { status: 429 });
+  }
   const body = await request.json();
   const { station_name, address, first_name, last_name, email, message } = body;
 
