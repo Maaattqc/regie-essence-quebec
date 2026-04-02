@@ -176,7 +176,7 @@ const CityPricePanel = memo(function CityPricePanel({
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Rechercher une ville..."
-                className="h-7 text-[12px] max-w-[140px]"
+                className="h-8 text-[13px]"
               />
               <select
                 className="h-8 rounded-md border border-[var(--divider)] bg-[var(--bg-input)] px-2 text-[13px] text-[var(--text)] min-w-[150px]"
