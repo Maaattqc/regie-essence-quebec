@@ -8,100 +8,50 @@ import L from "leaflet";
 import type { Feature, Point } from "geojson";
 import dynamic from "next/dynamic";
 import { useTheme } from "next-themes";
+import { motion, AnimatePresence } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Slider } from "@/components/ui/slider";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  X, Star, StarOff, History, Flag, Send, Mail, ArrowLeft,
+  Sun, Moon, Share2, BarChart3, Crosshair,
+} from "lucide-react";
+import { reportSchema } from "@/lib/schemas";
+import {
+  type StationProperties,
+  type StationPrice,
+  type GasTypeKey,
+  GAS_TYPES,
+  BRANDS,
+  REGIONS,
+  REGION_CENTERS,
+  QUEBEC_CENTER,
+  QUEBEC_ZOOM,
+  STATIONS_URL,
+  stationId,
+  parsePrice,
+  getPriceColor,
+  distanceKm,
+  normalize,
+  deduplicateCities,
+  getFavorites,
+  toggleFavorite,
+  reverseGeocode,
+} from "@/lib/stations";
 import "leaflet/dist/leaflet.css";
 
 const PriceChart = dynamic(() => import("./PriceChart"), { ssr: false });
 
 // Fix Chrome subpixel rendering gaps between tiles
-// https://github.com/Leaflet/Leaflet/issues/3575
 (L.Browser as Record<string, unknown>).any3d = false;
-
-const QUEBEC_CENTER: [number, number] = [52.0, -72.0];
-const QUEBEC_ZOOM = 5;
-const STATIONS_URL = "https://regieessencequebec.ca/stations.geojson.gz";
-
-const REGION_CENTERS: Record<string, [number, number]> = {
-  "Abitibi-Témiscamingue": [48.1705, -78.5117],
-  "Bas-Saint-Laurent": [48.2038, -68.6293],
-  "Capitale-Nationale": [46.9028, -71.2655],
-  "Centre-du-Québec": [46.0535, -72.2469],
-  "Chaudière-Appalaches": [46.5273, -70.9849],
-  "Côte-Nord": [49.5469, -67.3614],
-  "Estrie": [45.3859, -72.1444],
-  "Gaspésie-Îles-de-la-Madeleine": [48.3045, -64.9487],
-  "Lanaudière": [45.9302, -73.5505],
-  "Laurentides": [45.8279, -74.1920],
-  "Laval": [45.5789, -73.7406],
-  "Mauricie": [46.5544, -72.7076],
-  "Montérégie": [45.4674, -73.4465],
-  "Montréal": [45.5289, -73.6453],
-  "Municipalités hors MRC \\ CMM": [45.5266, -73.6502],
-  "Nord-du-Québec": [50.0194, -75.9221],
-  "Outaouais": [45.6084, -75.6577],
-  "Saguenay-Lac-Saint-Jean": [48.5114, -71.5597],
-};
-
-const GAS_TYPES = [
-  { key: "Régulier", label: "Régulier", color: "#d32f2f" },
-  { key: "Super", label: "Super", color: "#f9a825" },
-  { key: "Diesel", label: "Diesel", color: "#2e7d32" },
-] as const;
-
-type GasTypeKey = (typeof GAS_TYPES)[number]["key"];
-
-const BRANDS = [
-  "AMI", "Aucun", "Axco", "Beausoir", "Belzile", "Bélisle", "Canadian Tire",
-  "Costco", "Couche-Tard", "Crevier", "Eko", "Esso", "Gaz-O-Bar", "Harnois",
-  "Irving", "Le Relais", "Les Huiles Berthier Inc", "MacEwen", "Miraco",
-  "Mobil", "Nutrinor Énergies", "Paddock", "Paquet", "Petro Abitemis",
-  "Petro-Canada", "Petrol St-Félix", "Petroplus", "Pétro-T",
-  "Pétroles Maurice", "Quickie", "R.L.", "SDBJ", "Shell", "Sonerco", "Sonic",
-  "Stinson", "Ultramar",
-];
-
-const REGIONS = [
-  "Abitibi-Témiscamingue", "Bas-Saint-Laurent", "Capitale-Nationale",
-  "Centre-du-Québec", "Chaudière-Appalaches", "Côte-Nord", "Estrie",
-  "Gaspésie-Îles-de-la-Madeleine", "Lanaudière", "Laurentides", "Laval",
-  "Mauricie", "Montréal", "Montérégie",
-  "Municipalités hors MRC \\ CMM", "Nord-du-Québec", "Outaouais",
-  "Saguenay-Lac-Saint-Jean",
-];
-
-interface StationPrice {
-  GasType: string;
-  Price: string;
-  IsAvailable: boolean;
-}
-
-interface StationProperties {
-  Name: string;
-  brand: string;
-  Address: string;
-  PostalCode: string;
-  Region: string;
-  Prices: StationPrice[];
-  _city?: string;
-  _cityNorm?: string;
-}
-
-function stationId(props: StationProperties): string {
-  return `${props.Name}|${props.Address}`;
-}
-
-function getFavorites(): Set<string> {
-  try {
-    return new Set(JSON.parse(localStorage.getItem("favorites") || "[]"));
-  } catch { return new Set(); }
-}
-
-function toggleFavorite(id: string): Set<string> {
-  const favs = getFavorites();
-  if (favs.has(id)) favs.delete(id); else favs.add(id);
-  localStorage.setItem("favorites", JSON.stringify([...favs]));
-  window.dispatchEvent(new Event("favorites-changed"));
-  return favs;
-}
 
 function formatPopup(props: StationProperties, lat: number, lng: number) {
   const prices = props.Prices.filter((p) => p.IsAvailable)
@@ -133,10 +83,6 @@ function formatPopup(props: StationProperties, lat: number, lng: number) {
           style="flex:1;padding:5px 0;background:#7c3aed;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600">
           Historique
         </button>
-        <button onclick="window.__showReviews('${props.Name.replace(/'/g, "\\'")}','${props.Address.replace(/'/g, "\\'")}')"
-          style="flex:1;padding:5px 0;background:#0ea5e9;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600">
-          Avis
-        </button>
         <button onclick="window.__showReport('${props.Name.replace(/'/g, "\\'")}','${props.Address.replace(/'/g, "\\'")}')"
           style="flex:1;padding:5px 0;background:#e63946;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600">
           Signaler
@@ -144,18 +90,6 @@ function formatPopup(props: StationProperties, lat: number, lng: number) {
       </div>
     </div>
   `;
-}
-
-function distanceKm(lat1: number, lon1: number, lat2: number, lon2: number) {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 function useDisableMapDrag() {
@@ -172,13 +106,16 @@ function RadiusSlider({ radiusKm, onChange }: { radiusKm: number; onChange: (v: 
   const dragProps = useDisableMapDrag();
   return (
     <div className="radius-panel" {...dragProps}>
-      <div style={{ fontWeight: 600, marginBottom: 4 }}>
+      <div className="text-xs font-semibold mb-1">
         Rayon : {radiusKm === 0 ? "Tout" : `${radiusKm} km`}
       </div>
-      <input
-        type="range" min={0} max={50} step={5} value={radiusKm}
-        onChange={(e) => onChange(Number(e.target.value))}
-        style={{ width: 120 }}
+      <Slider
+        min={0}
+        max={50}
+        step={5}
+        value={[radiusKm]}
+        onValueChange={(v) => onChange(Array.isArray(v) ? v[0] : v)}
+        className="w-[120px]"
       />
     </div>
   );
@@ -190,36 +127,6 @@ function FlyTo({ center, zoom }: { center: [number, number]; zoom: number }) {
     map.flyTo(center, zoom);
   }, [map, center, zoom]);
   return null;
-}
-
-async function reverseGeocode(
-  lat: number,
-  lon: number
-): Promise<string | null> {
-  const res = await fetch(
-    `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&zoom=10`
-  );
-  const data = await res.json();
-  return (
-    data.address?.city ||
-    data.address?.town ||
-    data.address?.village ||
-    data.address?.municipality ||
-    null
-  );
-}
-
-const PRICE_COLORS = ["#2d9a2d", "#6fbf3b", "#f0c808", "#ef8a17", "#e63946"];
-
-function parsePrice(priceStr: string): number {
-  return parseFloat(priceStr.replace("\u00A2", ""));
-}
-
-function getPriceColor(value: number, min: number, max: number): string {
-  if (min === max) return PRICE_COLORS[2]; // jaune si tous pareil
-  const ratio = (value - min) / (max - min);
-  const idx = Math.min(Math.floor(ratio * 5), 4);
-  return PRICE_COLORS[idx];
 }
 
 const iconCache: Record<string, L.DivIcon> = {};
@@ -331,39 +238,6 @@ const StationsLayer = memo(function StationsLayer({
   );
 });
 
-function normalize(s: string) {
-  return s
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
-}
-
-function extractCity(address: string): string | null {
-  const idx = address.lastIndexOf(",");
-  if (idx === -1) return null;
-  const city = address.slice(idx + 1).trim();
-  return city.charAt(0).toUpperCase() + city.slice(1).toLowerCase();
-}
-
-function deduplicateCities(raw: Set<string>): string[] {
-  const sorted = [...raw].sort((a, b) => a.length - b.length);
-  const kept: string[] = [];
-  const normalizedKept: string[] = [];
-
-  for (const city of sorted) {
-    const norm = normalize(city);
-    const isDuplicate = normalizedKept.some(
-      (existing) => norm.startsWith(existing) && norm !== existing
-    );
-    if (!isDuplicate) {
-      kept.push(city);
-      normalizedKept.push(norm);
-    }
-  }
-
-  return kept.sort((a, b) => a.localeCompare(b, "fr"));
-}
-
 function SearchWithSuggestions({
   search,
   onSearchChange,
@@ -422,8 +296,7 @@ function SearchWithSuggestions({
 
   return (
     <div style={{ position: "relative" }}>
-      <input
-        className="gov-input"
+      <Input
         type="text"
         value={input}
         onChange={(e) => handleInput(e.target.value)}
@@ -431,10 +304,13 @@ function SearchWithSuggestions({
         onFocus={() => setFocused(true)}
         onBlur={() => setTimeout(() => setFocused(false), 150)}
         placeholder="Ville"
+        className="h-7 w-[180px] border-white/25 bg-white/12 text-white text-[13px] font-medium placeholder:text-white/50 focus-visible:bg-white/20 focus-visible:border-white/50 focus-visible:ring-0"
         style={{ paddingRight: input ? 24 : 10 }}
       />
       {input && (
-        <span className="search-clear" onMouseDown={handleClear} style={{ color: "rgba(255,255,255,0.6)" }}>x</span>
+        <span className="search-clear" onMouseDown={handleClear}>
+          <X className="size-3" />
+        </span>
       )}
       {focused && suggestions.length > 0 && (
         <div className="suggestions">
@@ -520,16 +396,22 @@ function FilterBar({
               </option>
             ))}
           </select>
-          <div style={{ display: "flex", gap: 2 }}>
+          <div className="flex gap-0.5">
             {GAS_TYPES.map((t) => (
-              <button
+              <Button
                 key={t.key}
-                className={`gov-gas-btn ${gasType === t.key ? "gov-gas-btn-active" : ""}`}
-                onClick={() => onGasTypeChange(t.key)}
+                variant={gasType === t.key ? "default" : "ghost"}
+                size="sm"
+                className={`text-[13px] font-semibold text-white border border-white/25 ${
+                  gasType === t.key
+                    ? "border-transparent"
+                    : "bg-white/12 hover:bg-white/20 hover:text-white"
+                }`}
                 style={gasType === t.key ? { background: t.color } : undefined}
+                onClick={() => onGasTypeChange(t.key)}
               >
                 {t.label}
-              </button>
+              </Button>
             ))}
           </div>
           <select
@@ -544,18 +426,30 @@ function FilterBar({
               </option>
             ))}
           </select>
-          <button
-            className={`gov-gas-btn ${showFavorites ? "gov-gas-btn-active" : ""}`}
+          <Button
+            variant={showFavorites ? "default" : "ghost"}
+            size="sm"
+            className={`text-[13px] font-semibold text-white border border-white/25 ${
+              showFavorites
+                ? "border-transparent bg-[#ff9800] hover:bg-[#ff9800]/80"
+                : "bg-white/12 hover:bg-white/20 hover:text-white"
+            }`}
             onClick={onToggleFavorites}
-            style={showFavorites ? { background: "#ff9800" } : undefined}
           >
+            {showFavorites ? <Star className="size-3.5 fill-current" /> : <StarOff className="size-3.5" />}
             Favoris
-          </button>
+          </Button>
         </div>
         <div className="gov-bar-right">
-          <span className="gov-bar-badge">EN DIRECT</span>
-          <button onClick={onChangelogClick} className="gov-bar-link" style={{ background: "none", border: "none", cursor: "pointer" }}>Changelog</button>
-          <button onClick={onLoginClick} className="gov-bar-link" style={{ background: "none", border: "none", cursor: "pointer" }}>Connexion</button>
+          <Badge variant="secondary" className="bg-white/15 text-white border-0 text-xs font-semibold tracking-wide">
+            EN DIRECT
+          </Badge>
+          <Button variant="link" size="sm" className="text-white/85 hover:text-white text-[13px] font-medium no-underline hover:no-underline" onClick={onChangelogClick}>
+            Changelog
+          </Button>
+          <Button variant="link" size="sm" className="text-white/85 hover:text-white text-[13px] font-medium no-underline hover:no-underline" onClick={onLoginClick}>
+            Connexion
+          </Button>
         </div>
         <div className="gov-bar-accent" />
       </div>
@@ -589,27 +483,38 @@ const RegionPricePanel = memo(function RegionPricePanel({
       .sort((a, b) => a.avg - b.avg);
   }, [data, gasType]);
 
-  if (!visible) return null;
-
   return (
-    <div className="panel" style={{ top: 60, left: 12, width: 280, maxHeight: "70vh", overflowY: "auto" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-        <strong>Prix moyen par région ({gasType})</strong>
-        <span className="panel-close" onClick={onClose}>x</span>
-      </div>
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
-        <tbody>
-          {regionAvgs.map(({ region, avg }, i) => (
-            <tr key={region} style={{ background: i % 2 === 0 ? "var(--row-alt)" : "transparent" }}>
-              <td style={{ padding: "4px 6px" }}>{region}</td>
-              <td style={{ padding: "4px 6px", textAlign: "right", fontWeight: 600 }}>
-                {avg.toFixed(1)}¢
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <AnimatePresence>
+      {visible && (
+        <motion.div
+          className="panel"
+          style={{ top: 60, left: 12, width: 280, maxHeight: "70vh", overflowY: "auto" }}
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -20 }}
+          transition={{ duration: 0.2 }}
+        >
+          <div className="flex justify-between items-center mb-2">
+            <strong>Prix moyen par région ({gasType})</strong>
+            <Button variant="ghost" size="icon-xs" onClick={onClose}>
+              <X className="size-3.5" />
+            </Button>
+          </div>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <tbody>
+              {regionAvgs.map(({ region, avg }, i) => (
+                <tr key={region} style={{ background: i % 2 === 0 ? "var(--row-alt)" : "transparent" }}>
+                  <td style={{ padding: "4px 6px" }}>{region}</td>
+                  <td style={{ padding: "4px 6px", textAlign: "right", fontWeight: 600 }}>
+                    {avg.toFixed(1)}¢
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 });
 
@@ -626,15 +531,30 @@ function ReportModal({
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setSending(true);
     setError("");
+    setFieldErrors({});
+
+    const payload = { station_name: stationName, address, ...form };
+    const validation = reportSchema.safeParse(payload);
+    if (!validation.success) {
+      const errs: Record<string, string> = {};
+      validation.error.issues.forEach((issue) => {
+        const key = String(issue.path[0]);
+        if (!errs[key]) errs[key] = issue.message;
+      });
+      setFieldErrors(errs);
+      return;
+    }
+
+    setSending(true);
     const res = await fetch("/api/report", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ station_name: stationName, address, ...form }),
+      body: JSON.stringify(payload),
     });
     if (res.ok) {
       setSent(true);
@@ -646,67 +566,80 @@ function ReportModal({
   }
 
   return (
-    <div className="report-overlay" onClick={onClose}>
-      <div className="report-modal" onClick={(e) => e.stopPropagation()}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>Signaler une inexactitude</h2>
-          <span className="panel-close" onClick={onClose}>x</span>
-        </div>
-        <div style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 16 }}>
-          <strong>{stationName}</strong><br />{address}
-        </div>
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Flag className="size-4 text-destructive" />
+            Signaler une inexactitude
+          </DialogTitle>
+          <DialogDescription>
+            <strong>{stationName}</strong> — {address}
+          </DialogDescription>
+        </DialogHeader>
 
         {sent ? (
-          <div style={{ textAlign: "center", padding: "20px 0" }}>
-            <p style={{ fontSize: 15, fontWeight: 600 }}>Merci pour votre signalement !</p>
-            <p style={{ fontSize: 13, color: "var(--text-muted)" }}>Nous allons examiner votre demande.</p>
-            <button className="login-btn" onClick={onClose} style={{ marginTop: 12 }}>Fermer</button>
-          </div>
+          <motion.div
+            className="text-center py-5"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+          >
+            <p className="text-[15px] font-semibold">Merci pour votre signalement !</p>
+            <p className="text-[13px] text-muted-foreground">Nous allons examiner votre demande.</p>
+            <Button onClick={onClose} className="mt-3">Fermer</Button>
+          </motion.div>
         ) : (
-          <form onSubmit={handleSubmit}>
-            <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-              <input
-                className="login-input"
-                placeholder="Prénom"
-                value={form.first_name}
-                onChange={(e) => setForm({ ...form, first_name: e.target.value })}
-                required
-                style={{ flex: 1 }}
-              />
-              <input
-                className="login-input"
-                placeholder="Nom"
-                value={form.last_name}
-                onChange={(e) => setForm({ ...form, last_name: e.target.value })}
-                required
-                style={{ flex: 1 }}
-              />
+          <form onSubmit={handleSubmit} className="flex flex-col gap-2">
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <Input
+                  placeholder="Prénom"
+                  value={form.first_name}
+                  onChange={(e) => setForm({ ...form, first_name: e.target.value })}
+                  aria-invalid={!!fieldErrors.first_name}
+                />
+                {fieldErrors.first_name && <p className="text-xs text-destructive mt-0.5">{fieldErrors.first_name}</p>}
+              </div>
+              <div className="flex-1">
+                <Input
+                  placeholder="Nom"
+                  value={form.last_name}
+                  onChange={(e) => setForm({ ...form, last_name: e.target.value })}
+                  aria-invalid={!!fieldErrors.last_name}
+                />
+                {fieldErrors.last_name && <p className="text-xs text-destructive mt-0.5">{fieldErrors.last_name}</p>}
+              </div>
             </div>
-            <input
-              className="login-input"
-              type="email"
-              placeholder="Courriel"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              required
-            />
-            <textarea
-              className="login-input"
-              placeholder="Décrivez l'inexactitude..."
-              value={form.message}
-              onChange={(e) => setForm({ ...form, message: e.target.value })}
-              required
-              rows={4}
-              style={{ resize: "vertical" }}
-            />
-            {error && <p className="login-error">{error}</p>}
-            <button className="login-btn" type="submit" disabled={sending}>
+            <div>
+              <Input
+                type="email"
+                placeholder="Courriel"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                aria-invalid={!!fieldErrors.email}
+              />
+              {fieldErrors.email && <p className="text-xs text-destructive mt-0.5">{fieldErrors.email}</p>}
+            </div>
+            <div>
+              <textarea
+                className="flex min-h-[80px] w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 outline-none resize-y"
+                placeholder="Décrivez l'inexactitude..."
+                value={form.message}
+                onChange={(e) => setForm({ ...form, message: e.target.value })}
+                aria-invalid={!!fieldErrors.message}
+                rows={4}
+              />
+              {fieldErrors.message && <p className="text-xs text-destructive mt-0.5">{fieldErrors.message}</p>}
+            </div>
+            {error && <p className="text-sm text-destructive">{error}</p>}
+            <Button type="submit" disabled={sending} variant="destructive">
+              <Send className="size-3.5" />
               {sending ? "Envoi..." : "Envoyer le signalement"}
-            </button>
+            </Button>
           </form>
         )}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -755,31 +688,38 @@ function LoginModal({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className="report-overlay" onClick={onClose}>
-      <div className="login-modal" onClick={(e) => e.stopPropagation()}>
-        <span className="panel-close" onClick={onClose} style={{ position: "absolute", top: "1rem", right: "1rem" }}>x</span>
-
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-sm">
         <img src="/quebec-logo.svg" alt="Québec" className="login-modal-logo" />
 
         {step === "email" && (
           <>
-            <p className="login-modal-subtitle">Entrez votre courriel pour recevoir un code de connexion</p>
-            <form onSubmit={handleSendCode}>
-              <label className="login-label">Adresse courriel</label>
-              <input
-                className="login-input"
-                type="email"
-                placeholder="exemple@courriel.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                autoFocus
-              />
-              {error && <p className="login-error">{error}</p>}
-              <button className="login-btn" type="submit" disabled={loading}>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Mail className="size-4" />
+                Connexion
+              </DialogTitle>
+              <DialogDescription>
+                Entrez votre courriel pour recevoir un code de connexion
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleSendCode} className="flex flex-col gap-3">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Adresse courriel</label>
+                <Input
+                  type="email"
+                  placeholder="exemple@courriel.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  autoFocus
+                />
+              </div>
+              {error && <p className="text-sm text-destructive">{error}</p>}
+              <Button type="submit" disabled={loading}>
                 {loading ? "Envoi..." : "Envoyer le code"}
-              </button>
-              <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "1rem", lineHeight: 1.4 }}>
+              </Button>
+              <p className="text-xs text-muted-foreground leading-relaxed">
                 Aucun mot de passe requis. Un code à 6 chiffres sera envoyé à votre courriel.
               </p>
             </form>
@@ -788,47 +728,61 @@ function LoginModal({ onClose }: { onClose: () => void }) {
 
         {step === "code" && (
           <>
-            <p className="login-modal-subtitle">Un code a été envoyé à <strong>{email}</strong></p>
-            <form onSubmit={handleVerifyCode}>
-              <label className="login-label">Code de vérification</label>
-              <input
-                className="login-input login-code-input"
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                maxLength={6}
-                placeholder="000000"
-                value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                required
-                autoFocus
-              />
-              {error && <p className="login-error">{error}</p>}
-              <button className="login-btn" type="submit" disabled={loading || code.length < 6}>
+            <DialogHeader>
+              <DialogTitle>Vérification</DialogTitle>
+              <DialogDescription>
+                Un code a été envoyé à <strong>{email}</strong>
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleVerifyCode} className="flex flex-col gap-3">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Code de vérification</label>
+                <Input
+                  className="text-center text-2xl tracking-[0.3em] font-mono"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={6}
+                  placeholder="000000"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  required
+                  autoFocus
+                />
+              </div>
+              {error && <p className="text-sm text-destructive">{error}</p>}
+              <Button type="submit" disabled={loading || code.length < 6}>
                 {loading ? "Vérification..." : "Vérifier le code"}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground"
                 onClick={() => { setStep("email"); setError(""); setCode(""); }}
-                style={{ background: "none", border: "none", color: "var(--text-muted)", fontSize: "0.8125rem", cursor: "pointer", marginTop: "0.75rem", display: "block", width: "100%", textAlign: "center" }}
               >
+                <ArrowLeft className="size-3" />
                 Changer de courriel
-              </button>
+              </Button>
             </form>
           </>
         )}
 
         {step === "done" && (
-          <div className="login-success">
-            <p style={{ fontSize: "0.9375rem", fontWeight: 600, margin: "0 0 0.5rem" }}>Connexion réussie !</p>
-            <p style={{ fontSize: "0.8125rem", color: "var(--text-muted)", margin: 0 }}>
+          <motion.div
+            className="text-center py-4"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+          >
+            <p className="text-[15px] font-semibold mb-1">Connexion réussie !</p>
+            <p className="text-[13px] text-muted-foreground">
               Vous êtes maintenant connecté.
             </p>
-            <button className="login-btn" onClick={onClose} style={{ marginTop: "1rem" }}>Fermer</button>
-          </div>
+            <Button onClick={onClose} className="mt-4">Fermer</Button>
+          </motion.div>
         )}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -852,17 +806,19 @@ function ChangelogModal({ onClose }: { onClose: () => void }) {
   }, []);
 
   return (
-    <div className="report-overlay" onClick={onClose}>
-      <div className="report-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "40rem", maxHeight: "80vh", overflowY: "auto", display: "flex", flexDirection: "column" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexShrink: 0 }}>
-          <h2 style={{ fontSize: "1.125rem", fontWeight: 700, margin: 0 }}>Changelog</h2>
-          <span className="panel-close" onClick={onClose}>x</span>
-        </div>
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-[40rem] max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <History className="size-4" />
+            Changelog
+          </DialogTitle>
+        </DialogHeader>
         <div>
           {loading ? (
-            <p style={{ color: "var(--text-muted)" }}>Chargement...</p>
+            <p className="text-muted-foreground">Chargement...</p>
           ) : commits.length === 0 ? (
-            <p style={{ color: "var(--text-muted)" }}>Aucun commit trouvé.</p>
+            <p className="text-muted-foreground">Aucun commit trouvé.</p>
           ) : (
             <div className="changelog-list">
               {commits.map((c) => (
@@ -878,159 +834,169 @@ function ChangelogModal({ onClose }: { onClose: () => void }) {
             </div>
           )}
         </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface Comment {
+  id: number;
+  content: string;
+  parent_id: number | null;
+  likes: number;
+  dislikes: number;
+  created_at: string;
+  author: string;
+  user_id: string;
+  my_vote: number;
+}
+
+function CommentItem({ c, replies, onReply, onVote }: { c: Comment; replies: Comment[]; onReply: (id: number) => void; onVote: (id: number, vote: number) => void }) {
+  const timeAgo = (d: string) => {
+    const diff = Date.now() - new Date(d).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 60) return `il y a ${mins}m`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `il y a ${hrs}h`;
+    return `il y a ${Math.floor(hrs / 24)}j`;
+  };
+  return (
+    <div style={{ padding: "0.5rem 0" }}>
+      <div style={{ display: "flex", gap: "0.5rem", alignItems: "flex-start" }}>
+        <div style={{ width: "1.75rem", height: "1.75rem", borderRadius: "50%", background: "var(--bg-hover)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.75rem", fontWeight: 700, flexShrink: 0, color: "var(--text-secondary)" }}>
+          {c.author[0]?.toUpperCase()}
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: "0.75rem" }}>
+            <strong>{c.author}</strong>
+            <span style={{ color: "var(--text-muted)", marginLeft: "0.375rem" }}>{timeAgo(c.created_at)}</span>
+          </div>
+          <p style={{ fontSize: "0.8125rem", margin: "0.25rem 0 0.375rem", lineHeight: 1.4, color: "var(--text)" }}>{c.content}</p>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", fontSize: "0.75rem" }}>
+            <button onClick={() => onVote(c.id, 1)} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "0.25rem", color: c.my_vote === 1 ? "#0ea5e9" : "var(--text-muted)", padding: 0 }}>
+              &#9650; {c.likes > 0 && c.likes}
+            </button>
+            <button onClick={() => onVote(c.id, -1)} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "0.25rem", color: c.my_vote === -1 ? "#e63946" : "var(--text-muted)", padding: 0 }}>
+              &#9660; {c.dislikes > 0 && c.dislikes}
+            </button>
+            <button onClick={() => onReply(c.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 0, fontWeight: 600, fontSize: "0.75rem" }}>
+              Répondre
+            </button>
+          </div>
+          {replies.length > 0 && (
+            <div style={{ marginLeft: "0.5rem", borderLeft: "2px solid var(--divider)", paddingLeft: "0.75rem", marginTop: "0.375rem" }}>
+              {replies.map((r) => (
+                <CommentItem key={r.id} c={r} replies={[]} onReply={onReply} onVote={onVote} />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
-interface Review {
-  id: number;
-  rating: number;
-  comment: string | null;
-  created_at: string;
-  author: string;
-}
-
-function ReviewModal({
-  stationName,
-  address,
-  onClose,
-}: {
-  stationName: string;
-  address: string;
-  onClose: () => void;
-}) {
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [avg, setAvg] = useState(0);
+function CommentsModal({ stationName, address, onClose }: { stationName: string; address: string; onClose: () => void }) {
+  const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [rating, setRating] = useState(0);
-  const [comment, setComment] = useState("");
+  const [newComment, setNewComment] = useState("");
+  const [replyTo, setReplyTo] = useState<number | null>(null);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
 
-  async function loadReviews() {
-    const res = await fetch(`/api/reviews?station=${encodeURIComponent(stationName)}&address=${encodeURIComponent(address)}`);
+  async function getToken() {
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token || null;
+  }
+
+  async function loadComments() {
+    const token = await getToken();
+    const headers: Record<string, string> = {};
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const res = await fetch(`/api/reviews?station=${encodeURIComponent(stationName)}&address=${encodeURIComponent(address)}`, { headers });
     const data = await res.json();
-    setReviews(data.reviews || []);
-    setAvg(data.avg || 0);
+    setComments(Array.isArray(data) ? data : []);
     setLoading(false);
   }
 
-  useEffect(() => { loadReviews(); }, [stationName, address]);
+  useEffect(() => { loadComments(); }, [stationName, address]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!newComment.trim()) return;
     setError("");
     setSending(true);
-    const { createClient } = await import("@supabase/supabase-js");
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      setError("Vous devez être connecté pour laisser un avis");
-      setSending(false);
-      return;
-    }
+    const token = await getToken();
+    if (!token) { setError("Connectez-vous pour commenter"); setSending(false); return; }
     const res = await fetch("/api/reviews", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({ station_name: stationName, address, rating, comment }),
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ station_name: stationName, address, content: newComment, parent_id: replyTo }),
     });
-    if (res.ok) {
-      setSuccess(true);
-      setRating(0);
-      setComment("");
-      loadReviews();
-    } else {
-      const data = await res.json();
-      setError(data.error || "Erreur");
-    }
+    if (res.ok) { setNewComment(""); setReplyTo(null); loadComments(); }
+    else { const d = await res.json(); setError(d.error || "Erreur"); }
     setSending(false);
   }
 
-  const stars = (n: number) => "★".repeat(n) + "☆".repeat(5 - n);
+  async function handleVote(commentId: number, vote: number) {
+    const token = await getToken();
+    if (!token) { setError("Connectez-vous pour voter"); return; }
+    await fetch("/api/reviews", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ action: "vote", comment_id: commentId, vote }),
+    });
+    loadComments();
+  }
+
+  const topLevel = comments.filter((c) => !c.parent_id);
+  const getReplies = (id: number) => comments.filter((c) => c.parent_id === id);
+  const replyAuthor = replyTo ? comments.find((c) => c.id === replyTo)?.author : null;
 
   return (
     <div className="report-overlay" onClick={onClose}>
-      <div className="report-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "28rem", maxHeight: "85vh", overflowY: "auto" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
-          <h2 style={{ fontSize: "1.0625rem", fontWeight: 700, margin: 0 }}>Avis — {stationName}</h2>
+      <div className="report-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "30rem", maxHeight: "85vh", display: "flex", flexDirection: "column" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem", flexShrink: 0 }}>
+          <h2 style={{ fontSize: "1.0625rem", fontWeight: 700, margin: 0 }}>Commentaires — {stationName}</h2>
           <span className="panel-close" onClick={onClose}>x</span>
         </div>
+        <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: "0.75rem" }}>{comments.length} commentaire{comments.length !== 1 ? "s" : ""}</div>
 
-        {!loading && reviews.length > 0 && (
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1rem", fontSize: "0.875rem" }}>
-            <span style={{ color: "#f59e0b", fontSize: "1.125rem" }}>{stars(Math.round(avg))}</span>
-            <strong>{avg.toFixed(1)}/5</strong>
-            <span style={{ color: "var(--text-muted)" }}>({reviews.length} avis)</span>
+        <form onSubmit={handleSubmit} style={{ flexShrink: 0, marginBottom: "0.75rem" }}>
+          {replyTo && (
+            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: "0.25rem", display: "flex", alignItems: "center", gap: "0.25rem" }}>
+              Répondre à <strong>{replyAuthor}</strong>
+              <button type="button" onClick={() => setReplyTo(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 0, fontSize: "0.75rem" }}>x</button>
+            </div>
+          )}
+          <div style={{ display: "flex", gap: "0.375rem" }}>
+            <input
+              className="login-input"
+              placeholder="Ajouter un commentaire..."
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              style={{ flex: 1, marginBottom: 0 }}
+            />
+            <button className="login-btn" type="submit" disabled={sending || !newComment.trim()} style={{ width: "auto", padding: "0 0.75rem", fontSize: "0.8125rem" }}>
+              {sending ? "..." : "Publier"}
+            </button>
           </div>
-        )}
-
-        <form onSubmit={handleSubmit} style={{ marginBottom: "1rem", padding: "0.75rem", background: "var(--bg-input)", borderRadius: "0.5rem" }}>
-          <div style={{ fontSize: "0.8125rem", fontWeight: 600, marginBottom: "0.5rem" }}>Laisser un avis</div>
-          <div style={{ display: "flex", gap: "0.25rem", marginBottom: "0.5rem" }}>
-            {[1, 2, 3, 4, 5].map((n) => (
-              <button
-                key={n}
-                type="button"
-                onClick={() => setRating(n)}
-                style={{
-                  background: "none", border: "none", cursor: "pointer",
-                  fontSize: "1.5rem", color: n <= rating ? "#f59e0b" : "var(--text-muted)",
-                  padding: 0, lineHeight: 1,
-                }}
-              >
-                ★
-              </button>
-            ))}
-          </div>
-          <textarea
-            className="login-input"
-            placeholder="Votre commentaire (optionnel)"
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            rows={2}
-            style={{ resize: "vertical", marginBottom: "0.5rem" }}
-          />
-          {error && <p className="login-error">{error}</p>}
-          {success && <p style={{ color: "#2d9a2d", fontSize: "0.8125rem", margin: "0 0 0.5rem" }}>Avis publié !</p>}
-          <button className="login-btn" type="submit" disabled={sending || rating === 0} style={{ fontSize: "0.8125rem", padding: "0.5rem" }}>
-            {sending ? "Envoi..." : "Publier"}
-          </button>
+          {error && <p className="login-error" style={{ marginTop: "0.25rem" }}>{error}</p>}
         </form>
 
-        {loading ? (
-          <p style={{ color: "var(--text-muted)", fontSize: "0.8125rem" }}>Chargement...</p>
-        ) : reviews.length === 0 ? (
-          <p style={{ color: "var(--text-muted)", fontSize: "0.8125rem" }}>Aucun avis pour cette station.</p>
-        ) : (
-          <div>
-            {reviews.map((r) => (
-              <div key={r.id} style={{ borderBottom: "1px solid var(--divider)", padding: "0.625rem 0" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div>
-                    <span style={{ color: "#f59e0b", fontSize: "0.8125rem" }}>{stars(r.rating)}</span>
-                    <strong style={{ marginLeft: "0.375rem", fontSize: "0.8125rem" }}>{r.author}</strong>
-                  </div>
-                  <span style={{ color: "var(--text-muted)", fontSize: "0.6875rem" }}>
-                    {new Date(r.created_at).toLocaleDateString("fr-CA")}
-                  </span>
-                </div>
-                {r.comment && (
-                  <p style={{ fontSize: "0.8125rem", margin: "0.25rem 0 0", color: "var(--text-secondary)", lineHeight: 1.4 }}>
-                    {r.comment}
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+        <div style={{ overflowY: "auto", flex: 1 }}>
+          {loading ? (
+            <p style={{ color: "var(--text-muted)", fontSize: "0.8125rem" }}>Chargement...</p>
+          ) : topLevel.length === 0 ? (
+            <p style={{ color: "var(--text-muted)", fontSize: "0.8125rem" }}>Aucun commentaire. Soyez le premier !</p>
+          ) : (
+            topLevel.map((c) => (
+              <CommentItem key={c.id} c={c} replies={getReplies(c.id)} onReply={setReplyTo} onVote={handleVote} />
+            ))
+          )}
+        </div>
       </div>
     </div>
   );
@@ -1040,13 +1006,15 @@ function SiteThemeToggle() {
   const { theme, setTheme } = useTheme();
   const isDark = theme === "dark";
   return (
-    <button
-      className="map-btn map-btn-default"
+    <Button
+      variant="outline"
+      size="sm"
+      className="mt-1.5 shadow-md bg-[var(--bg-panel)] text-[var(--text)] border-0 font-semibold text-[13px]"
       onClick={() => setTheme(isDark ? "light" : "dark")}
-      style={{ marginTop: 6 }}
     >
+      {isDark ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
       {isDark ? "Mode clair" : "Mode sombre"}
-    </button>
+    </Button>
   );
 }
 
@@ -1061,7 +1029,7 @@ export default function Map() {
   const [reportStation, setReportStation] = useState<{ name: string; address: string } | null>(null);
   const [showLogin, setShowLogin] = useState(false);
   const [showChangelog, setShowChangelog] = useState(false);
-  const [reviewStation, setReviewStation] = useState<{ name: string; address: string } | null>(null);
+  const [commentStation, setCommentStation] = useState<{ name: string; address: string } | null>(null);
   const [cheapestResults, setCheapestResults] = useState<{ stations: { lat: number; lng: number; price: number; name: string; dist: number }[]; message: string } | null>(null);
   const [radiusKm, setRadiusKm] = useState(5);
   const [userPos, setUserPos] = useState<[number, number] | null>(null);
@@ -1071,7 +1039,6 @@ export default function Map() {
   const [geoReady, setGeoReady] = useState(false);
   const [flyTarget, setFlyTarget] = useState<{ center: [number, number]; zoom: number } | null>(null);
 
-  // Load URL params on mount
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("ville")) setSearch(params.get("ville")!);
@@ -1090,7 +1057,6 @@ export default function Map() {
           return geojson;
         });
     promise.then((geojson: GeoJSON.FeatureCollection) => {
-        // Pre-compute city and normalized city for each feature
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         geojson.features.forEach((f: any) => {
           const addr = f.properties.Address as string;
@@ -1116,7 +1082,7 @@ export default function Map() {
       setReportStation({ name, address });
     };
     (window as unknown as Record<string, unknown>).__showReviews = (name: string, address: string) => {
-      setReviewStation({ name, address });
+      setCommentStation({ name, address });
     };
     const onFavChange = () => setFavs(getFavorites());
     window.addEventListener("favorites-changed", onFavChange);
@@ -1142,7 +1108,6 @@ export default function Map() {
         const { latitude, longitude } = pos.coords;
         setUserPos([latitude, longitude]);
         setFlyTarget({ center: [latitude, longitude], zoom: 12 });
-        // Set region from nearest station
         if (data) {
           let nearestRegion = "";
           let nearestDist = Infinity;
@@ -1157,19 +1122,17 @@ export default function Map() {
           });
           if (nearestRegion) setRegion(nearestRegion);
         }
-        // Set city
         const city = await reverseGeocode(latitude, longitude);
         if (city) setSearch(city);
         setGeoReady(true);
       },
-      () => setGeoReady(true) // refusé ou erreur, on affiche tout
+      () => setGeoReady(true)
     );
   }, [data]);
 
   function handleSearchChange(v: string) {
     setSearch(v);
     const vNorm = normalize(v);
-    // Find region from city
     if (v && data) {
       const match = data.features.find((f) => {
         const props = (f as Feature<Point, StationProperties>).properties;
@@ -1350,22 +1313,47 @@ export default function Map() {
           ))}
         </div>
         <div style={{ position: "absolute", bottom: 30, left: 12, zIndex: 1000 }}>
-          <div style={{ marginBottom: "0.375rem" }}>
-            <button className="map-btn map-btn-primary" onClick={() => { if (cheapestResults) setCheapestResults(null); else findCheapestNearby(); }} style={{ display: "block", width: "100%" }}>
-              {cheapestResults ? "Masquer" : "Trouver le meilleur prix proche"}
-            </button>
-            {cheapestResults?.message && (
-              <div style={{ background: "var(--bg-panel)", color: "var(--text)", padding: "0.375rem 0.5rem", borderRadius: "0.25rem", fontSize: "0.6875rem", marginTop: "0.25rem", lineHeight: 1.3, boxShadow: "0 2px 6px var(--shadow-light)" }}>
-                {cheapestResults.message}
-              </div>
-            )}
+          <div className="mb-1.5">
+            <Button
+              variant={cheapestResults ? "outline" : "default"}
+              size="sm"
+              className={`w-full shadow-md font-semibold text-[13px] ${!cheapestResults ? "bg-[#2d9a2d] hover:bg-[#2d9a2d]/90 text-white" : "bg-[var(--bg-panel)] text-[var(--text)]"}`}
+              onClick={() => { if (cheapestResults) setCheapestResults(null); else findCheapestNearby(); }}
+            >
+              <Crosshair className="size-3.5" />
+              {cheapestResults ? "Masquer" : "Meilleur prix proche"}
+            </Button>
+            <AnimatePresence>
+              {cheapestResults?.message && (
+                <motion.div
+                  className="bg-[var(--bg-panel)] text-[var(--text)] p-1.5 rounded text-[11px] mt-1 leading-tight shadow-md"
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -5 }}
+                >
+                  {cheapestResults.message}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
-          <button className="map-btn map-btn-default" onClick={() => setShowRegionPanel((v) => !v)} style={{ marginBottom: 6, display: "block" }}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mb-1.5 w-full shadow-md bg-[var(--bg-panel)] text-[var(--text)] border-0 font-semibold text-[13px]"
+            onClick={() => setShowRegionPanel((v) => !v)}
+          >
+            <BarChart3 className="size-3.5" />
             Prix par région
-          </button>
-          <button className="map-btn map-btn-default" onClick={shareLink} style={{ marginBottom: 6, display: "block" }}>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mb-1.5 w-full shadow-md bg-[var(--bg-panel)] text-[var(--text)] border-0 font-semibold text-[13px]"
+            onClick={shareLink}
+          >
+            <Share2 className="size-3.5" />
             Partager
-          </button>
+          </Button>
           <div className="map-style-group">
             {(["carte", "satellite", "dark"] as const).map((s) => (
               <button
@@ -1399,11 +1387,18 @@ export default function Map() {
           />
         )}
         {flyTarget && <FlyTo center={flyTarget.center} zoom={flyTarget.zoom} />}
-        {(!data || !geoReady) && (
-          <div className="loading-overlay">
-            {!data ? "Chargement des stations..." : "Géolocalisation..."}
-          </div>
-        )}
+        <AnimatePresence>
+          {(!data || !geoReady) && (
+            <motion.div
+              className="loading-overlay"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              {!data ? "Chargement des stations..." : "Géolocalisation..."}
+            </motion.div>
+          )}
+        </AnimatePresence>
         {filtered && geoReady && <StationsLayer gasType={gasType} data={filtered} hasFilter={!!(search || region || brand || showFavorites || radiusKm > 0)} />}
         {cheapestResults?.stations.map((s, i) => (
           <Marker
@@ -1418,22 +1413,33 @@ export default function Map() {
           />
         ))}
       </MapContainer>
-      {historyStation && (
-        <div className="panel" style={{ bottom: 60, right: 12, width: 320 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <div>
-              <strong style={{ fontSize: 13 }}>{historyStation.name}</strong>
-              <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>{historyStation.address}</div>
+      <AnimatePresence>
+        {historyStation && (
+          <motion.div
+            className="panel"
+            style={{ bottom: 60, right: 12, width: 320 }}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            transition={{ duration: 0.2 }}
+          >
+            <div className="flex justify-between items-center mb-2">
+              <div>
+                <strong className="text-[13px]">{historyStation.name}</strong>
+                <div className="text-[11px] text-muted-foreground">{historyStation.address}</div>
+              </div>
+              <Button variant="ghost" size="icon-xs" onClick={() => setHistoryStation(null)}>
+                <X className="size-3.5" />
+              </Button>
             </div>
-            <span className="panel-close" onClick={() => setHistoryStation(null)}>x</span>
-          </div>
-          <PriceChart
-            stationName={historyStation.name}
-            address={historyStation.address}
-            gasType={gasType}
-          />
-        </div>
-      )}
+            <PriceChart
+              stationName={historyStation.name}
+              address={historyStation.address}
+              gasType={gasType}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
       {reportStation && (
         <ReportModal
           stationName={reportStation.name}
@@ -1441,12 +1447,8 @@ export default function Map() {
           onClose={() => setReportStation(null)}
         />
       )}
-      {reviewStation && (
-        <ReviewModal
-          stationName={reviewStation.name}
-          address={reviewStation.address}
-          onClose={() => setReviewStation(null)}
-        />
+      {commentStation && (
+        <CommentsModal stationName={commentStation.name} address={commentStation.address} onClose={() => setCommentStation(null)} />
       )}
       {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
       {showChangelog && <ChangelogModal onClose={() => setShowChangelog(false)} />}

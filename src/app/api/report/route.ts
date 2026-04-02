@@ -1,28 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { rateLimit, getIP } from "@/lib/rateLimit";
-import { z } from "zod";
-
-export const reportSchema = z.object({
-  station_name: z
-    .string()
-    .min(1, "Le nom de la station est requis"),
-  address: z
-    .string()
-    .min(1, "L'adresse est requise"),
-  first_name: z
-    .string()
-    .min(2, "Le prénom doit contenir au moins 2 caractères"),
-  last_name: z
-    .string()
-    .min(2, "Le nom doit contenir au moins 2 caractères"),
-  email: z
-    .string()
-    .email("L'adresse courriel est invalide"),
-  message: z
-    .string()
-    .min(10, "Le message doit contenir au moins 10 caractères"),
-});
+import { reportSchema } from "@/lib/schemas";
 
 export async function POST(request: NextRequest) {
   if (!rateLimit(getIP(request))) {
@@ -36,9 +15,9 @@ export async function POST(request: NextRequest) {
   const result = reportSchema.safeParse(body);
 
   if (!result.success) {
-    const fieldErrors = z.flattenError(result.error).fieldErrors;
+    const firstIssue = result.error.issues[0];
     return NextResponse.json(
-      { error: "Données invalides", fieldErrors },
+      { error: firstIssue?.message ?? "Données invalides" },
       { status: 400 },
     );
   }
