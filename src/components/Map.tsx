@@ -233,13 +233,17 @@ const StationsLayer = memo(function StationsLayer({
     return { min: lo === Infinity ? 0 : lo, max: hi === -Infinity ? 0 : hi };
   }, [data, gasType]);
 
-  const markers = data.features.map((f) => {
+  const seen = new Set<string>();
+  const markers = data.features.flatMap((f) => {
     const feature = f as Feature<Point, StationProperties>;
     const [lng, lat] = feature.geometry.coordinates;
     const props = feature.properties;
-    return (
+    const id = stationId(props);
+    if (seen.has(id)) return [];
+    seen.add(id);
+    return [
       <Marker
-        key={stationId(props)}
+        key={id}
         position={[lat, lng]}
         icon={priceIcon(props, gasType, min, max)}
         {...{ __props: props } as unknown as Record<string, unknown>}
@@ -252,7 +256,7 @@ const StationsLayer = memo(function StationsLayer({
       >
         <Popup><span /></Popup>
       </Marker>
-    );
+    ];
   });
 
   if (hasFilter) {
