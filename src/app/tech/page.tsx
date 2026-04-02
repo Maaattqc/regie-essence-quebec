@@ -6,10 +6,11 @@ import { useTheme } from "next-themes";
 import { motion } from "framer-motion";
 import {
   ArrowLeft, Globe, Server, Database, Cloud, Shield,
-  Zap, Map, BarChart3, Users, Lock, Smartphone,
+  Zap, Map, BarChart3, Lock, Smartphone,
   RefreshCw, Search, Star, MessageSquare, Flag, Clock,
   CheckCircle2, Layers, GitBranch, Mail, Code2, Eye,
-  Sun, Moon, ShieldCheck, TestTube2,
+  Sun, Moon, ShieldCheck, TestTube2, Activity, FileText,
+  Gauge, HeartPulse,
 } from "lucide-react";
 import ScrollToTop from "@/components/ScrollToTop";
 
@@ -25,7 +26,7 @@ const stagger = {
 const BUZZWORDS = [
   "Rapide", "Performant", "Sécurisé", "Temps réel",
   "Haute disponibilité", "Mobile-first", "Open Data",
-  "Accessible", "Fiable", "Automatisé",
+  "Accessible", "Fiable", "Automatisé", "CI/CD", "Monitoring",
 ];
 
 const STACK = [
@@ -71,9 +72,12 @@ const STACK = [
     icon: Cloud,
     items: [
       { name: "Vercel Edge Network", desc: "CDN mondial ~300 ms de propagation, 40+ régions" },
-      { name: "CI/CD automatisé", desc: "Déploiement continu à chaque push GitHub, rollback instantané" },
-      { name: "Preview Deployments", desc: "Environnement de prévisualisation unique par branche" },
-      { name: "Vercel Cron Jobs", desc: "Capture automatique des prix à intervalle configurable" },
+      { name: "GitHub Actions CI/CD", desc: "Pipeline automatisé : lint, tests unitaires, build de production sur chaque PR" },
+      { name: "Sentry (crash reporting)", desc: "Monitoring des erreurs en production, source maps, alertes automatiques — sans collecte de PII" },
+      { name: "Dependabot", desc: "Mises à jour automatiques hebdomadaires des dépendances avec groupement intelligent" },
+      { name: "Husky + lint-staged", desc: "Pre-commit hooks : ESLint automatique sur chaque commit, aucun code non conforme ne passe" },
+      { name: "Preview Deployments", desc: "Environnement de prévisualisation unique par branche avec URL dédiée" },
+      { name: "Vercel Cron Jobs", desc: "Capture automatique quotidienne des prix depuis la source officielle" },
       { name: "Resend", desc: "Livraison d'emails transactionnels avec domaine vérifié SPF/DKIM/DMARC" },
     ],
   },
@@ -167,32 +171,37 @@ const FEATURES = [
 ];
 
 const SECURITY: [string, string][] = [
+  ["Content Security Policy (CSP)", "En-tête HTTP restreignant les sources autorisées pour scripts, styles, images et connexions — bloque XSS et injection de contenu"],
+  ["HTTP Strict Transport Security (HSTS)", "Force le navigateur à utiliser HTTPS exclusivement pendant 1 an, incluant les sous-domaines"],
+  ["X-Frame-Options / X-Content-Type-Options", "Protection contre le clickjacking (frame-ancestors: none) et le sniffing MIME (nosniff)"],
   ["Auth sans mot de passe (OTP)", "Connexion par code à usage unique envoyé par email — aucun stockage de mot de passe, aucune vulnérabilité liée"],
   ["Row Level Security (RLS)", "Chaque requête PostgreSQL est filtrée au niveau de la base de données selon l'identité de l'utilisateur"],
   ["Rate limiting par IP", "Protection contre les abus sur tous les endpoints API, implémentée sans Redis ni infrastructure externe"],
   ["Validation Zod sur tous les endpoints", "Toutes les données entrantes sont validées et typées côté serveur avant tout traitement ou écriture"],
   ["Séparation client / serveur stricte", "La clé service_role Supabase est confinée aux API Routes — jamais exposée dans le bundle JavaScript client"],
   ["Secrets hors bundle navigateur", "Variables d'environnement injectées au build Vercel, inaccessibles depuis le code exécuté dans le navigateur"],
-  ["HTTPS universel", "TLS forcé sur tous les domaines Vercel, y compris les environnements de prévisualisation par branche"],
-  ["Emails certifiés SPF / DKIM / DMARC", "Authentification email complète configurée sur domaine personnalisé — anti-usurpation, délivrabilité maximale"],
+  ["HTTPS universel + TLS forcé", "TLS sur tous les domaines Vercel, y compris les environnements de prévisualisation par branche"],
+  ["security.txt (RFC 9116)", "Fichier standardisé de divulgation responsable des vulnérabilités — conforme aux bonnes pratiques ANSSI"],
+  ["Sentry crash reporting anonyme", "Monitoring des erreurs sans collecte de données personnelles (sendDefaultPii: false, aucun session replay)"],
 ];
 
 const TESTS: [string, string][] = [
-  ["Vitest 4.1.2", "Runner de tests ultrarapide, natif ESM — intégré au pipeline sans configuration Babel ni Jest"],
-  ["@testing-library/react", "Tests de composants React axés sur le comportement utilisateur réel, pas sur l'implémentation interne"],
-  ["@testing-library/jest-dom", "Matchers DOM sémantiques pour des assertions lisibles et précises"],
-  ["9 fichiers — API Routes", "Chaque endpoint serveur est testé indépendamment : signalement, historique, cron, avis, admin, auth, pages vues"],
-  ["6 fichiers — Composants React", "Composants UI testés avec rendu réel : PriceChart, NavDropdown, LoginModal, ScrollToTop, pages Login et Changelog"],
-  ["5 fichiers — Utilitaires", "Fonctions pures et modules partagés : stations, rate limiting, schémas Zod, journal d'activité"],
-  ["93 tests — 20 fichiers", "Couverture complète en une seule passe, exécutée en < 8 s"],
+  ["145 tests — 23 fichiers", "Couverture complète en une seule passe : unitaires + intégration, exécutée en < 10 s"],
+  ["Tests unitaires (Vitest 4)", "Runner ultrarapide natif ESM — @testing-library/react pour composants, jest-dom pour assertions DOM"],
+  ["Tests d'intégration API", "Flux multi-étapes testés : validation Zod, format de réponse HTTP, codes d'erreur cohérents, Content-Type"],
+  ["Tests E2E (Playwright)", "Carte interactive, navigation entre pages, formulaire de connexion, changelog — mock réseau intégré"],
+  ["Seuils de couverture enforced", "80% lignes, 80% fonctions, 77% instructions, 65% branches — le build échoue si les seuils ne sont pas atteints"],
+  ["GitHub Actions CI", "Pipeline automatisé sur chaque PR : lint ESLint, tests Vitest, build Next.js de production"],
+  ["Pre-commit hooks (Husky)", "ESLint exécuté automatiquement avant chaque commit via lint-staged — code non conforme bloqué"],
+  ["Dependabot", "Mises à jour hebdomadaires des dépendances npm avec groupement intelligent (Next.js, Supabase, testing, UI)"],
 ];
 
 const METRICS = [
   { value: "2 000+", label: "Stations cartographiées" },
   { value: "< 100 ms", label: "Temps de réponse API moyen" },
   { value: "99.9%", label: "Disponibilité (SLA Vercel + Supabase)" },
-  { value: "40+", label: "Régions Edge mondiales" },
-  { value: "4", label: "Types de carburant suivis" },
+  { value: "145", label: "Tests automatisés (unit + intégration + E2E)" },
+  { value: "12", label: "En-têtes de sécurité HTTP actifs" },
   { value: "17", label: "Régions administratives couvertes" },
 ];
 
@@ -369,21 +378,77 @@ export default function TechPage() {
           <section className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
             <div className="flex items-center gap-3">
               <GitBranch className="size-5 text-gray-500" />
-              <h2 className="text-base font-bold text-gray-900 dark:text-white">Qualité logicielle & pratiques DevOps</h2>
+              <h2 className="text-base font-bold text-gray-900 dark:text-white">Qualité logicielle et pratiques DevOps</h2>
             </div>
             <div className="grid sm:grid-cols-2 gap-3 text-[13px]">
               {[
-                ["Déploiement continu (CI/CD)", "Push sur main → build Turbopack → déploiement production automatique en < 60 s"],
+                ["GitHub Actions CI/CD", "Pipeline automatisé sur chaque PR : lint ESLint, 145 tests Vitest, build Next.js — aucun merge sans validation"],
+                ["Déploiement continu Vercel", "Push sur main → build Turbopack → déploiement production automatique en < 60 s avec rollback instantané"],
                 ["Preview par branche", "Chaque pull request génère un environnement de prévisualisation isolé avec URL unique"],
-                ["Rollback instantané", "Retour à n'importe quelle version précédente en un clic depuis le tableau de bord Vercel"],
-                ["Variables d'environnement sécurisées", "Secrets injectés au build, jamais exposés côté client — séparation production/preview/dev"],
-                ["Typage statique intégral", "Zero any TypeScript sur tout le codebase — erreurs détectées à la compilation, pas en production"],
-                ["Validation Zod sur tous les endpoints", "Chaque entrée utilisateur est validée et assainie côté serveur avant toute opération base de données"],
-                ["Rate limiting sans infrastructure", "Protection contre les abus implémentée en mémoire Edge, sans Redis ni dépendance externe"],
-                ["Emails transactionnels certifiés", "SPF + DKIM + DMARC configurés sur domaine personnalisé — délivrabilité maximale"],
+                ["Pre-commit hooks (Husky)", "ESLint exécuté automatiquement sur chaque commit via lint-staged — code non conforme bloqué avant push"],
+                ["Dependabot", "Mises à jour hebdomadaires automatiques des dépendances npm, groupées par catégorie (framework, DB, tests, UI)"],
+                ["Typage statique intégral", "TypeScript 5 strict sur tout le codebase — erreurs détectées à la compilation, pas en production"],
+                ["Seuils de couverture enforced", "80% lignes, 80% fonctions minimum — le build CI échoue si la couverture baisse"],
+                ["Versioning sémantique", "Tags git versionnés (v1.0.0+) avec historique traçable et changelog automatique"],
               ].map(([title, desc]) => (
                 <div key={title} className="flex gap-2.5">
                   <CheckCircle2 className="size-4 text-green-500 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-semibold text-gray-800 dark:text-gray-200">{title}</div>
+                    <div className="text-[11.5px] text-gray-500 dark:text-gray-400 mt-0.5">{desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Monitoring & Observabilité — détaillé seulement */}
+        {detailed && (
+          <section className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <Activity className="size-5 text-orange-500" />
+              <h2 className="text-base font-bold text-gray-900 dark:text-white">Monitoring et observabilité</h2>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-3 text-[13px]">
+              {[
+                ["Sentry (crash reporting)", "Capture automatique des erreurs client et serveur avec stack traces, source maps et contexte de navigation"],
+                ["Endpoint /api/health", "Point de contrôle HTTP pour monitoring d'uptime externe (UptimeRobot, BetterUptime, Pingdom)"],
+                ["Source maps en production", "Stack traces déobfusquées dans Sentry — debug précis même sur le code minifié déployé"],
+                ["Instrumentation Next.js", "Hook onRequestError capture automatiquement les erreurs serveur sans code additionnel dans chaque route"],
+                ["Tunnel Sentry (/monitoring)", "Contourne les bloqueurs de publicités — les erreurs sont toujours rapportées via proxy serveur"],
+                ["Zero PII collecté", "sendDefaultPii: false, aucun session replay — conformité Loi 25 sans bannière de consentement requise"],
+              ].map(([title, desc]) => (
+                <div key={title} className="flex gap-2.5">
+                  <CheckCircle2 className="size-4 text-orange-500 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-semibold text-gray-800 dark:text-gray-200">{title}</div>
+                    <div className="text-[11.5px] text-gray-500 dark:text-gray-400 mt-0.5">{desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Conformité & Documentation — détaillé seulement */}
+        {detailed && (
+          <section className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <FileText className="size-5 text-blue-500" />
+              <h2 className="text-base font-bold text-gray-900 dark:text-white">Conformité et documentation</h2>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-3 text-[13px]">
+              {[
+                ["Politique de confidentialité (Loi 25)", "Page dédiée listant les données collectées, les sous-traitants, les droits des utilisateurs et le responsable"],
+                ["OpenAPI 3.1 (/openapi.json)", "Spécification complète de l'API REST avec schémas de requête/réponse, codes d'erreur et exemples"],
+                ["security.txt (RFC 9116)", "Point de contact standardisé pour la divulgation responsable de vulnérabilités"],
+                ["README technique", "Documentation complète : stack, installation, variables d'environnement, scripts, architecture du projet"],
+                ["Politique de confidentialité (Loi 25)", "Conformité à la loi québécoise sur la protection des renseignements personnels — aucune collecte de PII"],
+                ["Données open data REQ", "Source officielle gouvernementale — aucune donnée personnelle de tiers collectée ou stockée"],
+              ].map(([title, desc], i) => (
+                <div key={`${title}-${i}`} className="flex gap-2.5">
+                  <CheckCircle2 className="size-4 text-blue-500 shrink-0 mt-0.5" />
                   <div>
                     <div className="font-semibold text-gray-800 dark:text-gray-200">{title}</div>
                     <div className="text-[11.5px] text-gray-500 dark:text-gray-400 mt-0.5">{desc}</div>
@@ -420,7 +485,7 @@ export default function TechPage() {
           <section className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
             <div className="flex items-center gap-3">
               <TestTube2 className="size-5 text-purple-500" />
-              <h2 className="text-base font-bold text-gray-900 dark:text-white">Couverture de tests</h2>
+              <h2 className="text-base font-bold text-gray-900 dark:text-white">Tests et assurance qualité</h2>
             </div>
             <div className="grid sm:grid-cols-2 gap-3 text-[13px]">
               {TESTS.map(([title, desc]) => (
