@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MapContainer, TileLayer, ZoomControl, AttributionControl, useMap } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import { Marker, Popup, Circle } from "react-leaflet";
 import L from "leaflet";
 import type { Feature, Point } from "geojson";
 import dynamic from "next/dynamic";
+import { useTheme } from "next-themes";
 import "leaflet/dist/leaflet.css";
 
 const PriceChart = dynamic(() => import("./PriceChart"), { ssr: false });
@@ -80,6 +81,8 @@ interface StationProperties {
   PostalCode: string;
   Region: string;
   Prices: StationPrice[];
+  _city?: string;
+  _cityNorm?: string;
 }
 
 function stationId(props: StationProperties): string {
@@ -125,10 +128,16 @@ function formatPopup(props: StationProperties, lat: number, lng: number) {
           ${isFav ? "Favori ★" : "Favori ☆"}
         </button>
       </div>
-      <button onclick="window.__showHistory('${props.Name.replace(/'/g, "\\'")}','${props.Address.replace(/'/g, "\\'")}')"
-        style="display:block;width:100%;margin-top:6px;padding:5px 0;background:#7c3aed;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600">
-        Historique des prix
-      </button>
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <button onclick="window.__showHistory('${props.Name.replace(/'/g, "\\'")}','${props.Address.replace(/'/g, "\\'")}')"
+          style="flex:1;padding:5px 0;background:#7c3aed;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600">
+          Historique
+        </button>
+        <button onclick="window.__showReport('${props.Name.replace(/'/g, "\\'")}','${props.Address.replace(/'/g, "\\'")}')"
+          style="flex:1;padding:5px 0;background:#e63946;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600">
+          Signaler
+        </button>
+      </div>
     </div>
   `;
 }
@@ -158,14 +167,7 @@ function useDisableMapDrag() {
 function RadiusSlider({ radiusKm, onChange }: { radiusKm: number; onChange: (v: number) => void }) {
   const dragProps = useDisableMapDrag();
   return (
-    <div
-      style={{
-        position: "absolute", top: 175, right: 12, zIndex: 1000,
-        background: "#fff", padding: "8px 12px", borderRadius: 8,
-        boxShadow: "0 2px 6px rgba(0,0,0,.25)", fontSize: 12,
-      }}
-      {...dragProps}
-    >
+    <div className="radius-panel" {...dragProps}>
       <div style={{ fontWeight: 600, marginBottom: 4 }}>
         Rayon : {radiusKm === 0 ? "Tout" : `${radiusKm} km`}
       </div>
@@ -216,6 +218,8 @@ function getPriceColor(value: number, min: number, max: number): string {
   return PRICE_COLORS[idx];
 }
 
+const iconCache: Record<string, L.DivIcon> = {};
+
 function priceIcon(
   props: StationProperties,
   gasType: GasTypeKey,
@@ -226,12 +230,18 @@ function priceIcon(
   const label = priceObj ? priceObj.Price.replace("\u00A2", "") : "—";
   const bg = priceObj ? getPriceColor(parsePrice(priceObj.Price), min, max) : "#999";
 
-  return L.divIcon({
-    html: `<div style="background:${bg};color:#fff;font-size:11px;font-weight:700;padding:2px 4px;border-radius:4px;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.4);text-align:center">${label}</div>`,
-    className: "",
-    iconSize: [40, 20],
-    iconAnchor: [20, 10],
-  });
+  const cacheKey = `${label}-${bg}`;
+  let icon = iconCache[cacheKey];
+  if (!icon) {
+    icon = L.divIcon({
+      html: `<div style="background:${bg};color:#fff;font-size:11px;font-weight:700;padding:2px 4px;border-radius:4px;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.4);text-align:center">${label}</div>`,
+      className: "",
+      iconSize: [40, 20],
+      iconAnchor: [20, 10],
+    });
+    iconCache[cacheKey] = icon;
+  }
+  return icon;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -261,7 +271,7 @@ function createClusterIcon(cluster: any, gasType: GasTypeKey, min: number, max: 
   });
 }
 
-function StationsLayer({
+const StationsLayer = memo(function StationsLayer({
   gasType,
   data,
   hasFilter,
@@ -302,16 +312,20 @@ function StationsLayer({
             position={[lat, lng]}
             icon={priceIcon(props, gasType, min, max)}
             {...{ __props: props } as unknown as Record<string, unknown>}
+            eventHandlers={{
+              popupopen: (e) => {
+                const popup = e.target.getPopup();
+                if (popup) popup.setContent(formatPopup(props, lat, lng));
+              },
+            }}
           >
-            <Popup>
-              <div dangerouslySetInnerHTML={{ __html: formatPopup(props, lat, lng) }} />
-            </Popup>
+            <Popup><span /></Popup>
           </Marker>
         );
       })}
     </MarkerClusterGroup>
   );
-}
+});
 
 function normalize(s: string) {
   return s
@@ -361,17 +375,26 @@ function SearchWithSuggestions({
 }) {
   const [input, setInput] = useState(search);
   const [focused, setFocused] = useState(false);
+  const [debouncedInput, setDebouncedInput] = useState(input);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setInput(search);
+    setDebouncedInput(search);
   }, [search]);
 
+  const handleInput = useCallback((v: string) => {
+    setInput(v);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setDebouncedInput(v), 200);
+  }, []);
+
   const suggestions = useMemo(() => {
-    const q = input.trim();
+    const q = debouncedInput.trim();
     if (q.length < 2) return [];
     const norm = normalize(q);
     return cities.filter((c) => normalize(c).includes(norm)).slice(0, 8);
-  }, [input, cities]);
+  }, [debouncedInput, cities]);
 
   function select(city: string) {
     setInput(city);
@@ -396,74 +419,28 @@ function SearchWithSuggestions({
   return (
     <div style={{ position: "relative" }}>
       <input
+        className="gov-input"
         type="text"
         value={input}
-        onChange={(e) => setInput(e.target.value)}
+        onChange={(e) => handleInput(e.target.value)}
         onKeyDown={handleKeyDown}
         onFocus={() => setFocused(true)}
         onBlur={() => setTimeout(() => setFocused(false), 150)}
         placeholder="Ville"
-        style={{
-          padding: "6px 10px",
-          paddingRight: input ? 24 : 10,
-          borderRadius: 6,
-          border: "1px solid #ddd",
-          fontSize: 13,
-          fontWeight: 500,
-          width: 200,
-        }}
+        style={{ paddingRight: input ? 24 : 10 }}
       />
       {input && (
-        <span
-          onMouseDown={handleClear}
-          style={{
-            position: "absolute",
-            right: 6,
-            top: "50%",
-            transform: "translateY(-50%)",
-            cursor: "pointer",
-            color: "#999",
-            fontSize: 14,
-            fontWeight: 700,
-          }}
-        >
-          x
-        </span>
+        <span className="search-clear" onMouseDown={handleClear} style={{ color: "rgba(255,255,255,0.6)" }}>x</span>
       )}
       {focused && suggestions.length > 0 && (
-        <div
-          style={{
-            position: "absolute",
-            top: "100%",
-            left: 0,
-            right: 0,
-            marginTop: 4,
-            background: "#fff",
-            borderRadius: 6,
-            boxShadow: "0 4px 12px rgba(0,0,0,.15)",
-            maxHeight: 200,
-            overflowY: "auto",
-            zIndex: 1001,
-          }}
-        >
+        <div className="suggestions">
           {suggestions.map((city) => (
             <div
               key={city}
+              className="suggestion-item"
               onMouseDown={() => select(city)}
-              style={{
-                padding: "6px 10px",
-                fontSize: 13,
-                cursor: "pointer",
-                borderBottom: "1px solid #f0f0f0",
-              }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.background = "#f5f5f5")
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.background = "transparent")
-              }
             >
-              {city} <span style={{ color: "#999" }}>({cityCounts[city] || 0})</span>
+              {city} <span style={{ color: "var(--text-muted)" }}>({cityCounts[city] || 0})</span>
             </div>
           ))}
         </div>
@@ -506,102 +483,79 @@ function FilterBar({
   totalStations: number;
 }) {
   return (
-    <div className="filter-bar">
-      <SearchWithSuggestions
-        search={search}
-        onSearchChange={onSearchChange}
-        onConfirm={onSearchChange}
-        cities={cities}
-        cityCounts={cityCounts}
-      />
-
-      <select
-        value={region}
-        onChange={(e) => onRegionChange(e.target.value)}
-        style={{
-          padding: "6px 8px",
-          borderRadius: 6,
-          border: "1px solid #ddd",
-          fontSize: 13,
-          fontWeight: 500,
-          cursor: "pointer",
-        }}
-      >
-        <option value="">Toutes les régions ({totalStations})</option>
-        {REGIONS.map((r) => (
-          <option key={r} value={r}>
-            {r} ({regionCounts[r] || 0})
-          </option>
-        ))}
-      </select>
-
-      <div style={{ width: 1, height: 24, background: "#ddd" }} />
-
-      <div style={{ display: "flex", gap: 4 }}>
-        {GAS_TYPES.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => onGasTypeChange(t.key)}
-            style={{
-              padding: "6px 14px",
-              border: "none",
-              borderRadius: 6,
-              cursor: "pointer",
-              fontWeight: 600,
-              fontSize: 13,
-              background: gasType === t.key ? t.color : "transparent",
-              color: gasType === t.key ? "#fff" : "#333",
-            }}
+    <header className="gov-header">
+      <div className="gov-bar">
+        <div className="gov-bar-title">
+          <span className="gov-bar-fleur">&#9884;</span>
+          <div>
+            Régie Essence Québec
+            <div className="gov-bar-subtitle">Prix en temps réel des stations-service</div>
+          </div>
+        </div>
+        <div className="gov-bar-filters">
+          <SearchWithSuggestions
+            search={search}
+            onSearchChange={onSearchChange}
+            onConfirm={onSearchChange}
+            cities={cities}
+            cityCounts={cityCounts}
+          />
+          <select
+            className="gov-select"
+            value={region}
+            onChange={(e) => onRegionChange(e.target.value)}
           >
-            {t.label}
+            <option value="">Toutes les régions ({totalStations})</option>
+            {REGIONS.map((r) => (
+              <option key={r} value={r}>
+                {r} ({regionCounts[r] || 0})
+              </option>
+            ))}
+          </select>
+          <div style={{ display: "flex", gap: 2 }}>
+            {GAS_TYPES.map((t) => (
+              <button
+                key={t.key}
+                className={`gov-gas-btn ${gasType === t.key ? "gov-gas-btn-active" : ""}`}
+                onClick={() => onGasTypeChange(t.key)}
+                style={gasType === t.key ? { background: t.color } : undefined}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+          <select
+            className="gov-select"
+            value={brand}
+            onChange={(e) => onBrandChange(e.target.value)}
+          >
+            <option value="">Toutes les compagnies ({totalStations})</option>
+            {BRANDS.map((b) => (
+              <option key={b} value={b}>
+                {b} ({brandCounts[b] || 0})
+              </option>
+            ))}
+          </select>
+          <button
+            className={`gov-gas-btn ${showFavorites ? "gov-gas-btn-active" : ""}`}
+            onClick={onToggleFavorites}
+            style={showFavorites ? { background: "#ff9800" } : undefined}
+          >
+            Favoris
           </button>
-        ))}
+        </div>
+        <div className="gov-bar-right">
+          <span className="gov-bar-badge">EN DIRECT</span>
+          <a href="/changelog" className="gov-bar-link">Changelog</a>
+          <a href="/login" className="gov-bar-link">Connexion</a>
+        </div>
+        <div className="gov-bar-accent" />
       </div>
-
-      <div style={{ width: 1, height: 24, background: "#ddd" }} />
-
-      <select
-        value={brand}
-        onChange={(e) => onBrandChange(e.target.value)}
-        style={{
-          padding: "6px 8px",
-          borderRadius: 6,
-          border: "1px solid #ddd",
-          fontSize: 13,
-          fontWeight: 500,
-          cursor: "pointer",
-        }}
-      >
-        <option value="">Toutes les compagnies ({totalStations})</option>
-        {BRANDS.map((b) => (
-          <option key={b} value={b}>
-            {b} ({brandCounts[b] || 0})
-          </option>
-        ))}
-      </select>
-
-      <div style={{ width: 1, height: 24, background: "#ddd" }} />
-
-      <button
-        onClick={onToggleFavorites}
-        style={{
-          padding: "6px 14px",
-          border: "none",
-          borderRadius: 6,
-          cursor: "pointer",
-          fontWeight: 600,
-          fontSize: 13,
-          background: showFavorites ? "#ff9800" : "transparent",
-          color: showFavorites ? "#fff" : "#333",
-        }}
-      >
-        ★ Favoris
-      </button>
-    </div>
+    </header>
   );
 }
 
-function RegionPricePanel({
+const RegionPricePanel = memo(function RegionPricePanel({
   data,
   gasType,
   visible,
@@ -630,30 +584,15 @@ function RegionPricePanel({
   if (!visible) return null;
 
   return (
-    <div
-      style={{
-        position: "absolute",
-        top: 60,
-        left: 12,
-        zIndex: 1000,
-        background: "#fff",
-        borderRadius: 10,
-        boxShadow: "0 4px 16px rgba(0,0,0,.2)",
-        width: 280,
-        maxHeight: "70vh",
-        overflowY: "auto",
-        padding: "12px 14px",
-        fontSize: 13,
-      }}
-    >
+    <div className="panel" style={{ top: 60, left: 12, width: 280, maxHeight: "70vh", overflowY: "auto" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
         <strong>Prix moyen par région ({gasType})</strong>
-        <span onClick={onClose} style={{ cursor: "pointer", fontWeight: 700, color: "#999" }}>x</span>
+        <span className="panel-close" onClick={onClose}>x</span>
       </div>
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <tbody>
           {regionAvgs.map(({ region, avg }, i) => (
-            <tr key={region} style={{ background: i % 2 === 0 ? "#f9f9f9" : "#fff" }}>
+            <tr key={region} style={{ background: i % 2 === 0 ? "var(--row-alt)" : "transparent" }}>
               <td style={{ padding: "4px 6px" }}>{region}</td>
               <td style={{ padding: "4px 6px", textAlign: "right", fontWeight: 600 }}>
                 {avg.toFixed(1)}¢
@@ -663,6 +602,117 @@ function RegionPricePanel({
         </tbody>
       </table>
     </div>
+  );
+});
+
+function ReportModal({
+  stationName,
+  address,
+  onClose,
+}: {
+  stationName: string;
+  address: string;
+  onClose: () => void;
+}) {
+  const [form, setForm] = useState({ first_name: "", last_name: "", email: "", message: "" });
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setSending(true);
+    setError("");
+    const res = await fetch("/api/report", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ station_name: stationName, address, ...form }),
+    });
+    if (res.ok) {
+      setSent(true);
+    } else {
+      const data = await res.json();
+      setError(data.error || "Erreur");
+    }
+    setSending(false);
+  }
+
+  return (
+    <div className="report-overlay" onClick={onClose}>
+      <div className="report-modal" onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>Signaler une inexactitude</h2>
+          <span className="panel-close" onClick={onClose}>x</span>
+        </div>
+        <div style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 16 }}>
+          <strong>{stationName}</strong><br />{address}
+        </div>
+
+        {sent ? (
+          <div style={{ textAlign: "center", padding: "20px 0" }}>
+            <p style={{ fontSize: 15, fontWeight: 600 }}>Merci pour votre signalement !</p>
+            <p style={{ fontSize: 13, color: "var(--text-muted)" }}>Nous allons examiner votre demande.</p>
+            <button className="login-btn" onClick={onClose} style={{ marginTop: 12 }}>Fermer</button>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit}>
+            <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+              <input
+                className="login-input"
+                placeholder="Prénom"
+                value={form.first_name}
+                onChange={(e) => setForm({ ...form, first_name: e.target.value })}
+                required
+                style={{ flex: 1 }}
+              />
+              <input
+                className="login-input"
+                placeholder="Nom"
+                value={form.last_name}
+                onChange={(e) => setForm({ ...form, last_name: e.target.value })}
+                required
+                style={{ flex: 1 }}
+              />
+            </div>
+            <input
+              className="login-input"
+              type="email"
+              placeholder="Courriel"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              required
+            />
+            <textarea
+              className="login-input"
+              placeholder="Décrivez l'inexactitude..."
+              value={form.message}
+              onChange={(e) => setForm({ ...form, message: e.target.value })}
+              required
+              rows={4}
+              style={{ resize: "vertical" }}
+            />
+            {error && <p className="login-error">{error}</p>}
+            <button className="login-btn" type="submit" disabled={sending}>
+              {sending ? "Envoi..." : "Envoyer le signalement"}
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SiteThemeToggle() {
+  const { theme, setTheme } = useTheme();
+  const isDark = theme === "dark";
+  return (
+    <button
+      className="map-btn map-btn-default"
+      onClick={() => setTheme(isDark ? "light" : "dark")}
+      style={{ marginTop: 6 }}
+    >
+      {isDark ? "Mode clair" : "Mode sombre"}
+    </button>
   );
 }
 
@@ -674,11 +724,13 @@ export default function Map() {
   const [mapStyle, setMapStyle] = useState<"carte" | "satellite" | "dark">("carte");
   const [showRegionPanel, setShowRegionPanel] = useState(false);
   const [historyStation, setHistoryStation] = useState<{ name: string; address: string } | null>(null);
+  const [reportStation, setReportStation] = useState<{ name: string; address: string } | null>(null);
   const [radiusKm, setRadiusKm] = useState(0);
   const [userPos, setUserPos] = useState<[number, number] | null>(null);
   const [showFavorites, setShowFavorites] = useState(false);
   const [favs, setFavs] = useState<Set<string>>(new Set());
   const [data, setData] = useState<GeoJSON.FeatureCollection | null>(null);
+  const [geoReady, setGeoReady] = useState(false);
   const [flyTarget, setFlyTarget] = useState<{ center: [number, number]; zoom: number } | null>(null);
 
   // Load URL params on mount
@@ -692,10 +744,28 @@ export default function Map() {
   }, []);
 
   useEffect(() => {
-    fetch(STATIONS_URL)
-      .then((res) => res.json())
-      .then((geojson) => setData(geojson))
-      .catch(console.error);
+    const cached = sessionStorage.getItem("stations");
+    const promise = cached
+      ? Promise.resolve(JSON.parse(cached))
+      : fetch(STATIONS_URL).then((res) => res.json()).then((geojson) => {
+          try { sessionStorage.setItem("stations", JSON.stringify(geojson)); } catch {}
+          return geojson;
+        });
+    promise.then((geojson: GeoJSON.FeatureCollection) => {
+        // Pre-compute city and normalized city for each feature
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        geojson.features.forEach((f: any) => {
+          const addr = f.properties.Address as string;
+          const idx = addr.lastIndexOf(",");
+          if (idx !== -1) {
+            const raw = addr.slice(idx + 1).trim();
+            const city = raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
+            f.properties._city = city;
+            f.properties._cityNorm = normalize(city);
+          }
+        });
+        setData(geojson);
+      }).catch(console.error);
     setFavs(getFavorites());
     (window as unknown as Record<string, unknown>).__toggleFav = (id: string) => {
       const updated = toggleFavorite(id);
@@ -703,6 +773,9 @@ export default function Map() {
     };
     (window as unknown as Record<string, unknown>).__showHistory = (name: string, address: string) => {
       setHistoryStation({ name, address });
+    };
+    (window as unknown as Record<string, unknown>).__showReport = (name: string, address: string) => {
+      setReportStation({ name, address });
     };
     const onFavChange = () => setFavs(getFavorites());
     window.addEventListener("favorites-changed", onFavChange);
@@ -722,7 +795,7 @@ export default function Map() {
   }
 
   useEffect(() => {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation) { setGeoReady(true); return; }
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const { latitude, longitude } = pos.coords;
@@ -746,18 +819,20 @@ export default function Map() {
         // Set city
         const city = await reverseGeocode(latitude, longitude);
         if (city) setSearch(city);
+        setGeoReady(true);
       },
-      () => {} // refusé ou erreur, on ne fait rien
+      () => setGeoReady(true) // refusé ou erreur, on affiche tout
     );
   }, [data]);
 
   function handleSearchChange(v: string) {
     setSearch(v);
+    const vNorm = normalize(v);
     // Find region from city
     if (v && data) {
       const match = data.features.find((f) => {
-        const city = extractCity((f as Feature<Point, StationProperties>).properties.Address);
-        return city && normalize(city).includes(normalize(v));
+        const props = (f as Feature<Point, StationProperties>).properties;
+        return props._cityNorm && props._cityNorm.includes(vNorm);
       });
       if (match) setRegion((match as Feature<Point, StationProperties>).properties.Region);
     }
@@ -765,8 +840,7 @@ export default function Map() {
       const coords: [number, number][] = [];
       data.features.forEach((f) => {
         const props = (f as Feature<Point, StationProperties>).properties;
-        const city = extractCity(props.Address);
-        if (city && normalize(city).includes(normalize(v))) {
+        if (props._cityNorm && props._cityNorm.includes(vNorm)) {
           const [lng, lat] = (f as Feature<Point>).geometry.coordinates;
           coords.push([lat, lng]);
         }
@@ -821,8 +895,7 @@ export default function Map() {
     if (!data) return [];
     const set = new Set<string>();
     data.features.forEach((f) => {
-      const addr = (f as Feature<Point, StationProperties>).properties.Address;
-      const city = extractCity(addr);
+      const city = (f as Feature<Point, StationProperties>).properties._city;
       if (city) set.add(city);
     });
     return deduplicateCities(set);
@@ -846,8 +919,7 @@ export default function Map() {
         if (brand && props.brand !== brand) return false;
         if (region && props.Region !== region) return false;
         if (q) {
-          const city = extractCity(props.Address);
-          if (!city || !normalize(city).includes(q)) return false;
+          if (!props._cityNorm || !props._cityNorm.includes(q)) return false;
         }
         return true;
       }),
@@ -863,14 +935,13 @@ export default function Map() {
       const props = (f as Feature<Point, StationProperties>).properties;
       rc[props.Region] = (rc[props.Region] || 0) + 1;
       bc[props.brand] = (bc[props.brand] || 0) + 1;
-      const city = extractCity(props.Address);
-      if (city) cc[city] = (cc[city] || 0) + 1;
+      if (props._city) cc[props._city] = (cc[props._city] || 0) + 1;
     });
     return { regionCounts: rc, brandCounts: bc, cityCounts: cc, totalStations: data.features.length };
   }, [data]);
 
   return (
-    <div style={{ position: "relative", height: "100vh", width: "100vw" }}>
+    <div style={{ position: "relative", height: "100%", width: "100%" }}>
       <FilterBar
         gasType={gasType}
         onGasTypeChange={setGasType}
@@ -913,20 +984,7 @@ export default function Map() {
           }
         />
         <ZoomControl position="bottomright" />
-        <div
-          style={{
-            position: "absolute",
-            top: 60,
-            right: 12,
-            zIndex: 1000,
-            background: "#fff",
-            padding: "8px 10px",
-            borderRadius: 8,
-            boxShadow: "0 2px 6px rgba(0,0,0,.25)",
-            fontSize: 11,
-            lineHeight: "18px",
-          }}
-        >
+        <div className="legend">
           {[
             { color: "#2d9a2d", label: "Très bas" },
             { color: "#6fbf3b", label: "Bas" },
@@ -935,98 +993,33 @@ export default function Map() {
             { color: "#e63946", label: "Très élevé" },
           ].map((item) => (
             <div key={item.color} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span
-                style={{
-                  display: "inline-block",
-                  width: 12,
-                  height: 12,
-                  borderRadius: 3,
-                  background: item.color,
-                }}
-              />
+              <span style={{ display: "inline-block", width: 12, height: 12, borderRadius: 3, background: item.color }} />
               {item.label}
             </div>
           ))}
         </div>
-        <div
-          style={{
-            position: "absolute",
-            bottom: 30,
-            left: 12,
-            zIndex: 1000,
-          }}
-        >
-          <button
-            onClick={findCheapestNearby}
-            style={{
-              padding: "8px 14px",
-              border: "none",
-              borderRadius: 6,
-              cursor: "pointer",
-              fontWeight: 600,
-              fontSize: 13,
-              background: "#2d9a2d",
-              color: "#fff",
-              boxShadow: "0 2px 6px rgba(0,0,0,.3)",
-              marginBottom: 6,
-            }}
-          >
+        <div style={{ position: "absolute", bottom: 30, left: 12, zIndex: 1000 }}>
+          <button className="map-btn map-btn-primary" onClick={findCheapestNearby} style={{ marginBottom: 6, display: "block" }}>
             Moins cher près de moi
           </button>
-          <button
-            onClick={() => setShowRegionPanel((v) => !v)}
-            style={{
-              padding: "8px 14px",
-              border: "none",
-              borderRadius: 6,
-              cursor: "pointer",
-              fontWeight: 600,
-              fontSize: 13,
-              background: showRegionPanel ? "#333" : "#fff",
-              color: showRegionPanel ? "#fff" : "#333",
-              boxShadow: "0 2px 6px rgba(0,0,0,.3)",
-              marginBottom: 6,
-            }}
-          >
+          <button className="map-btn map-btn-default" onClick={() => setShowRegionPanel((v) => !v)} style={{ marginBottom: 6, display: "block" }}>
             Prix par région
           </button>
-          <button
-            onClick={shareLink}
-            style={{
-              padding: "8px 14px",
-              border: "none",
-              borderRadius: 6,
-              cursor: "pointer",
-              fontWeight: 600,
-              fontSize: 13,
-              background: "#fff",
-              color: "#333",
-              boxShadow: "0 2px 6px rgba(0,0,0,.3)",
-              marginBottom: 6,
-            }}
-          >
+          <button className="map-btn map-btn-default" onClick={shareLink} style={{ marginBottom: 6, display: "block" }}>
             Partager
           </button>
-          <div style={{ display: "flex", gap: 4, background: "#fff", borderRadius: 6, padding: 3, boxShadow: "0 2px 6px rgba(0,0,0,.3)" }}>
+          <div className="map-style-group">
             {(["carte", "satellite", "dark"] as const).map((s) => (
               <button
                 key={s}
+                className={`map-style-btn ${mapStyle === s ? "map-style-btn-active" : ""}`}
                 onClick={() => setMapStyle(s)}
-                style={{
-                  padding: "5px 10px",
-                  border: "none",
-                  borderRadius: 4,
-                  cursor: "pointer",
-                  fontWeight: 600,
-                  fontSize: 12,
-                  background: mapStyle === s ? "#333" : "transparent",
-                  color: mapStyle === s ? "#fff" : "#333",
-                }}
               >
                 {s === "carte" ? "Carte" : s === "satellite" ? "Satellite" : "Dark"}
               </button>
             ))}
           </div>
+          <SiteThemeToggle />
         </div>
         <AttributionControl position="bottomleft" />
         {userPos && (
@@ -1048,42 +1041,21 @@ export default function Map() {
           />
         )}
         {flyTarget && <FlyTo center={flyTarget.center} zoom={flyTarget.zoom} />}
-        {!data && (
-          <div style={{
-            position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
-            zIndex: 1000, background: "#fff", padding: "16px 24px", borderRadius: 10,
-            boxShadow: "0 4px 12px rgba(0,0,0,.2)", fontSize: 14, fontWeight: 600,
-          }}>
-            Chargement des stations...
+        {(!data || !geoReady) && (
+          <div className="loading-overlay">
+            {!data ? "Chargement des stations..." : "Géolocalisation..."}
           </div>
         )}
-        {filtered && <StationsLayer gasType={gasType} data={filtered} hasFilter={!!(search || region || brand || showFavorites || radiusKm > 0)} />}
+        {filtered && geoReady && <StationsLayer gasType={gasType} data={filtered} hasFilter={!!(search || region || brand || showFavorites || radiusKm > 0)} />}
       </MapContainer>
       {historyStation && (
-        <div
-          style={{
-            position: "absolute",
-            bottom: 60,
-            right: 12,
-            zIndex: 1000,
-            background: "#fff",
-            borderRadius: 10,
-            boxShadow: "0 4px 16px rgba(0,0,0,.2)",
-            width: 320,
-            padding: "12px 14px",
-          }}
-        >
+        <div className="panel" style={{ bottom: 60, right: 12, width: 320 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
             <div>
               <strong style={{ fontSize: 13 }}>{historyStation.name}</strong>
-              <div style={{ fontSize: 11, color: "#666" }}>{historyStation.address}</div>
+              <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>{historyStation.address}</div>
             </div>
-            <span
-              onClick={() => setHistoryStation(null)}
-              style={{ cursor: "pointer", fontWeight: 700, color: "#999", fontSize: 16 }}
-            >
-              x
-            </span>
+            <span className="panel-close" onClick={() => setHistoryStation(null)}>x</span>
           </div>
           <PriceChart
             stationName={historyStation.name}
@@ -1091,6 +1063,13 @@ export default function Map() {
             gasType={gasType}
           />
         </div>
+      )}
+      {reportStation && (
+        <ReportModal
+          stationName={reportStation.name}
+          address={reportStation.address}
+          onClose={() => setReportStation(null)}
+        />
       )}
     </div>
   );
