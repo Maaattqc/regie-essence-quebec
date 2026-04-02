@@ -439,15 +439,6 @@ export default function Map() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Track page view
-  useEffect(() => {
-    let sid = sessionStorage.getItem("pv_sid");
-    if (!sid) { sid = crypto.randomUUID(); sessionStorage.setItem("pv_sid", sid); }
-    if (!sessionStorage.getItem("pv_sent")) {
-      fetch("/api/pageview", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sessionId: sid }) });
-      sessionStorage.setItem("pv_sent", "1");
-    }
-  }, []);
 
   useEffect(() => {
     let cancelled = false;

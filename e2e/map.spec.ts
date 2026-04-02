@@ -44,13 +44,6 @@ test.describe("Page d'accueil - carte interactive", () => {
         body: JSON.stringify(mockStationsPayload),
       })
     })
-    await page.route('/api/pageview', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ ok: true }),
-      })
-    })
   })
 
   test('la page charge avec un statut 200 et un titre correct', async ({ page }) => {
