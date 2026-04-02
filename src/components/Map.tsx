@@ -6,7 +6,10 @@ import MarkerClusterGroup from "react-leaflet-cluster";
 import { Marker, Popup, Circle } from "react-leaflet";
 import L from "leaflet";
 import type { Feature, Point } from "geojson";
+import dynamic from "next/dynamic";
 import "leaflet/dist/leaflet.css";
+
+const PriceChart = dynamic(() => import("./PriceChart"), { ssr: false });
 
 // Fix Chrome subpixel rendering gaps between tiles
 // https://github.com/Leaflet/Leaflet/issues/3575
@@ -122,6 +125,10 @@ function formatPopup(props: StationProperties, lat: number, lng: number) {
           ${isFav ? "Favori ★" : "Favori ☆"}
         </button>
       </div>
+      <button onclick="window.__showHistory('${props.Name.replace(/'/g, "\\'")}','${props.Address.replace(/'/g, "\\'")}')"
+        style="display:block;width:100%;margin-top:6px;padding:5px 0;background:#7c3aed;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600">
+        Historique des prix
+      </button>
     </div>
   `;
 }
@@ -666,6 +673,7 @@ export default function Map() {
   const [search, setSearch] = useState("");
   const [mapStyle, setMapStyle] = useState<"carte" | "satellite" | "dark">("carte");
   const [showRegionPanel, setShowRegionPanel] = useState(false);
+  const [historyStation, setHistoryStation] = useState<{ name: string; address: string } | null>(null);
   const [radiusKm, setRadiusKm] = useState(0);
   const [userPos, setUserPos] = useState<[number, number] | null>(null);
   const [showFavorites, setShowFavorites] = useState(false);
@@ -692,6 +700,9 @@ export default function Map() {
     (window as unknown as Record<string, unknown>).__toggleFav = (id: string) => {
       const updated = toggleFavorite(id);
       setFavs(new Set(updated));
+    };
+    (window as unknown as Record<string, unknown>).__showHistory = (name: string, address: string) => {
+      setHistoryStation({ name, address });
     };
     const onFavChange = () => setFavs(getFavorites());
     window.addEventListener("favorites-changed", onFavChange);
@@ -1048,6 +1059,39 @@ export default function Map() {
         )}
         {filtered && <StationsLayer gasType={gasType} data={filtered} hasFilter={!!(search || region || brand || showFavorites || radiusKm > 0)} />}
       </MapContainer>
+      {historyStation && (
+        <div
+          style={{
+            position: "absolute",
+            bottom: 60,
+            right: 12,
+            zIndex: 1000,
+            background: "#fff",
+            borderRadius: 10,
+            boxShadow: "0 4px 16px rgba(0,0,0,.2)",
+            width: 320,
+            padding: "12px 14px",
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <div>
+              <strong style={{ fontSize: 13 }}>{historyStation.name}</strong>
+              <div style={{ fontSize: 11, color: "#666" }}>{historyStation.address}</div>
+            </div>
+            <span
+              onClick={() => setHistoryStation(null)}
+              style={{ cursor: "pointer", fontWeight: 700, color: "#999", fontSize: 16 }}
+            >
+              x
+            </span>
+          </div>
+          <PriceChart
+            stationName={historyStation.name}
+            address={historyStation.address}
+            gasType={gasType}
+          />
+        </div>
+      )}
     </div>
   );
 }
