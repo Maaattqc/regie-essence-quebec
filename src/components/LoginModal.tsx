@@ -4,7 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Mail, ArrowLeft } from "lucide-react";
+import { Mail, ArrowLeft, CheckCircle } from "lucide-react";
 import { createBrowserClient } from "@/lib/auth";
 
 export default function LoginModal({ onClose }: { onClose: () => void }) {
@@ -117,11 +117,19 @@ export default function LoginModal({ onClose }: { onClose: () => void }) {
 
         {step === "done" && (
           <motion.div
-            className="text-center py-4"
-            initial={{ opacity: 0, scale: 0.95 }}
+            className="text-center py-6"
+            initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
+            transition={{ type: "spring", stiffness: 300, damping: 20 }}
           >
-            <p className="text-[0.9375rem] font-semibold mb-1">Connexion réussie !</p>
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", stiffness: 400, damping: 15, delay: 0.1 }}
+            >
+              <CheckCircle className="size-12 mx-auto mb-3" style={{ color: "#2d9a2d" }} />
+            </motion.div>
+            <p className="text-[0.9375rem] font-semibold mb-1" style={{ color: "#2d9a2d" }}>Connexion réussie !</p>
             <p className="text-[0.8125rem] text-muted-foreground">
               Vous êtes maintenant connecté.
             </p>

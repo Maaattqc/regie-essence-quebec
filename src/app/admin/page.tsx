@@ -14,6 +14,7 @@ import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuLabel,
   DropdownMenuItem,
   DropdownMenuSeparator,
@@ -66,16 +67,18 @@ function AdminUserDropdown({ email, onLogout }: { email: string; onLogout: () =>
   return (
     <DropdownMenu>
       <DropdownMenuTrigger>
-        <button className="flex items-center gap-1.5 bg-white/12 border border-white/25 rounded-full py-0.5 pr-2.5 pl-0.5 cursor-pointer text-white text-[0.8125rem] font-medium">
-          <div className="w-6 h-6 rounded-full bg-white/25 flex items-center justify-center text-[0.7rem] font-bold">
+        <span className="flex items-center gap-1.5 bg-white/12 border border-white/25 rounded-full py-0.5 pr-2.5 pl-0.5 cursor-pointer text-white text-[0.8125rem] font-medium">
+          <span className="size-6 rounded-full bg-white/25 flex items-center justify-center text-[0.7rem] font-bold">
             {initial}
-          </div>
+          </span>
           {username}
           <ChevronDown className="size-3 transition-transform group-data-[popup-open]:rotate-180" />
-        </button>
+        </span>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuLabel>{email}</DropdownMenuLabel>
+      <DropdownMenuContent align="end" className="min-w-[16rem]">
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>{email}</DropdownMenuLabel>
+        </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onClick={onLogout}>
           <LogOut className="size-3.5" /> Déconnexion

@@ -48,8 +48,9 @@ export async function GET(request: NextRequest) {
     if (u?.user?.email) emails[uid] = u.user.email.split("@")[0];
   }
 
-  // Get current user's votes
+  // Get current user's votes (authenticated or anonymous)
   const token = getToken(request);
+  const anonymousId = request.nextUrl.searchParams.get("anonymous_id");
   let myVotes: Record<number, number> = {};
   if (token) {
     const user = await getUser(token);
@@ -60,6 +61,13 @@ export async function GET(request: NextRequest) {
         .eq("user_id", user.id);
       myVotes = Object.fromEntries((votes || []).map((v) => [v.comment_id, v.vote]));
     }
+  } else if (anonymousId) {
+    const { data: votes } = await supabaseAdmin
+      .from("comment_votes")
+      .select("comment_id, vote")
+      .eq("anonymous_id", anonymousId)
+      .is("user_id", null);
+    myVotes = Object.fromEntries((votes || []).map((v) => [v.comment_id, v.vote]));
   }
 
   const result = (comments || []).map((c) => ({
@@ -88,39 +96,42 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json();
 
-  // Vote action (requires login)
+  // Vote action (authenticated or anonymous)
   if (body.action === "vote") {
-    if (!user) return NextResponse.json({ error: "Connectez-vous pour voter" }, { status: 401 });
-    const { comment_id, vote } = body;
+    const { comment_id, vote, anonymous_id } = body;
     if (!comment_id || ![1, -1].includes(vote)) return NextResponse.json({ error: "Invalide" }, { status: 400 });
+    if (!user && !anonymous_id) return NextResponse.json({ error: "Identifiant requis" }, { status: 400 });
 
-    // Check existing vote
-    const { data: existing } = await supabaseAdmin
-      .from("comment_votes")
-      .select("vote")
-      .eq("user_id", user.id)
-      .eq("comment_id", comment_id)
-      .single();
+    const voteFilter = user
+      ? supabaseAdmin.from("comment_votes").select("vote").eq("user_id", user.id).eq("comment_id", comment_id)
+      : supabaseAdmin.from("comment_votes").select("vote").eq("anonymous_id", anonymous_id).is("user_id", null).eq("comment_id", comment_id);
+
+    const { data: existing } = await voteFilter.maybeSingle();
 
     if (existing) {
+      const deleteQ = user
+        ? supabaseAdmin.from("comment_votes").delete().eq("user_id", user.id).eq("comment_id", comment_id)
+        : supabaseAdmin.from("comment_votes").delete().eq("anonymous_id", anonymous_id).is("user_id", null).eq("comment_id", comment_id);
+      const updateQ = (v: number) => user
+        ? supabaseAdmin.from("comment_votes").update({ vote: v }).eq("user_id", user.id).eq("comment_id", comment_id)
+        : supabaseAdmin.from("comment_votes").update({ vote: v }).eq("anonymous_id", anonymous_id).is("user_id", null).eq("comment_id", comment_id);
+
       if (existing.vote === vote) {
-        // Remove vote (toggle off)
-        await supabaseAdmin.from("comment_votes").delete().eq("user_id", user.id).eq("comment_id", comment_id);
-        const col = vote === 1 ? "likes" : "dislikes";
-        await supabaseAdmin.rpc("decrement", { row_id: comment_id, col_name: col });
+        await deleteQ;
+        await supabaseAdmin.rpc("decrement", { row_id: comment_id, col_name: vote === 1 ? "likes" : "dislikes" });
       } else {
-        // Switch vote
-        await supabaseAdmin.from("comment_votes").update({ vote }).eq("user_id", user.id).eq("comment_id", comment_id);
-        const addCol = vote === 1 ? "likes" : "dislikes";
-        const removeCol = vote === 1 ? "dislikes" : "likes";
-        await supabaseAdmin.rpc("increment", { row_id: comment_id, col_name: addCol });
-        await supabaseAdmin.rpc("decrement", { row_id: comment_id, col_name: removeCol });
+        await updateQ(vote);
+        await supabaseAdmin.rpc("increment", { row_id: comment_id, col_name: vote === 1 ? "likes" : "dislikes" });
+        await supabaseAdmin.rpc("decrement", { row_id: comment_id, col_name: vote === 1 ? "dislikes" : "likes" });
       }
     } else {
-      // New vote
-      await supabaseAdmin.from("comment_votes").insert({ user_id: user.id, comment_id, vote });
-      const col = vote === 1 ? "likes" : "dislikes";
-      await supabaseAdmin.rpc("increment", { row_id: comment_id, col_name: col });
+      await supabaseAdmin.from("comment_votes").insert({
+        user_id: user?.id || null,
+        anonymous_id: user ? null : anonymous_id,
+        comment_id,
+        vote,
+      });
+      await supabaseAdmin.rpc("increment", { row_id: comment_id, col_name: vote === 1 ? "likes" : "dislikes" });
     }
     return NextResponse.json({ ok: true });
   }

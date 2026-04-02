@@ -11,7 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import {
-  X, Share2, BarChart3, Crosshair, Users,
+  X, Share2, BarChart3, Building2, Crosshair, Users,
 } from "lucide-react";
 import FilterBar from "@/components/FilterBar";
 import { createBrowserClient } from "@/lib/auth";
@@ -19,6 +19,7 @@ import LoginModal from "@/components/LoginModal";
 import ChangelogModal from "@/components/ChangelogModal";
 import ReportModal from "@/components/ReportModal";
 import CommentsModal from "@/components/CommentsModal";
+import CityPricePanel from "@/components/CityPricePanel";
 import RegionPricePanel from "@/components/RegionPricePanel";
 import SiteThemeToggle from "@/components/SiteThemeToggle";
 import {
@@ -28,12 +29,12 @@ import {
   REGION_CENTERS,
   QUEBEC_CENTER,
   QUEBEC_ZOOM,
-  STATIONS_URL,
   stationId,
   parsePrice,
   getPriceColor,
   distanceKm,
   normalize,
+  extractCity,
   deduplicateCities,
   getFavorites,
   toggleFavorite,
@@ -42,47 +43,101 @@ import {
 import "leaflet/dist/leaflet.css";
 
 const PriceChart = dynamic(() => import("./PriceChart"), { ssr: false });
+const STATIONS_CACHE_KEY = "stations-api-cache";
 
 // Fix Chrome subpixel rendering gaps between tiles
 (L.Browser as Record<string, unknown>).any3d = false;
 
+interface StationsApiPayload {
+  ok: boolean;
+  data: GeoJSON.FeatureCollection | null;
+}
+
+function decorateStationGeoJson(geojson: GeoJSON.FeatureCollection) {
+  geojson.features.forEach((feature) => {
+    const station = feature as Feature<Point, StationProperties>;
+    const city = extractCity(station.properties.Address);
+
+    if (!city) {
+      return;
+    }
+
+    station.properties._city = city;
+    station.properties._cityNorm = normalize(city);
+  });
+
+  return geojson;
+}
+
+function readSearchParam(name: string) {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  return new URLSearchParams(window.location.search).get(name);
+}
+
+// Lucide SVG paths inlined for use in Leaflet HTML popups (no JSX available)
+const SVG = {
+  navigation: `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>`,
+  star: `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
+  starEmpty: `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
+  barChart: `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>`,
+  messageCircle: `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>`,
+  flag: `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>`,
+};
+
 function formatPopup(props: StationProperties, lat: number, lng: number) {
-  const prices = props.Prices.filter((p) => p.IsAvailable)
-    .map((p) => `<tr><td>${p.GasType}</td><td><strong>${p.Price}</strong></td></tr>`)
+  const priceChips = props.Prices.filter((p) => p.IsAvailable)
+    .map((p) => `
+      <div style="display:flex;justify-content:space-between;align-items:center;background:#f5f5f5;border-radius:6px;padding:5px 9px;font-size:12.5px">
+        <span style="color:#555;font-weight:500">${p.GasType}</span>
+        <strong style="color:#111;font-size:14px;margin-left:10px">${p.Price} <span style="font-size:10px;font-weight:400;color:#888">¢/L</span></strong>
+      </div>`)
     .join("");
 
   const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
   const sid = stationId(props);
   const isFav = getFavorites().has(sid);
+  const esc = (s: string) => s.replace(/'/g, "\\'").replace(/"/g, "&quot;");
+
+  const btnBase = "border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;padding:7px 4px;display:flex;align-items:center;justify-content:center;gap:4px;flex:1;";
 
   return `
-    <div style="min-width:180px">
-      <strong>${props.Name}</strong><br/>
-      <small>${props.brand} — ${props.Region}</small><br/>
-      <small>${props.Address}</small>
-      <table style="margin-top:6px;width:100%">${prices}</table>
-      <div style="display:flex;gap:6px;margin-top:8px">
+    <div style="min-width:230px;font-family:system-ui,sans-serif;padding:2px 0">
+      <div style="margin-bottom:10px">
+        <div style="font-size:15px;font-weight:700;color:#111;line-height:1.3;margin-bottom:3px">${props.Name}</div>
+        <div style="font-size:12px;color:#666;margin-bottom:1px">${props.brand} &middot; ${props.Region}</div>
+        <div style="font-size:11.5px;color:#999">${props.Address}</div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:10px">
+        ${priceChips}
+      </div>
+
+      <div style="display:flex;gap:5px;margin-bottom:5px">
         <a href="${mapsUrl}" target="_blank" rel="noopener noreferrer"
-          style="flex:1;padding:5px 0;background:#4285f4;color:#fff;text-align:center;border-radius:4px;text-decoration:none;font-size:12px;font-weight:600">
-          Itinéraire
+          style="${btnBase}background:#4285f4;color:#fff;text-decoration:none;flex:2">
+          ${SVG.navigation} Itinéraire
         </a>
-        <button onclick="window.__toggleFav('${sid.replace(/'/g, "\\'")}')"
-          style="flex:1;padding:5px 0;background:${isFav ? "#ff9800" : "#eee"};color:${isFav ? "#fff" : "#333"};border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600">
-          ${isFav ? "Favori ★" : "Favori ☆"}
+        <button onclick="window.__toggleFav('${esc(sid)}')"
+          style="${btnBase}background:${isFav ? "#ff9800" : "#f0f0f0"};color:${isFav ? "#fff" : "#555"}">
+          ${isFav ? SVG.star : SVG.starEmpty} Favori
         </button>
       </div>
-      <div style="display:flex;gap:6px;margin-top:6px">
-        <button onclick="window.__showHistory('${props.Name.replace(/'/g, "\\'")}','${props.Address.replace(/'/g, "\\'")}')"
-          style="flex:1;padding:5px 0;background:#7c3aed;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600">
-          Historique
+
+      <div style="display:flex;gap:5px">
+        <button onclick="window.__showHistory('${esc(props.Name)}','${esc(props.Address)}')"
+          style="${btnBase}background:#ede9fe;color:#6d28d9">
+          ${SVG.barChart} Historique
         </button>
-        <button onclick="window.__showReviews('${props.Name.replace(/'/g, "\\'")}','${props.Address.replace(/'/g, "\\'")}')"
-          style="flex:1;padding:5px 0;background:#0ea5e9;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600">
-          Commentaires
+        <button onclick="window.__showReviews('${esc(props.Name)}','${esc(props.Address)}')"
+          style="${btnBase}background:#e0f2fe;color:#0369a1">
+          ${SVG.messageCircle} Commentaires
         </button>
-        <button onclick="window.__showReport('${props.Name.replace(/'/g, "\\'")}','${props.Address.replace(/'/g, "\\'")}')"
-          style="flex:1;padding:5px 0;background:#e63946;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600">
-          Signaler
+        <button onclick="window.__showReport('${esc(props.Name)}','${esc(props.Address)}')"
+          style="${btnBase}background:#fee2e2;color:#dc2626">
+          ${SVG.flag} Signaler
         </button>
       </div>
     </div>
@@ -153,10 +208,14 @@ function createClusterIcon(cluster: any, gasType: GasTypeKey, min: number, max: 
 const StationsLayer = memo(function StationsLayer({
   gasType,
   data,
+  priceMin,
+  priceMax,
   hasFilter,
 }: {
   gasType: GasTypeKey;
   data: GeoJSON.FeatureCollection;
+  priceMin: number;
+  priceMax: number;
   hasFilter: boolean;
 }) {
   const { min, max } = useMemo(() => {
@@ -174,34 +233,40 @@ const StationsLayer = memo(function StationsLayer({
     return { min: lo === Infinity ? 0 : lo, max: hi === -Infinity ? 0 : hi };
   }, [data, gasType]);
 
+  const markers = data.features.map((f) => {
+    const feature = f as Feature<Point, StationProperties>;
+    const [lng, lat] = feature.geometry.coordinates;
+    const props = feature.properties;
+    return (
+      <Marker
+        key={stationId(props)}
+        position={[lat, lng]}
+        icon={priceIcon(props, gasType, min, max)}
+        {...{ __props: props } as unknown as Record<string, unknown>}
+        eventHandlers={{
+          popupopen: (e) => {
+            const popup = e.target.getPopup();
+            if (popup) popup.setContent(formatPopup(props, lat, lng));
+          },
+        }}
+      >
+        <Popup><span /></Popup>
+      </Marker>
+    );
+  });
+
+  if (hasFilter) {
+    return <>{markers}</>;
+  }
+
   return (
     <MarkerClusterGroup
-      key={gasType + min + max + data.features.length + (hasFilter ? "no" : "yes")}
+      key={gasType + priceMin + priceMax}
       chunkedLoading
-      maxClusterRadius={hasFilter ? 0 : 60}
+      maxClusterRadius={60}
       iconCreateFunction={(cluster: unknown) => createClusterIcon(cluster, gasType, min, max)}
     >
-      {data.features.map((f, i) => {
-        const feature = f as Feature<Point, StationProperties>;
-        const [lng, lat] = feature.geometry.coordinates;
-        const props = feature.properties;
-        return (
-          <Marker
-            key={i}
-            position={[lat, lng]}
-            icon={priceIcon(props, gasType, min, max)}
-            {...{ __props: props } as unknown as Record<string, unknown>}
-            eventHandlers={{
-              popupopen: (e) => {
-                const popup = e.target.getPopup();
-                if (popup) popup.setContent(formatPopup(props, lat, lng));
-              },
-            }}
-          >
-            <Popup><span /></Popup>
-          </Marker>
-        );
-      })}
+      {markers}
     </MarkerClusterGroup>
   );
 });
@@ -229,7 +294,9 @@ function LiveCursors({ showCursors, onOnlineCount }: { showCursors: boolean; onO
   const showRef = useRef(showCursors);
   const cursorsRef = useRef<Record<string, { lat: number; lng: number; color: string; uid: string }>>({});
 
-  showRef.current = showCursors;
+  useEffect(() => {
+    showRef.current = showCursors;
+  }, [showCursors]);
 
   // Show/hide markers when toggle changes
   useEffect(() => {
@@ -321,15 +388,24 @@ function LiveCursors({ showCursors, onOnlineCount }: { showCursors: boolean; onO
 }
 
 export default function Map() {
-  const [gasType, setGasType] = useState<GasTypeKey>("Régulier");
-  const [brand, setBrand] = useState("");
-  const [region, setRegion] = useState("");
-  const [search, setSearch] = useState("");
-  const [mapStyle, setMapStyle] = useState<"carte" | "satellite" | "dark">("carte");
+  const [gasType, setGasType] = useState<GasTypeKey>(
+    () => (readSearchParam("type") as GasTypeKey) || "Régulier"
+  );
+  const [brand, setBrand] = useState(() => readSearchParam("brand") || "");
+  const [region, setRegion] = useState(() => readSearchParam("region") || "");
+  const [search, setSearch] = useState(() => readSearchParam("ville") || "");
+  const [mapStyle, setMapStyle] = useState<"carte" | "satellite" | "dark">(
+    () => (readSearchParam("style") as "carte" | "satellite" | "dark") || "carte"
+  );
   const [showRegionPanel, setShowRegionPanel] = useState(false);
+  const [showCityPanel, setShowCityPanel] = useState(false);
+  const [shareToast, setShareToast] = useState(false);
   const [historyStation, setHistoryStation] = useState<{ name: string; address: string } | null>(null);
   const [reportStation, setReportStation] = useState<{ name: string; address: string } | null>(null);
-  const [showLogin, setShowLogin] = useState(false);
+  const [showLogin, setShowLogin] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return new URLSearchParams(window.location.search).has("openLogin");
+  });
   const [showChangelog, setShowChangelog] = useState(false);
   const [commentStation, setCommentStation] = useState<{ name: string; address: string } | null>(null);
   const [currentUser, setCurrentUser] = useState<{ email: string } | null>(null);
@@ -337,22 +413,13 @@ export default function Map() {
   const [radiusKm, setRadiusKm] = useState(0);
   const [userPos, setUserPos] = useState<[number, number] | null>(null);
   const [showFavorites, setShowFavorites] = useState(false);
-  const [favs, setFavs] = useState<Set<string>>(new Set());
+  const [favs, setFavs] = useState<Set<string>>(() => getFavorites());
   const [data, setData] = useState<GeoJSON.FeatureCollection | null>(null);
   const [geoReady, setGeoReady] = useState(false);
   const [flyTarget, setFlyTarget] = useState<{ center: [number, number]; zoom: number } | null>(null);
   const [showCursors, setShowCursors] = useState(false);
   const [onlineCount, setOnlineCount] = useState(0);
   const handleOnlineCount = useCallback((n: number) => setOnlineCount(n), []);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("ville")) setSearch(params.get("ville")!);
-    if (params.get("region")) setRegion(params.get("region")!);
-    if (params.get("type")) setGasType(params.get("type") as GasTypeKey);
-    if (params.get("brand")) setBrand(params.get("brand")!);
-    if (params.get("style")) setMapStyle(params.get("style") as "carte" | "satellite" | "dark");
-  }, []);
 
   useEffect(() => {
     const sb = createBrowserClient();
@@ -366,28 +433,50 @@ export default function Map() {
   }, []);
 
   useEffect(() => {
-    const cached = sessionStorage.getItem("stations");
-    const promise = cached
-      ? Promise.resolve(JSON.parse(cached))
-      : fetch(STATIONS_URL).then((res) => res.json()).then((geojson) => {
-          try { sessionStorage.setItem("stations", JSON.stringify(geojson)); } catch {}
-          return geojson;
-        });
-    promise.then((geojson: GeoJSON.FeatureCollection) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        geojson.features.forEach((f: any) => {
-          const addr = f.properties.Address as string;
-          const idx = addr.lastIndexOf(",");
-          if (idx !== -1) {
-            const raw = addr.slice(idx + 1).trim();
-            const city = raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
-            f.properties._city = city;
-            f.properties._cityNorm = normalize(city);
-          }
-        });
-        setData(geojson);
-      }).catch(console.error);
-    setFavs(getFavorites());
+    let cancelled = false;
+    let retryTimer: number | null = null;
+
+    const applyStations = (geojson: GeoJSON.FeatureCollection) => {
+      if (cancelled) {
+        return;
+      }
+
+      setData(decorateStationGeoJson(geojson));
+    };
+
+    const cached = sessionStorage.getItem(STATIONS_CACHE_KEY);
+    if (cached) {
+      try {
+        applyStations(JSON.parse(cached) as GeoJSON.FeatureCollection);
+      } catch {}
+    }
+
+    const loadStations = async () => {
+      try {
+        const response = await fetch("/api/stations", { cache: "no-store" });
+        const payload = (await response.json()) as StationsApiPayload;
+
+        if (payload.data) {
+          try {
+            sessionStorage.setItem(
+              STATIONS_CACHE_KEY,
+              JSON.stringify(payload.data)
+            );
+          } catch {}
+
+          applyStations(payload.data);
+          return;
+        }
+      } catch (error) {
+        console.error(error);
+      }
+
+      if (!cancelled) {
+        retryTimer = window.setTimeout(loadStations, 5000);
+      }
+    };
+
+    void loadStations();
     (window as unknown as Record<string, unknown>).__toggleFav = (id: string) => {
       const updated = toggleFavorite(id);
       setFavs(new Set(updated));
@@ -403,7 +492,13 @@ export default function Map() {
     };
     const onFavChange = () => setFavs(getFavorites());
     window.addEventListener("favorites-changed", onFavChange);
-    return () => window.removeEventListener("favorites-changed", onFavChange);
+    return () => {
+      cancelled = true;
+      if (retryTimer !== null) {
+        window.clearTimeout(retryTimer);
+      }
+      window.removeEventListener("favorites-changed", onFavChange);
+    };
   }, []);
 
   function shareLink() {
@@ -415,11 +510,15 @@ export default function Map() {
     if (mapStyle !== "carte") params.set("style", mapStyle);
     const url = `${window.location.origin}${window.location.pathname}${params.toString() ? "?" + params : ""}`;
     navigator.clipboard.writeText(url);
-    alert("Lien copié !");
+    setShareToast(true);
+    setTimeout(() => setShareToast(false), 2000);
   }
 
   useEffect(() => {
-    if (!navigator.geolocation) { setGeoReady(true); return; }
+    if (!navigator.geolocation) {
+      queueMicrotask(() => setGeoReady(true));
+      return;
+    }
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const { latitude, longitude } = pos.coords;
@@ -556,6 +655,19 @@ export default function Map() {
     } as GeoJSON.FeatureCollection;
   }, [data, brand, region, search, showFavorites, favs, radiusKm, userPos]);
 
+  const { priceMin, priceMax } = useMemo(() => {
+    if (!data) return { priceMin: 0, priceMax: 0 };
+    let min = Infinity, max = -Infinity;
+    data.features.forEach((f) => {
+      const p = (f as Feature<Point, StationProperties>).properties.Prices.find((pr) => pr.GasType === gasType && pr.IsAvailable);
+      if (!p) return;
+      const v = parsePrice(p.Price);
+      if (v < min) min = v;
+      if (v > max) max = v;
+    });
+    return { priceMin: min === Infinity ? 0 : min, priceMax: max === -Infinity ? 0 : max };
+  }, [data, gasType]);
+
   const { regionCounts, brandCounts, cityCounts, totalStations } = useMemo(() => {
     if (!data) return { regionCounts: {}, brandCounts: {}, cityCounts: {}, totalStations: 0 };
     const rc: Record<string, number> = {};
@@ -610,7 +722,7 @@ export default function Map() {
               ? '&copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics'
               : mapStyle === "dark"
               ? '&copy; <a href="https://carto.com/">CARTO</a>'
-              : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              : '&copy; <a href="https://www.linkedin.com/in/mathieu-fournier-4977591bb" target="_blank" title="mathieufournierqc@outlook.com">Mathieu Fournier</a>'
           }
           url={
             mapStyle === "satellite"
@@ -621,20 +733,6 @@ export default function Map() {
           }
         />
         <ZoomControl position="bottomright" />
-        <div className="legend">
-          {[
-            { color: "#2d9a2d", label: "Très bas" },
-            { color: "#6fbf3b", label: "Bas" },
-            { color: "#f0c808", label: "Moyen" },
-            { color: "#ef8a17", label: "Élevé" },
-            { color: "#e63946", label: "Très élevé" },
-          ].map((item) => (
-            <div key={item.color} className="legend-item">
-              <span className="legend-dot" style={{ background: item.color }} />
-              {item.label}
-            </div>
-          ))}
-        </div>
         <div className="flex flex-col gap-1.5 leaflet-control" style={{ position: "absolute", bottom: 30, left: 12, zIndex: 1000, width: 170 }}>
           <div>
             <Button
@@ -659,17 +757,26 @@ export default function Map() {
               )}
             </AnimatePresence>
           </div>
-          <Button variant="outline" size="sm" className="w-full shadow-md !bg-[var(--bg-panel)] !text-[var(--text)] !border-0 font-semibold text-[13px]" onClick={() => setShowRegionPanel((v) => !v)}>
+          <Button variant="outline" size="sm" className="w-full shadow-md !bg-[var(--bg-panel)] !text-[var(--text)] !border-0 font-semibold text-[13px]" onClick={() => { setShowCityPanel(false); setShowRegionPanel((v) => !v); }}>
             <BarChart3 className="size-3.5" />
             Prix par région
+          </Button>
+          <Button variant="outline" size="sm" className="w-full shadow-md !bg-[var(--bg-panel)] !text-[var(--text)] !border-0 font-semibold text-[13px]" onClick={() => { setShowRegionPanel(false); setShowCityPanel((v) => !v); }}>
+            <Building2 className="size-3.5" />
+            Prix par ville
           </Button>
           <Button variant="outline" size="sm" className="w-full shadow-md !bg-[var(--bg-panel)] !text-[var(--text)] !border-0 font-semibold text-[13px]" onClick={shareLink}>
             <Share2 className="size-3.5" />
             Partager
           </Button>
-          <Button variant="outline" size="sm" className="w-full shadow-md !bg-[var(--bg-panel)] !text-[var(--text)] !border-0 font-semibold text-[13px]" onClick={() => setMapStyle(mapStyle === "satellite" ? "carte" : "satellite")}>
-            {mapStyle === "satellite" ? "Carte" : "Satellite"}
-          </Button>
+          <div className="flex gap-1.5">
+            <Button variant="outline" size="sm" className={`flex-1 shadow-md !border-0 font-semibold text-[13px] ${mapStyle === "satellite" ? "!bg-[#457b9d] !text-white" : "!bg-[var(--bg-panel)] !text-[var(--text)]"}`} onClick={() => setMapStyle(mapStyle === "satellite" ? "carte" : "satellite")}>
+              Satellite
+            </Button>
+            <Button variant="outline" size="sm" className={`flex-1 shadow-md !border-0 font-semibold text-[13px] ${mapStyle === "dark" ? "!bg-[#1a1a2e] !text-white" : "!bg-[var(--bg-panel)] !text-[var(--text)]"}`} onClick={() => setMapStyle(mapStyle === "dark" ? "carte" : "dark")}>
+              Carte Dark
+            </Button>
+          </div>
           <Button variant="outline" size="sm" className={`w-full shadow-md font-semibold text-[13px] ${showCursors ? "!bg-[#457b9d] !text-white" : "!bg-[var(--bg-panel)] !text-[var(--text)]"} !border-0`} onClick={() => setShowCursors((v) => !v)}>
             <Users className="size-3.5" />
             {showCursors ? `En ligne (${onlineCount})` : "Visiteurs"}
@@ -689,6 +796,13 @@ export default function Map() {
               />
             </div>
           )}
+          <div className="bg-[var(--bg-panel)] rounded-md shadow-md px-3 py-2">
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, fontWeight: 700, marginBottom: 3 }}>
+              <span style={{ color: "#2d9a2d" }}>{priceMin.toFixed(1)}¢</span>
+              <span style={{ color: "#e63946" }}>{priceMax.toFixed(1)}¢</span>
+            </div>
+            <div style={{ height: 6, borderRadius: 3, background: "linear-gradient(to right, #2d9a2d, #6fbf3b, #f0c808, #ef8a17, #e63946)" }} />
+          </div>
           <SiteThemeToggle />
         </div>
         <AttributionControl position="bottomleft" />
@@ -697,14 +811,6 @@ export default function Map() {
             center={userPos}
             radius={radiusKm * 1000}
             pathOptions={{ color: "#4285f4", fillColor: "#4285f4", fillOpacity: 0.08, weight: 2 }}
-          />
-        )}
-        {data && (
-          <RegionPricePanel
-            data={data}
-            gasType={gasType}
-            visible={showRegionPanel}
-            onClose={() => setShowRegionPanel(false)}
           />
         )}
         <LiveCursors showCursors={showCursors} onOnlineCount={handleOnlineCount} />
@@ -721,7 +827,7 @@ export default function Map() {
             </motion.div>
           )}
         </AnimatePresence>
-        {filtered && geoReady && <StationsLayer gasType={gasType} data={filtered} hasFilter={!!(search || region || brand || showFavorites || radiusKm > 0)} />}
+        {filtered && geoReady && <StationsLayer gasType={gasType} data={filtered} priceMin={priceMin} priceMax={priceMax} hasFilter={!!(search || region || brand || showFavorites || radiusKm > 0)} />}
         {cheapestResults?.stations.map((s, i) => (
           <Marker
             key={`cheapest-${i}`}
@@ -735,6 +841,22 @@ export default function Map() {
           />
         ))}
       </MapContainer>
+      {data && (
+        <RegionPricePanel
+          data={data}
+          gasType={gasType}
+          visible={showRegionPanel}
+          onClose={() => setShowRegionPanel(false)}
+        />
+      )}
+      {data && (
+        <CityPricePanel
+          data={data}
+          gasType={gasType}
+          visible={showCityPanel}
+          onClose={() => setShowCityPanel(false)}
+        />
+      )}
       <AnimatePresence>
         {historyStation && (
           <motion.div
@@ -772,8 +894,25 @@ export default function Map() {
       {commentStation && (
         <CommentsModal stationName={commentStation.name} address={commentStation.address} onClose={() => setCommentStation(null)} userEmail={currentUser?.email} />
       )}
-      {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
+      {showLogin && <LoginModal onClose={() => {
+        setShowLogin(false);
+        const url = new URL(window.location.href);
+        url.searchParams.delete("openLogin");
+        window.history.replaceState(null, "", url.toString());
+      }} />}
       {showChangelog && <ChangelogModal onClose={() => setShowChangelog(false)} />}
+      <AnimatePresence>
+        {shareToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", zIndex: 9999, background: "var(--bg-panel)", color: "var(--text)", padding: "0.5rem 1rem", borderRadius: "0.5rem", boxShadow: "0 4px 12px rgba(0,0,0,0.2)", fontSize: "0.8125rem", fontWeight: 600, display: "flex", alignItems: "center", gap: "0.375rem" }}
+          >
+            <Share2 className="size-3.5" style={{ color: "#2d9a2d" }} /> Lien copié !
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

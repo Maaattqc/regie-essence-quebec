@@ -14,9 +14,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Essence Québec | Carte des prix de l'essence et du carburant diesel",
+  title: {
+    default: "Carte des prix d'essence au Québec | Essence Québec",
+    template: "%s | Essence Québec",
+  },
   description:
-    "Consultez la carte des prix de l'essence au Québec en temps réel. Trouvez les prix actuels, comparez les stations-service près de chez vous et économisez sur le carburant.",
+    "Carte interactive des prix de l'essence au Québec, mise à jour en temps réel. Trouvez les stations les moins chères près de chez vous et économisez sur le carburant.",
   keywords: [
     "prix essence Québec",
     "carte essence Québec",
@@ -31,17 +34,17 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: "https://essence-quebec.ca",
-    title: "Essence Québec | Carte des prix de l'essence et du carburant diesel",
+    title: "Carte des prix d'essence au Québec | Essence Québec",
     description:
-      "Consultez la carte des prix de l'essence au Québec en temps réel. Trouvez les prix actuels, comparez les stations-service près de chez vous et économisez sur le carburant.",
+      "Carte interactive des prix de l'essence au Québec, mise à jour en temps réel. Trouvez les stations les moins chères près de chez vous et économisez.",
     locale: "fr_CA",
     siteName: "Essence Québec",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Essence Québec | Carte des prix de l'essence et du carburant diesel",
+    title: "Carte des prix d'essence au Québec | Essence Québec",
     description:
-      "Consultez la carte des prix de l'essence au Québec en temps réel. Trouvez les prix actuels et comparez les stations-service près de chez vous.",
+      "Carte interactive des prix de l'essence au Québec, mise à jour en temps réel. Trouvez les stations les moins chères près de chez vous.",
   },
   other: {
     "geo.region": "CA-QC",
@@ -69,7 +72,57 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@graph": [
+                {
+                  "@type": "WebSite",
+                  "@id": "https://essence-quebec.ca/#website",
+                  url: "https://essence-quebec.ca",
+                  name: "Essence Québec",
+                  description:
+                    "Carte interactive des prix de l'essence au Québec en temps réel.",
+                  inLanguage: "fr-CA",
+                  potentialAction: {
+                    "@type": "SearchAction",
+                    target: {
+                      "@type": "EntryPoint",
+                      urlTemplate:
+                        "https://essence-quebec.ca/?q={search_term_string}",
+                    },
+                    "query-input": "required name=search_term_string",
+                  },
+                },
+                {
+                  "@type": "WebApplication",
+                  "@id": "https://essence-quebec.ca/#app",
+                  name: "Essence Québec",
+                  url: "https://essence-quebec.ca",
+                  description:
+                    "Consultez et comparez les prix de l'essence et du diesel dans toutes les régions du Québec grâce à notre carte interactive.",
+                  applicationCategory: "UtilityApplication",
+                  operatingSystem: "Web",
+                  isAccessibleForFree: true,
+                  inLanguage: "fr-CA",
+                  areaServed: {
+                    "@type": "AdministrativeArea",
+                    name: "Québec",
+                    containedInPlace: { "@type": "Country", name: "Canada" },
+                  },
+                  offers: {
+                    "@type": "Offer",
+                    price: "0",
+                    priceCurrency: "CAD",
+                  },
+                },
+              ],
+            }),
+          }}
+        />
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
           {children}
         </ThemeProvider>
       </body>

@@ -4,16 +4,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogCancel,
-  AlertDialogAction,
-} from "@/components/ui/alert-dialog";
+import { motion, AnimatePresence } from "framer-motion";
 import { createBrowserClient } from "@/lib/auth";
 
 export interface Comment {
@@ -102,18 +93,32 @@ function CommentItem({ c, replies, allComments, onVote, onSubmitReply, isAdmin, 
             )}
           </div>
 
-          <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
-            <AlertDialogContent size="sm">
-              <AlertDialogHeader>
-                <AlertDialogTitle>Supprimer ce commentaire ?</AlertDialogTitle>
-                <AlertDialogDescription>Cette action est irréversible.</AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Annuler</AlertDialogCancel>
-                <AlertDialogAction variant="destructive" onClick={() => onDelete!(c.id)}>Supprimer</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <AnimatePresence>
+            {confirmDelete && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="flex items-center gap-2 mt-1.5 p-2 rounded-md bg-[var(--bg-hover)] text-xs">
+                  <span className="font-semibold">Supprimer ce commentaire ?</span>
+                  <button
+                    onClick={() => { onDelete!(c.id); setConfirmDelete(false); }}
+                    className="bg-[#e63946] text-white border-none rounded px-2 py-0.5 cursor-pointer font-semibold text-xs"
+                  >
+                    Oui
+                  </button>
+                  <button
+                    onClick={() => setConfirmDelete(false)}
+                    className="bg-transparent border border-[var(--divider)] rounded px-2 py-0.5 cursor-pointer font-semibold text-xs text-[var(--text)]"
+                  >
+                    Non
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {showReply && (
             <div className="flex gap-1.5 mt-1.5">
@@ -171,7 +176,8 @@ export default function CommentsModal({ stationName, address, onClose, userEmail
     const token = await getToken();
     const headers: Record<string, string> = {};
     if (token) headers.Authorization = `Bearer ${token}`;
-    const res = await fetch(`/api/reviews?station=${encodeURIComponent(stationName)}&address=${encodeURIComponent(address)}`, { headers });
+    const anonParam = !token ? `&anonymous_id=${encodeURIComponent(getAnonymousId())}` : "";
+    const res = await fetch(`/api/reviews?station=${encodeURIComponent(stationName)}&address=${encodeURIComponent(address)}${anonParam}`, { headers });
     const data = await res.json();
     setComments(Array.isArray(data) ? data : []);
     setLoading(false);
@@ -239,7 +245,6 @@ export default function CommentsModal({ stationName, address, onClose, userEmail
 
   async function handleVote(commentId: number, vote: number) {
     const token = await getToken();
-    if (!token) { setError("Connectez-vous pour voter"); return; }
     setComments((prev) => prev.map((c) => {
       if (c.id !== commentId) return c;
       const wasVote = c.my_vote;
@@ -253,10 +258,12 @@ export default function CommentsModal({ stationName, address, onClose, userEmail
         dislikes: c.dislikes + (vote === -1 ? 1 : 0) - (wasVote === -1 ? 1 : 0),
       };
     }));
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
     await fetch("/api/reviews", {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ action: "vote", comment_id: commentId, vote }),
+      headers,
+      body: JSON.stringify({ action: "vote", comment_id: commentId, vote, anonymous_id: token ? undefined : getAnonymousId() }),
     });
   }
 

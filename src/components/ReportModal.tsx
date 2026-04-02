@@ -4,14 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import { Flag, Send } from "lucide-react";
+import { Flag, Send, X } from "lucide-react";
 import { reportSchema } from "@/lib/schemas";
 
 export default function ReportModal({
@@ -62,48 +55,56 @@ export default function ReportModal({
   }
 
   return (
-    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Flag className="size-4 text-destructive" />
+    <div className="report-overlay" onClick={onClose}>
+      <motion.div
+        className="report-modal"
+        onClick={(e) => e.stopPropagation()}
+        style={{ maxWidth: "28rem" }}
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
+          <h2 style={{ fontSize: "1.0625rem", fontWeight: 700, margin: 0, display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <Flag className="size-4" style={{ color: "#e63946" }} />
             Signaler une inexactitude
-          </DialogTitle>
-          <DialogDescription>
-            <strong>{stationName}</strong> — {address}
-          </DialogDescription>
-        </DialogHeader>
+          </h2>
+          <span className="panel-close" onClick={onClose}>x</span>
+        </div>
+        <p style={{ fontSize: "0.8125rem", color: "var(--text-muted)", marginBottom: "0.75rem" }}>
+          <strong>{stationName}</strong> — {address}
+        </p>
 
         {sent ? (
           <motion.div
-            className="text-center py-5"
+            style={{ textAlign: "center", padding: "1.5rem 0" }}
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
           >
-            <p className="text-[15px] font-semibold">Merci pour votre signalement !</p>
-            <p className="text-[13px] text-muted-foreground">Nous allons examiner votre demande.</p>
+            <p style={{ fontSize: "0.9375rem", fontWeight: 600 }}>Merci pour votre signalement !</p>
+            <p style={{ fontSize: "0.8125rem", color: "var(--text-muted)" }}>Nous allons examiner votre demande.</p>
             <Button onClick={onClose} className="mt-3">Fermer</Button>
           </motion.div>
         ) : (
-          <form onSubmit={handleSubmit} className="flex flex-col gap-2">
-            <div className="flex gap-2">
-              <div className="flex-1">
+          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              <div style={{ flex: 1 }}>
                 <Input
                   placeholder="Prénom"
                   value={form.first_name}
                   onChange={(e) => setForm({ ...form, first_name: e.target.value })}
                   aria-invalid={!!fieldErrors.first_name}
                 />
-                {fieldErrors.first_name && <p className="text-xs text-destructive mt-0.5">{fieldErrors.first_name}</p>}
+                {fieldErrors.first_name && <p style={{ fontSize: "0.75rem", color: "#e63946", marginTop: "0.125rem" }}>{fieldErrors.first_name}</p>}
               </div>
-              <div className="flex-1">
+              <div style={{ flex: 1 }}>
                 <Input
                   placeholder="Nom"
                   value={form.last_name}
                   onChange={(e) => setForm({ ...form, last_name: e.target.value })}
                   aria-invalid={!!fieldErrors.last_name}
                 />
-                {fieldErrors.last_name && <p className="text-xs text-destructive mt-0.5">{fieldErrors.last_name}</p>}
+                {fieldErrors.last_name && <p style={{ fontSize: "0.75rem", color: "#e63946", marginTop: "0.125rem" }}>{fieldErrors.last_name}</p>}
               </div>
             </div>
             <div>
@@ -114,27 +115,28 @@ export default function ReportModal({
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
                 aria-invalid={!!fieldErrors.email}
               />
-              {fieldErrors.email && <p className="text-xs text-destructive mt-0.5">{fieldErrors.email}</p>}
+              {fieldErrors.email && <p style={{ fontSize: "0.75rem", color: "#e63946", marginTop: "0.125rem" }}>{fieldErrors.email}</p>}
             </div>
             <div>
               <textarea
-                className="flex min-h-[80px] w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 outline-none resize-y"
+                className="login-input"
+                style={{ minHeight: "80px", resize: "vertical", width: "100%" }}
                 placeholder="Décrivez l'inexactitude..."
                 value={form.message}
                 onChange={(e) => setForm({ ...form, message: e.target.value })}
                 aria-invalid={!!fieldErrors.message}
                 rows={4}
               />
-              {fieldErrors.message && <p className="text-xs text-destructive mt-0.5">{fieldErrors.message}</p>}
+              {fieldErrors.message && <p style={{ fontSize: "0.75rem", color: "#e63946", marginTop: "0.125rem" }}>{fieldErrors.message}</p>}
             </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" disabled={sending} variant="destructive">
+            {error && <p style={{ fontSize: "0.875rem", color: "#e63946" }}>{error}</p>}
+            <button className="login-btn" type="submit" disabled={sending} style={{ background: "#e63946", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.375rem" }}>
               <Send className="size-3.5" />
               {sending ? "Envoi..." : "Envoyer le signalement"}
-            </Button>
+            </button>
           </form>
         )}
-      </DialogContent>
-    </Dialog>
+      </motion.div>
+    </div>
   );
 }

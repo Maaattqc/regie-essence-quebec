@@ -12,18 +12,18 @@ export default function NavDropdown({ onChangelogClick }: { onChangelogClick: ()
   return (
     <DropdownMenu>
       <DropdownMenuTrigger>
-        <button className="flex items-center gap-1 text-white/85 hover:text-white text-[13px] font-medium cursor-pointer bg-transparent border-none">
+        <span className="flex items-center gap-1 text-white/85 hover:text-white text-[13px] font-medium cursor-pointer">
           Menu <ChevronDown className="size-3 transition-transform group-data-[popup-open]:rotate-180" />
-        </button>
+        </span>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
+      <DropdownMenuContent align="end" className="min-w-[11rem]">
         <DropdownMenuItem>
           <a href="/admin" className="flex items-center gap-2 w-full no-underline text-inherit">
-            <Shield className="size-3.5" /> Admin
+            <Shield className="size-3.5" /> Gestion Admin
           </a>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={onChangelogClick}>
-          <FileText className="size-3.5" /> Changelog
+          <FileText className="size-3.5" /> Changelogs Code
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

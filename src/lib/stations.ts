@@ -106,8 +106,8 @@ export function normalize(s: string): string {
 export function extractCity(address: string): string | null {
   const idx = address.lastIndexOf(",");
   if (idx === -1) return null;
-  const city = address.slice(idx + 1).trim();
-  return city.charAt(0).toUpperCase() + city.slice(1).toLowerCase();
+  const city = address.slice(idx + 1).trim().toLowerCase();
+  return city.replace(/(^|[-\s])(\S)/g, (_, sep, ch) => sep + ch.toUpperCase());
 }
 
 export function deduplicateCities(raw: Set<string>): string[] {
@@ -118,7 +118,7 @@ export function deduplicateCities(raw: Set<string>): string[] {
   for (const city of sorted) {
     const norm = normalize(city);
     const isDuplicate = normalizedKept.some(
-      (existing) => norm.startsWith(existing) && norm !== existing
+      (existing) => norm === existing || (norm.startsWith(existing + "-") || norm.startsWith(existing + " "))
     );
     if (!isDuplicate) {
       kept.push(city);
