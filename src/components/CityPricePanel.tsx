@@ -179,7 +179,7 @@ const CityPricePanel = memo(function CityPricePanel({
                 className="h-7 text-[12px] max-w-[140px]"
               />
               <select
-                className="h-9 rounded-md border border-[var(--divider)] bg-[var(--bg-input)] px-2 text-[13px] font-medium text-[var(--text)] flex-1"
+                className="h-8 rounded-md border border-[var(--divider)] bg-[var(--bg-input)] px-2 text-[13px] text-[var(--text)] min-w-[150px]"
                 value={regionFilter}
                 onChange={(e) => setRegionFilter(e.target.value)}
               >
