@@ -90,6 +90,7 @@ interface PriceSnapshotRow {
   gas_type: string;
   price: number;
   snapshot_date: string;
+  snapshot_at: string;
 }
 
 export interface StationFeedMeta {
@@ -295,6 +296,7 @@ function normalizeRemoteGeoJson(
         gas_type: priceEntry.GasType,
         price,
         snapshot_date: snapshotDate,
+        snapshot_at: importedAt,
       });
     });
   });

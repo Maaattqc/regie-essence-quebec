@@ -90,18 +90,19 @@ export async function GET(req: NextRequest) {
   if (type === "snapshots") {
     const { data } = await supabaseAdmin
       .from("price_snapshots")
-      .select("snapshot_date, gas_type, price")
-      .order("snapshot_date", { ascending: false });
+      .select("snapshot_date, snapshot_at, gas_type, price")
+      .order("snapshot_at", { ascending: false });
 
     if (!data) return NextResponse.json([]);
 
-    // Group by date then gas_type
-    const byDate = new Map<string, { date: string; types: Record<string, { nb: number; sum: number; min: number; max: number }> }>();
+    // Group by snapshot_at (unique sync timestamp)
+    const byTs = new Map<string, { date: string; snapshotAt: string; types: Record<string, { nb: number; sum: number; min: number; max: number }> }>();
     for (const row of data) {
-      if (!byDate.has(row.snapshot_date)) {
-        byDate.set(row.snapshot_date, { date: row.snapshot_date, types: {} });
+      const key = row.snapshot_at ?? row.snapshot_date;
+      if (!byTs.has(key)) {
+        byTs.set(key, { date: row.snapshot_date, snapshotAt: key, types: {} });
       }
-      const entry = byDate.get(row.snapshot_date)!;
+      const entry = byTs.get(key)!;
       if (!entry.types[row.gas_type]) {
         entry.types[row.gas_type] = { nb: 0, sum: 0, min: Infinity, max: -Infinity };
       }
@@ -112,8 +113,9 @@ export async function GET(req: NextRequest) {
       if (Number(row.price) > t.max) t.max = Number(row.price);
     }
 
-    const result = Array.from(byDate.values()).map(({ date, types }) => ({
+    const result = Array.from(byTs.values()).map(({ date, snapshotAt, types }) => ({
       date,
+      snapshotAt,
       totalStations: Object.values(types).reduce((s, t) => s + t.nb, 0),
       types: Object.fromEntries(
         Object.entries(types).map(([k, t]) => [k, {
@@ -129,15 +131,21 @@ export async function GET(req: NextRequest) {
   }
 
   if (type === "snapshot_detail") {
+    const snapshotAt = req.nextUrl.searchParams.get("snapshotAt");
     const date = req.nextUrl.searchParams.get("date");
-    if (!date) return NextResponse.json({ error: "date requis" }, { status: 400 });
+    if (!snapshotAt && !date) return NextResponse.json({ error: "snapshotAt ou date requis" }, { status: 400 });
 
-    const { data } = await supabaseAdmin
+    let query = supabaseAdmin
       .from("price_snapshots")
-      .select("station_name, address, gas_type, price")
-      .eq("snapshot_date", date)
-      .order("price", { ascending: true });
+      .select("station_name, address, gas_type, price");
 
+    if (snapshotAt) {
+      query = query.eq("snapshot_at", snapshotAt);
+    } else {
+      query = query.eq("snapshot_date", date!);
+    }
+
+    const { data } = await query.order("price", { ascending: true });
     return NextResponse.json(data ?? []);
   }
 

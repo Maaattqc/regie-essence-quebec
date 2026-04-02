@@ -57,6 +57,7 @@ interface Report {
 
 interface SnapshotSummary {
   date: string;
+  snapshotAt: string;
   totalStations: number;
   types: Record<string, { nb: number; avg: number; min: number; max: number }>;
 }
@@ -211,21 +212,21 @@ export default function AdminPage() {
     setSnapshots(await res.json());
   }
 
-  async function loadSnapshotDetail(date: string) {
+  async function loadSnapshotDetail(snapshotAt: string) {
     setSnapshotDetailLoading(true);
     setSnapshotDetail([]);
-    const res = await fetch(`/api/admin?type=snapshot_detail&date=${date}`, { headers: authHeaders() });
+    const res = await fetch(`/api/admin?type=snapshot_detail&snapshotAt=${encodeURIComponent(snapshotAt)}`, { headers: authHeaders() });
     if (res.ok) setSnapshotDetail(await res.json());
     setSnapshotDetailLoading(false);
   }
 
-  function handleSelectSnapshot(date: string) {
-    if (selectedSnapshot === date) {
+  function handleSelectSnapshot(snapshotAt: string) {
+    if (selectedSnapshot === snapshotAt) {
       setSelectedSnapshot(null);
       setSnapshotDetail([]);
     } else {
-      setSelectedSnapshot(date);
-      loadSnapshotDetail(date);
+      setSelectedSnapshot(snapshotAt);
+      loadSnapshotDetail(snapshotAt);
     }
   }
 
@@ -474,20 +475,19 @@ export default function AdminPage() {
             )
           )}
 
-          {tab === "data" && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">{snapshots.length} snapshot{snapshots.length !== 1 ? "s" : ""} en base</p>
-              </div>
+          {tab === "data" && !selectedSnapshot && (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">{snapshots.length} snapshot{snapshots.length !== 1 ? "s" : ""} en base · Cliquez une ligne pour voir le détail</p>
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Date</TableHead>
+                    <TableHead>Heure (HNE)</TableHead>
                     <TableHead className="text-right">Stations</TableHead>
                     <TableHead className="text-right">Moy. Régulier</TableHead>
                     <TableHead className="text-right">Moy. Super</TableHead>
                     <TableHead className="text-right">Moy. Diesel</TableHead>
-                    <TableHead className="text-right">Min / Max global</TableHead>
+                    <TableHead className="text-right">Min / Max</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -495,17 +495,16 @@ export default function AdminPage() {
                     const allPrices = Object.values(s.types).flatMap(t => [t.min, t.max]);
                     const globalMin = Math.min(...allPrices);
                     const globalMax = Math.max(...allPrices);
-                    const isOpen = selectedSnapshot === s.date;
-                    return [
+                    const dt = new Date(s.snapshotAt);
+                    const heure = dt.toLocaleTimeString("fr-CA", { timeZone: "America/Toronto", hour: "2-digit", minute: "2-digit", second: "2-digit" });
+                    return (
                       <TableRow
-                        key={s.date}
+                        key={s.snapshotAt}
                         className="cursor-pointer hover:bg-muted/60"
-                        onClick={() => handleSelectSnapshot(s.date)}
+                        onClick={() => handleSelectSnapshot(s.snapshotAt)}
                       >
-                        <TableCell className="font-medium flex items-center gap-2">
-                          <ChevronDown className={`size-3.5 transition-transform ${isOpen ? "rotate-180" : ""}`} />
-                          {s.date}
-                        </TableCell>
+                        <TableCell className="font-medium">{s.date}</TableCell>
+                        <TableCell className="font-mono text-sm">{heure}</TableCell>
                         <TableCell className="text-right">{s.totalStations.toLocaleString()}</TableCell>
                         <TableCell className="text-right text-blue-600 dark:text-blue-400 font-mono">
                           {s.types["Régulier"] ? `${s.types["Régulier"].avg}¢` : "—"}
@@ -519,79 +518,97 @@ export default function AdminPage() {
                         <TableCell className="text-right font-mono text-xs text-muted-foreground">
                           {globalMin}¢ / {globalMax}¢
                         </TableCell>
-                      </TableRow>,
-                      isOpen && (
-                        <TableRow key={`${s.date}-detail`}>
-                          <TableCell colSpan={6} className="p-0 bg-muted/30">
-                            <div className="p-4 space-y-3">
-                              <div className="flex items-center gap-3 flex-wrap">
-                                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Filtrer :</span>
-                                {["Tous", "Régulier", "Super", "Diesel"].map((g) => (
-                                  <button
-                                    key={g}
-                                    onClick={(e) => { e.stopPropagation(); setDetailGasFilter(g); }}
-                                    className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${detailGasFilter === g ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}
-                                  >
-                                    {g}
-                                  </button>
-                                ))}
-                                <span className="ml-4 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Trier :</span>
-                                {([["price_asc", "Prix ↑"], ["price_desc", "Prix ↓"], ["name", "Nom A→Z"]] as const).map(([val, label]) => (
-                                  <button
-                                    key={val}
-                                    onClick={(e) => { e.stopPropagation(); setDetailSort(val); }}
-                                    className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${detailSort === val ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}
-                                  >
-                                    {label}
-                                  </button>
-                                ))}
-                              </div>
-                              {snapshotDetailLoading ? (
-                                <p className="text-sm text-muted-foreground py-4 text-center">Chargement...</p>
-                              ) : (
-                                <div className="max-h-[400px] overflow-y-auto rounded border">
-                                  <table className="w-full text-sm">
-                                    <thead className="sticky top-0 bg-background border-b">
-                                      <tr>
-                                        <th className="text-left px-3 py-2 font-medium text-muted-foreground">Station</th>
-                                        <th className="text-left px-3 py-2 font-medium text-muted-foreground">Adresse</th>
-                                        <th className="text-left px-3 py-2 font-medium text-muted-foreground">Type</th>
-                                        <th className="text-right px-3 py-2 font-medium text-muted-foreground">Prix</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {snapshotDetail
-                                        .filter(r => detailGasFilter === "Tous" || r.gas_type === detailGasFilter)
-                                        .sort((a, b) => {
-                                          if (detailSort === "price_asc") return a.price - b.price;
-                                          if (detailSort === "price_desc") return b.price - a.price;
-                                          return a.station_name.localeCompare(b.station_name);
-                                        })
-                                        .map((r, i) => (
-                                          <tr key={i} className="border-b last:border-0 hover:bg-muted/40">
-                                            <td className="px-3 py-1.5 font-medium">{r.station_name}</td>
-                                            <td className="px-3 py-1.5 text-muted-foreground text-xs">{r.address}</td>
-                                            <td className="px-3 py-1.5">
-                                              <Badge variant="outline" className="text-xs">{r.gas_type}</Badge>
-                                            </td>
-                                            <td className="px-3 py-1.5 text-right font-mono font-semibold">{r.price}¢</td>
-                                          </tr>
-                                        ))
-                                      }
-                                    </tbody>
-                                  </table>
-                                </div>
-                              )}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ),
-                    ];
+                      </TableRow>
+                    );
                   })}
                 </TableBody>
               </Table>
             </div>
           )}
+
+          {tab === "data" && selectedSnapshot && (() => {
+            const s = snapshots.find(x => x.snapshotAt === selectedSnapshot);
+            const dt = s ? new Date(s.snapshotAt) : null;
+            const label = dt ? `${s!.date} à ${dt.toLocaleTimeString("fr-CA", { timeZone: "America/Toronto", hour: "2-digit", minute: "2-digit" })} HNE` : selectedSnapshot;
+            const rows = snapshotDetail
+              .filter(r => detailGasFilter === "Tous" || r.gas_type === detailGasFilter)
+              .sort((a, b) => {
+                if (detailSort === "price_asc") return a.price - b.price;
+                if (detailSort === "price_desc") return b.price - a.price;
+                return a.station_name.localeCompare(b.station_name);
+              });
+            return (
+              <div className="space-y-4">
+                {/* Header */}
+                <div className="flex items-center gap-3 flex-wrap">
+                  <button
+                    onClick={() => { setSelectedSnapshot(null); setSnapshotDetail([]); }}
+                    className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <ArrowLeft className="size-4" /> Retour
+                  </button>
+                  <div className="h-4 w-px bg-border" />
+                  <span className="font-semibold text-sm">Snapshot du {label}</span>
+                  <Badge variant="secondary">{snapshotDetail.length.toLocaleString()} entrées</Badge>
+                </div>
+
+                {/* Filtres + tri */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  {["Tous", "Régulier", "Super", "Diesel"].map((g) => (
+                    <button
+                      key={g}
+                      onClick={() => setDetailGasFilter(g)}
+                      className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${detailGasFilter === g ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}
+                    >
+                      {g}{g !== "Tous" && snapshotDetail.filter(r => r.gas_type === g).length > 0 ? ` (${snapshotDetail.filter(r => r.gas_type === g).length})` : ""}
+                    </button>
+                  ))}
+                  <div className="ml-4 h-4 w-px bg-border" />
+                  {([["price_asc", "Prix ↑"], ["price_desc", "Prix ↓"], ["name", "Nom A→Z"]] as const).map(([val, label]) => (
+                    <button
+                      key={val}
+                      onClick={() => setDetailSort(val)}
+                      className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${detailSort === val ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Tableau pleine largeur */}
+                {snapshotDetailLoading ? (
+                  <p className="text-sm text-muted-foreground py-8 text-center">Chargement...</p>
+                ) : (
+                  <div className="rounded-md border overflow-hidden">
+                    <div className="overflow-y-auto" style={{ maxHeight: "calc(100vh - 280px)" }}>
+                      <table className="w-full text-sm">
+                        <thead className="sticky top-0 bg-muted/80 backdrop-blur border-b z-10">
+                          <tr>
+                            <th className="text-left px-4 py-2.5 font-semibold text-muted-foreground">Station</th>
+                            <th className="text-left px-4 py-2.5 font-semibold text-muted-foreground">Adresse</th>
+                            <th className="text-left px-4 py-2.5 font-semibold text-muted-foreground">Type</th>
+                            <th className="text-right px-4 py-2.5 font-semibold text-muted-foreground">Prix</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border">
+                          {rows.map((r, i) => (
+                            <tr key={i} className="hover:bg-muted/40 transition-colors">
+                              <td className="px-4 py-2 font-medium">{r.station_name}</td>
+                              <td className="px-4 py-2 text-muted-foreground text-xs">{r.address}</td>
+                              <td className="px-4 py-2">
+                                <Badge variant="outline" className="text-xs">{r.gas_type}</Badge>
+                              </td>
+                              <td className="px-4 py-2 text-right font-mono font-bold">{r.price}¢</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
     </div>
   );
