@@ -83,6 +83,10 @@ function formatPopup(props: StationProperties, lat: number, lng: number) {
           style="flex:1;padding:5px 0;background:#7c3aed;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600">
           Historique
         </button>
+        <button onclick="window.__showReviews('${props.Name.replace(/'/g, "\\'")}','${props.Address.replace(/'/g, "\\'")}')"
+          style="flex:1;padding:5px 0;background:#0ea5e9;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600">
+          Commentaires
+        </button>
         <button onclick="window.__showReport('${props.Name.replace(/'/g, "\\'")}','${props.Address.replace(/'/g, "\\'")}')"
           style="flex:1;padding:5px 0;background:#e63946;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600">
           Signaler
