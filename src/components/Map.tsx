@@ -21,7 +21,6 @@ import ReportModal from "@/components/ReportModal";
 import CommentsModal from "@/components/CommentsModal";
 import CityPricePanel from "@/components/CityPricePanel";
 import RegionPricePanel from "@/components/RegionPricePanel";
-import SiteThemeToggle from "@/components/SiteThemeToggle";
 import {
   type StationProperties,
   type StationPrice,
@@ -87,28 +86,32 @@ const SVG = {
   flag: `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>`,
 };
 
+function escHtml(s: string) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
 function formatPopup(props: StationProperties, lat: number, lng: number) {
   const priceChips = props.Prices.filter((p) => p.IsAvailable)
     .map((p) => `
       <div style="display:flex;justify-content:space-between;align-items:center;background:#f5f5f5;border-radius:6px;padding:5px 9px;font-size:12.5px">
-        <span style="color:#555;font-weight:500">${p.GasType}</span>
-        <strong style="color:#111;font-size:14px;margin-left:10px">${p.Price} <span style="font-size:10px;font-weight:400;color:#888">¢/L</span></strong>
+        <span style="color:#555;font-weight:500">${escHtml(p.GasType)}</span>
+        <strong style="color:#111;font-size:14px;margin-left:10px">${escHtml(p.Price)} <span style="font-size:10px;font-weight:400;color:#888">¢/L</span></strong>
       </div>`)
     .join("");
 
   const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
   const sid = stationId(props);
   const isFav = getFavorites().has(sid);
-  const esc = (s: string) => s.replace(/'/g, "\\'").replace(/"/g, "&quot;");
+  const esc = escHtml;
 
   const btnBase = "border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;padding:7px 4px;display:flex;align-items:center;justify-content:center;gap:4px;flex:1;";
 
   return `
     <div style="min-width:230px;font-family:system-ui,sans-serif;padding:2px 0">
       <div style="margin-bottom:10px">
-        <div style="font-size:15px;font-weight:700;color:#111;line-height:1.3;margin-bottom:3px">${props.Name}</div>
-        <div style="font-size:12px;color:#666;margin-bottom:1px">${props.brand} &middot; ${props.Region}</div>
-        <div style="font-size:11.5px;color:#999">${props.Address}</div>
+        <div style="font-size:15px;font-weight:700;color:#111;line-height:1.3;margin-bottom:3px">${esc(props.Name)}</div>
+        <div style="font-size:12px;color:#666;margin-bottom:1px">${esc(props.brand ?? "")} &middot; ${esc(props.Region)}</div>
+        <div style="font-size:11.5px;color:#999">${esc(props.Address)}</div>
       </div>
 
       <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:10px">
@@ -542,7 +545,7 @@ export default function Map() {
       async (pos) => {
         const { latitude, longitude } = pos.coords;
         setUserPos([latitude, longitude]);
-        setFlyTarget({ center: [latitude, longitude], zoom: 12 });
+        let geoZoom = 12;
         if (data) {
           let nearestRegion = "";
           let nearestDist = Infinity;
@@ -555,10 +558,18 @@ export default function Map() {
               nearestRegion = feature.properties.Region;
             }
           });
-          if (nearestRegion) setRegion(nearestRegion);
+          if (nearestRegion) {
+            setRegion(nearestRegion);
+            const regionZooms: Record<string, number> = { "Montréal": 11, "Laval": 12 };
+            if (regionZooms[nearestRegion]) geoZoom = regionZooms[nearestRegion];
+          }
         }
         const city = await reverseGeocode(latitude, longitude);
-        if (city) setSearch(city);
+        if (city) {
+          setSearch(city);
+          if (normalize(city) === normalize("Saint-Georges")) geoZoom = 13;
+        }
+        setFlyTarget({ center: [latitude, longitude], zoom: geoZoom });
         setGeoReady(true);
       },
       () => setGeoReady(true)
@@ -587,17 +598,19 @@ export default function Map() {
       if (coords.length > 0) {
         const avgLat = coords.reduce((s, c) => s + c[0], 0) / coords.length;
         const avgLng = coords.reduce((s, c) => s + c[1], 0) / coords.length;
-        setFlyTarget({ center: [avgLat, avgLng], zoom: 12 });
+        const cityZoom = normalize(v) === normalize("Saint-Georges") ? 13 : 12;
+        setFlyTarget({ center: [avgLat, avgLng], zoom: cityZoom });
       }
     } else {
       setFlyTarget(null);
     }
   }
+  const REGION_ZOOM: Record<string, number> = { "Montréal": 11, "Laval": 12 };
   function handleRegionChange(v: string) {
     setRegion(v);
     setSearch("");
     if (v && REGION_CENTERS[v]) {
-      setFlyTarget({ center: REGION_CENTERS[v], zoom: 9 });
+      setFlyTarget({ center: REGION_CENTERS[v], zoom: REGION_ZOOM[v] ?? 9 });
     } else {
       setFlyTarget(null);
     }
@@ -822,7 +835,6 @@ export default function Map() {
             </div>
             <div style={{ height: 6, borderRadius: 3, background: "linear-gradient(to right, #2d9a2d, #6fbf3b, #f0c808, #ef8a17, #e63946)" }} />
           </div>
-          <SiteThemeToggle />
         </div>
         <AttributionControl position="bottomleft" />
         {userPos && radiusKm > 0 && (

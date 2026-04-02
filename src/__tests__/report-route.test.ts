@@ -8,21 +8,25 @@ const mocks = vi.hoisted(() => {
   const from = vi.fn(() => ({ insert }))
 
   return {
-    createClient: vi.fn(() => ({ from })),
     from,
     getIP: vi.fn(),
     insert,
     rateLimit: vi.fn(),
+    logActivity: vi.fn(),
   }
 })
 
-vi.mock('@supabase/supabase-js', () => ({
-  createClient: mocks.createClient,
+vi.mock('@/lib/supabase', () => ({
+  supabaseAdmin: { from: mocks.from },
 }))
 
 vi.mock('@/lib/rateLimit', () => ({
   getIP: mocks.getIP,
   rateLimit: mocks.rateLimit,
+}))
+
+vi.mock('@/lib/activity-log', () => ({
+  logActivity: mocks.logActivity,
 }))
 
 import { POST } from '@/app/api/report/route'
@@ -41,11 +45,11 @@ describe('POST /api/report', () => {
     process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://example.supabase.co'
     process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role'
 
-    mocks.createClient.mockClear()
     mocks.from.mockClear()
     mocks.getIP.mockReset()
     mocks.insert.mockReset()
     mocks.rateLimit.mockReset()
+    mocks.logActivity.mockReset()
 
     mocks.getIP.mockReturnValue('203.0.113.1')
     mocks.insert.mockResolvedValue({ error: null })
@@ -82,7 +86,7 @@ describe('POST /api/report', () => {
     await expect(response.json()).resolves.toMatchObject({
       error: expect.any(String),
     })
-    expect(mocks.createClient).not.toHaveBeenCalled()
+    expect(mocks.insert).not.toHaveBeenCalled()
   })
 
   it('insere le signalement valide dans supabase', async () => {
@@ -96,10 +100,6 @@ describe('POST /api/report', () => {
 
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({ ok: true })
-    expect(mocks.createClient).toHaveBeenCalledWith(
-      'https://example.supabase.co',
-      'service-role',
-    )
     expect(mocks.from).toHaveBeenCalledWith('reports')
     expect(mocks.insert).toHaveBeenCalledWith(validBody)
   })
@@ -118,6 +118,6 @@ describe('POST /api/report', () => {
     )
 
     expect(response.status).toBe(500)
-    await expect(response.json()).resolves.toEqual({ error: 'insert failed' })
+    await expect(response.json()).resolves.toEqual({ error: 'Erreur serveur' })
   })
 })

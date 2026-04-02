@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { supabaseAdmin } from "@/lib/supabase";
 import { rateLimit, getIP } from "@/lib/rateLimit";
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { commentSchema, voteSchema } from "@/lib/schemas";
 
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
 
@@ -22,6 +18,8 @@ async function getUser(token: string) {
   return user;
 }
 
+const VALID_COLUMNS = ["likes", "dislikes"] as const;
+
 // GET comments for a station
 export async function GET(request: NextRequest) {
   if (!rateLimit(getIP(request))) return NextResponse.json({ error: "Trop de requêtes" }, { status: 429 });
@@ -31,7 +29,6 @@ export async function GET(request: NextRequest) {
   const address = searchParams.get("address");
   if (!station || !address) return NextResponse.json({ error: "station et address requis" }, { status: 400 });
 
-  // Get all comments for this station (exclude soft-deleted)
   const { data: comments } = await supabaseAdmin
     .from("comments")
     .select("*")
@@ -40,7 +37,6 @@ export async function GET(request: NextRequest) {
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
-  // Get emails
   const userIds = [...new Set((comments || []).map((c) => c.user_id).filter(Boolean))];
   const emails: Record<string, string> = {};
   for (const uid of userIds) {
@@ -48,9 +44,8 @@ export async function GET(request: NextRequest) {
     if (u?.user?.email) emails[uid] = u.user.email.split("@")[0];
   }
 
-  // Get current user's votes (authenticated or anonymous)
   const token = getToken(request);
-  const anonymousId = request.nextUrl.searchParams.get("anonymous_id");
+  const anonymousId = searchParams.get("anonymous_id");
   let myVotes: Record<number, number> = {};
   if (token) {
     const user = await getUser(token);
@@ -93,68 +88,75 @@ export async function POST(request: NextRequest) {
 
   const token = getToken(request);
   const user = token ? await getUser(token) : null;
-
   const body = await request.json();
 
-  // Vote action (authenticated or anonymous)
+  // Vote action
   if (body.action === "vote") {
-    const { comment_id, vote, anonymous_id } = body;
-    if (!comment_id || ![1, -1].includes(vote)) return NextResponse.json({ error: "Invalide" }, { status: 400 });
+    const parsed = voteSchema.safeParse(body);
+    if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Données invalides" }, { status: 400 });
+    const { comment_id, vote, anonymous_id } = parsed.data;
+
     if (!user && !anonymous_id) return NextResponse.json({ error: "Identifiant requis" }, { status: 400 });
+
+    const likeCol = vote === 1 ? "likes" : "dislikes";
+    const dislikeCol = vote === 1 ? "dislikes" : "likes";
+    if (!VALID_COLUMNS.includes(likeCol) || !VALID_COLUMNS.includes(dislikeCol)) {
+      return NextResponse.json({ error: "Invalide" }, { status: 400 });
+    }
 
     const voteFilter = user
       ? supabaseAdmin.from("comment_votes").select("vote").eq("user_id", user.id).eq("comment_id", comment_id)
-      : supabaseAdmin.from("comment_votes").select("vote").eq("anonymous_id", anonymous_id).is("user_id", null).eq("comment_id", comment_id);
+      : supabaseAdmin.from("comment_votes").select("vote").eq("anonymous_id", anonymous_id!).is("user_id", null).eq("comment_id", comment_id);
 
     const { data: existing } = await voteFilter.maybeSingle();
 
     if (existing) {
       const deleteQ = user
         ? supabaseAdmin.from("comment_votes").delete().eq("user_id", user.id).eq("comment_id", comment_id)
-        : supabaseAdmin.from("comment_votes").delete().eq("anonymous_id", anonymous_id).is("user_id", null).eq("comment_id", comment_id);
+        : supabaseAdmin.from("comment_votes").delete().eq("anonymous_id", anonymous_id!).is("user_id", null).eq("comment_id", comment_id);
       const updateQ = (v: number) => user
         ? supabaseAdmin.from("comment_votes").update({ vote: v }).eq("user_id", user.id).eq("comment_id", comment_id)
-        : supabaseAdmin.from("comment_votes").update({ vote: v }).eq("anonymous_id", anonymous_id).is("user_id", null).eq("comment_id", comment_id);
+        : supabaseAdmin.from("comment_votes").update({ vote: v }).eq("anonymous_id", anonymous_id!).is("user_id", null).eq("comment_id", comment_id);
 
       if (existing.vote === vote) {
         await deleteQ;
-        await supabaseAdmin.rpc("decrement", { row_id: comment_id, col_name: vote === 1 ? "likes" : "dislikes" });
+        await supabaseAdmin.rpc("decrement", { row_id: comment_id, col_name: likeCol });
       } else {
         await updateQ(vote);
-        await supabaseAdmin.rpc("increment", { row_id: comment_id, col_name: vote === 1 ? "likes" : "dislikes" });
-        await supabaseAdmin.rpc("decrement", { row_id: comment_id, col_name: vote === 1 ? "dislikes" : "likes" });
+        await supabaseAdmin.rpc("increment", { row_id: comment_id, col_name: likeCol });
+        await supabaseAdmin.rpc("decrement", { row_id: comment_id, col_name: dislikeCol });
       }
     } else {
       await supabaseAdmin.from("comment_votes").insert({
         user_id: user?.id || null,
-        anonymous_id: user ? null : anonymous_id,
+        anonymous_id: user ? null : anonymous_id!,
         comment_id,
         vote,
       });
-      await supabaseAdmin.rpc("increment", { row_id: comment_id, col_name: vote === 1 ? "likes" : "dislikes" });
+      await supabaseAdmin.rpc("increment", { row_id: comment_id, col_name: likeCol });
     }
     return NextResponse.json({ ok: true });
   }
 
-  // New comment (anonymous or logged in)
-  const { station_name, address, content, parent_id, anonymous_id } = body;
-  if (!station_name || !address || !content || content.length < 1) {
-    return NextResponse.json({ error: "Contenu requis" }, { status: 400 });
-  }
+  // New comment
+  const parsed = commentSchema.safeParse(body);
+  if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Données invalides" }, { status: 400 });
+  const { station_name, address, content, parent_id, anonymous_id } = parsed.data;
+
   if (!user && !anonymous_id) {
     return NextResponse.json({ error: "Identifiant anonyme requis" }, { status: 400 });
   }
 
   const { error } = await supabaseAdmin.from("comments").insert({
     user_id: user?.id || null,
-    anonymous_id: user ? null : anonymous_id,
+    anonymous_id: user ? null : anonymous_id!,
     station_name,
     address,
     content,
     parent_id: parent_id || null,
   });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   return NextResponse.json({ ok: true });
 }
 
@@ -168,13 +170,12 @@ export async function DELETE(request: NextRequest) {
   if (!user || !isAdmin(user.email)) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
 
   const { comment_id } = await request.json();
-  if (!comment_id) return NextResponse.json({ error: "comment_id requis" }, { status: 400 });
+  if (!comment_id || typeof comment_id !== "number") return NextResponse.json({ error: "comment_id requis (number)" }, { status: 400 });
 
-  // Soft delete: mark comment and its replies as deleted
   const now = new Date().toISOString();
   await supabaseAdmin.from("comments").update({ deleted_at: now }).eq("parent_id", comment_id);
   const { error } = await supabaseAdmin.from("comments").update({ deleted_at: now }).eq("id", comment_id);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   return NextResponse.json({ ok: true });
 }

@@ -22,7 +22,7 @@ export default function ChangelogModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="report-overlay" onClick={onClose}>
       <div
-        className="report-modal max-w-[40rem] max-h-[80vh] flex flex-col"
+        className="report-modal max-w-[56rem] max-h-[85vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-3 shrink-0">

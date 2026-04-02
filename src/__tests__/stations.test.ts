@@ -108,6 +108,8 @@ describe("deduplicateCities", () => {
   it("garde les villes différentes même si proches", () => {
     const cities = new Set(["Laval", "Lavaltrie"]);
     const result = deduplicateCities(cities);
-    expect(result.length).toBe(1);
+    expect(result.length).toBe(2);
+    expect(result).toContain("Laval");
+    expect(result).toContain("Lavaltrie");
   });
 });

@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTheme } from "next-themes";
 import { Input } from "@/components/ui/input";
-import { Search, Star, StarOff, X, User, ChevronDown, MapPin, Building2 } from "lucide-react";
+import { Search, Star, StarOff, X, User, ChevronDown, MapPin, Building2, Sun, Moon } from "lucide-react";
 import {
   type GasTypeKey,
   GAS_TYPES,
@@ -129,6 +130,21 @@ function NbSelect({
   );
 }
 
+function ThemeToggle() {
+  const { resolvedTheme, setTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
+  return (
+    <button
+      onClick={() => setTheme(isDark ? "light" : "dark")}
+      className="flex items-center justify-center size-8 rounded-lg text-white/70 hover:text-white hover:bg-white/15 transition-colors"
+      style={{ background: "transparent", border: "none", cursor: "pointer" }}
+      aria-label={isDark ? "Mode clair" : "Mode sombre"}
+    >
+      {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}
+    </button>
+  );
+}
+
 export default function FilterBar({
   gasType,
   onGasTypeChange,
@@ -231,6 +247,7 @@ export default function FilterBar({
 
         <div className="gov-bar-right">
           <NavDropdown onChangelogClick={onChangelogClick} />
+          <ThemeToggle />
           {currentUser ? (
             <UserDropdown email={currentUser.email} onLogout={onLogout} />
           ) : (

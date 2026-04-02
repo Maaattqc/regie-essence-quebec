@@ -332,26 +332,11 @@ async function batchUpsertSnapshots(rows: PriceSnapshotRow[]) {
   }
 }
 
-async function fetchSourceDataset(etag: string | null) {
-  const headers = new Headers();
-  if (etag) {
-    headers.set("If-None-Match", etag);
-  }
-
+async function fetchSourceDataset() {
   const response = await fetch(STATIONS_URL, {
-    headers,
     cache: "no-store",
     signal: AbortSignal.timeout(30_000),
   });
-
-  if (response.status === 304) {
-    return {
-      changed: false as const,
-      etag: response.headers.get("etag"),
-      sourceLastModified: toIsoOrNull(response.headers.get("last-modified")),
-      geojson: null,
-    };
-  }
 
   if (!response.ok) {
     throw new Error(`Source fetch failed with status ${response.status}`);
@@ -513,41 +498,7 @@ export async function syncStations({
     };
   }
 
-  const source = await fetchSourceDataset(state.source_etag);
-  const checkedAt = new Date().toISOString();
-
-  if (!source.changed) {
-    await markStationSyncChecked({
-      last_checked_at: checkedAt,
-      source_etag: source.etag ?? state.source_etag,
-      source_last_modified:
-        source.sourceLastModified ?? state.source_last_modified,
-    });
-
-    return {
-      changed: false,
-      datasetId: state.active_dataset_id,
-      reason: "not-modified",
-    };
-  }
-
-  if (
-    state.active_dataset_id &&
-    source.etag &&
-    state.source_etag === source.etag
-  ) {
-    await markStationSyncChecked({
-      last_checked_at: checkedAt,
-      source_last_modified:
-        source.sourceLastModified ?? state.source_last_modified,
-    });
-
-    return {
-      changed: false,
-      datasetId: state.active_dataset_id,
-      reason: "not-modified",
-    };
-  }
+  const source = await fetchSourceDataset();
 
   const datasetId = randomUUID();
   const importedAt = new Date().toISOString();

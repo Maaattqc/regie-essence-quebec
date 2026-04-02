@@ -5,6 +5,9 @@
 
 ## Règles UI
 - **Jamais** de `window.confirm()`, `window.alert()` ou `window.prompt()` — utiliser des confirmations inline stylées (Tailwind/shadcn) cohérentes avec le design du site
+- **Jamais d'emojis Unicode** dans le code UI — utiliser exclusivement les icônes de `lucide-react` (déjà installé dans le projet)
+- **Jamais de `<Skeleton>` ou autre `<div>` à l'intérieur d'un `<p>`** — HTML invalide qui cause une erreur d'hydratation Next.js. Utiliser `<div>` au lieu de `<p>` quand le contenu peut contenir un composant block-level
+- **Jamais de séquences Unicode `\u00XX`** dans le code — toujours écrire les vrais caractères UTF-8 (é, è, ê, ¢, É, etc.)
 
 ## Outils CLI disponibles
 - **Supabase CLI** (`npx supabase`) — projet lié : `dpjmmnkhlhwluytfaclz` (`regie-essence-quebec`). Utiliser `npx supabase db query --linked "SQL"` pour exécuter des migrations.

@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   getIP: vi.fn(),
   rateLimit: vi.fn(),
   syncStations: vi.fn(),
+  logActivity: vi.fn(),
 }))
 
 vi.mock('next/server', async () => {
@@ -27,6 +28,10 @@ vi.mock('@/lib/station-sync', () => ({
   syncStations: mocks.syncStations,
 }))
 
+vi.mock('@/lib/activity-log', () => ({
+  logActivity: mocks.logActivity,
+}))
+
 import { GET } from '@/app/api/cron/route'
 
 describe('GET /api/cron', () => {
@@ -43,7 +48,8 @@ describe('GET /api/cron', () => {
     })
     mocks.getIP.mockReturnValue('203.0.113.4')
     mocks.rateLimit.mockReturnValue(true)
-    mocks.syncStations.mockResolvedValue(undefined)
+    mocks.syncStations.mockResolvedValue({ changed: false, datasetId: null, reason: "not-modified" })
+    mocks.logActivity.mockResolvedValue(undefined)
   })
 
   it('retourne 429 quand le rate limit est depasse', async () => {

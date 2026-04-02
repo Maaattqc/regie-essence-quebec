@@ -1,6 +1,7 @@
 import { after, NextResponse } from "next/server";
 import { rateLimit, getIP } from "@/lib/rateLimit";
 import { syncStations } from "@/lib/station-sync";
+import { logActivity } from "@/lib/activity-log";
 
 export const maxDuration = 120;
 
@@ -20,10 +21,11 @@ export async function GET(request: Request) {
   const queuedAt = new Date().toISOString();
 
   after(async () => {
-    await syncStations({
+    const result = await syncStations({
       reason: "cron",
       force: true,
     });
+    await logActivity("cron", result.changed ? "Sync terminé — nouvelles données" : `Sync terminé — ${result.reason}`, undefined, { datasetId: result.datasetId, reason: result.reason });
   });
 
   return NextResponse.json(

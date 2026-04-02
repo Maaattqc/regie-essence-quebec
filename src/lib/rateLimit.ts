@@ -1,3 +1,6 @@
+// NOTE: Rate limiter in-memory — chaque instance serverless (Vercel) a sa propre Map.
+// En environnement distribué, ce rate limit est "best effort" (pas partagé entre instances).
+// Pour un rate limiting strict, migrer vers Redis/Upstash.
 const requests = new Map<string, number[]>();
 
 const WINDOW_MS = 1000;

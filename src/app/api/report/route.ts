@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { supabaseAdmin } from "@/lib/supabase";
 import { rateLimit, getIP } from "@/lib/rateLimit";
 import { reportSchema } from "@/lib/schemas";
+import { logActivity } from "@/lib/activity-log";
 
 export async function POST(request: NextRequest) {
   if (!rateLimit(getIP(request))) {
@@ -22,16 +23,13 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  );
-
-  const { error } = await supabase.from("reports").insert(result.data);
+  const { error } = await supabaseAdmin.from("reports").insert(result.data);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
+
+  await logActivity("report", "Nouveau signalement", result.data.station_name, { address: result.data.address });
 
   return NextResponse.json({ ok: true });
 }

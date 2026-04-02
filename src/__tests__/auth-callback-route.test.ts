@@ -6,10 +6,22 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
   createClient: vi.fn(),
   verifyOtp: vi.fn(),
+  logActivity: vi.fn(),
+  rateLimit: vi.fn(),
+  getIP: vi.fn(),
 }))
 
 vi.mock('@supabase/supabase-js', () => ({
   createClient: mocks.createClient,
+}))
+
+vi.mock('@/lib/activity-log', () => ({
+  logActivity: mocks.logActivity,
+}))
+
+vi.mock('@/lib/rateLimit', () => ({
+  rateLimit: mocks.rateLimit,
+  getIP: mocks.getIP,
 }))
 
 import { GET } from '@/app/auth/callback/route'
@@ -27,7 +39,10 @@ describe('GET /auth/callback', () => {
         verifyOtp: mocks.verifyOtp,
       },
     })
-    mocks.verifyOtp.mockResolvedValue({ error: null })
+    mocks.verifyOtp.mockResolvedValue({ data: { user: { email: 'test@example.com' } }, error: null })
+    mocks.logActivity.mockResolvedValue(undefined)
+    mocks.rateLimit.mockReturnValue(true)
+    mocks.getIP.mockReturnValue('127.0.0.1')
   })
 
   it('verifie le token otp quand les parametres sont presents', async () => {

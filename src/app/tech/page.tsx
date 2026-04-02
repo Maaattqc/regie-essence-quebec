@@ -2,13 +2,25 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useTheme } from "next-themes";
+import { motion } from "framer-motion";
 import {
   ArrowLeft, Globe, Server, Database, Cloud, Shield,
   Zap, Map, BarChart3, Users, Lock, Smartphone,
   RefreshCw, Search, Star, MessageSquare, Flag, Clock,
   CheckCircle2, Layers, GitBranch, Mail, Code2, Eye,
+  Sun, Moon,
 } from "lucide-react";
 import ScrollToTop from "@/components/ScrollToTop";
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0 },
+};
+
+const stagger = {
+  visible: { transition: { staggerChildren: 0.06 } },
+};
 
 const BUZZWORDS = [
   "Rapide", "Performant", "Sécurisé", "Temps réel",
@@ -165,6 +177,8 @@ const METRICS = [
 
 export default function TechPage() {
   const [detailed, setDetailed] = useState(false);
+  const { resolvedTheme, setTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -198,6 +212,13 @@ export default function TechPage() {
               <span className="hidden sm:inline">Fiche technique</span>
             </button>
           </div>
+          <button
+            onClick={() => setTheme(isDark ? "light" : "dark")}
+            className="flex items-center justify-center size-8 rounded-lg hover:bg-white/15 transition-colors border-none cursor-pointer bg-transparent text-white/70 hover:text-white"
+            aria-label={isDark ? "Mode clair" : "Mode sombre"}
+          >
+            {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}
+          </button>
         </div>
         {/* Accent bar */}
         <div style={{ height: 4, background: "linear-gradient(90deg, #FFD700 0%, #FFD700 33%, #003DA5 33%, #003DA5 67%, #FF0000 67%)" }} />
@@ -206,44 +227,50 @@ export default function TechPage() {
       <main className="max-w-5xl mx-auto px-6 py-12 space-y-16">
 
         {/* Hero */}
-        <section className="text-center space-y-4">
-          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white leading-tight">
+        <motion.section className="text-center space-y-4" initial="hidden" animate="visible" variants={stagger}>
+          <motion.h1 variants={fadeUp} transition={{ duration: 0.5 }} className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white leading-tight">
             {detailed
               ? <>Plateforme de transparence<br className="hidden sm:block" /> des prix de carburant au Québec</>
               : <>Comparez les prix d{"'"}essence<br className="hidden sm:block" /> partout au Québec</>
             }
-          </h1>
-          <p className="text-lg text-gray-500 dark:text-gray-400 max-w-2xl mx-auto leading-relaxed">
+          </motion.h1>
+          <motion.p variants={fadeUp} transition={{ duration: 0.5 }} className="text-lg text-gray-500 dark:text-gray-400 max-w-2xl mx-auto leading-relaxed">
             {detailed
               ? <>Application web haute disponibilité exposant en temps réel les données officielles de la Régie de l{"'"}énergie du Québec — conçue selon les standards modernes d{"'"}architecture cloud et de sécurité gouvernementale.</>
               : <>Une application rapide, fiable et sécurisée qui affiche en temps réel les prix officiels de la Régie de l{"'"}énergie pour plus de 2 000 stations-service au Québec.</>
             }
-          </p>
+          </motion.p>
           {/* Buzzwords — résumé seulement */}
           {!detailed && (
-            <div className="flex flex-wrap justify-center gap-2 pt-2">
-              {BUZZWORDS.map((b) => (
-                <span key={b} className="inline-flex items-center gap-1 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 text-[12px] font-semibold rounded-full px-3 py-1 border border-blue-200 dark:border-blue-800">
+            <motion.div variants={fadeUp} transition={{ duration: 0.5 }} className="flex flex-wrap justify-center gap-2 pt-2">
+              {BUZZWORDS.map((b, i) => (
+                <motion.span
+                  key={b}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.3 + i * 0.05, duration: 0.3 }}
+                  className="inline-flex items-center gap-1 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 text-[12px] font-semibold rounded-full px-3 py-1 border border-blue-200 dark:border-blue-800"
+                >
                   <Zap className="size-3" />
                   {b}
-                </span>
+                </motion.span>
               ))}
-            </div>
+            </motion.div>
           )}
-        </section>
+        </motion.section>
 
         {/* Metrics — détaillé seulement */}
         {detailed && (
-          <section>
+          <motion.section initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-50px" }} variants={stagger}>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               {METRICS.map((m) => (
-                <div key={m.label} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5 text-center">
+                <motion.div key={m.label} variants={fadeUp} transition={{ duration: 0.4 }} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5 text-center hover:shadow-lg hover:-translate-y-0.5 transition-all">
                   <div className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white mb-1">{m.value}</div>
                   <div className="text-[12px] text-gray-500 dark:text-gray-400">{m.label}</div>
-                </div>
+                </motion.div>
               ))}
             </div>
-          </section>
+          </motion.section>
         )}
 
         {/* Stack — détaillé seulement */}
@@ -278,8 +305,8 @@ export default function TechPage() {
         )}
 
         {/* Features — toujours visible */}
-        <section className="space-y-6">
-          <div>
+        <motion.section className="space-y-6" initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-50px" }} variants={stagger}>
+          <motion.div variants={fadeUp} transition={{ duration: 0.4 }}>
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
               {detailed ? "Fonctionnalités livrées" : "Ce que vous pouvez faire"}
             </h2>
@@ -289,13 +316,13 @@ export default function TechPage() {
                 : "Toutes les fonctionnalités sont disponibles gratuitement, sans inscription, directement depuis votre navigateur."
               }
             </p>
-          </div>
+          </motion.div>
           <div className="grid sm:grid-cols-2 gap-4">
             {FEATURES.map((f) => {
               const Icon = f.icon;
               const activeTags = detailed ? f.techTags : f.tags;
               return (
-                <div key={f.title} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5 flex gap-4">
+                <motion.div key={f.title} variants={fadeUp} transition={{ duration: 0.4 }} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5 flex gap-4 hover:shadow-lg hover:-translate-y-0.5 transition-all">
                   <div className="size-9 rounded-lg bg-blue-50 dark:bg-blue-950/50 flex items-center justify-center shrink-0">
                     <Icon className="size-4 text-blue-700 dark:text-blue-400" />
                   </div>
@@ -310,11 +337,11 @@ export default function TechPage() {
                       ))}
                     </div>
                   </div>
-                </div>
+                </motion.div>
               );
             })}
           </div>
-        </section>
+        </motion.section>
 
         {/* DevOps & CI/CD — détaillé seulement */}
         {detailed && (

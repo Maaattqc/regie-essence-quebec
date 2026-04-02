@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { supabaseAdmin } from "@/lib/supabase";
+import { rateLimit, getIP } from "@/lib/rateLimit";
+import { logActivity } from "@/lib/activity-log";
 
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
 
@@ -22,16 +19,21 @@ async function verifyAdmin(req: NextRequest) {
 function maskEmail(email: string) {
   const [name, domain] = email.split("@");
   if (!domain) return "***@***";
-  return `${name[0]}${"*".repeat(Math.max(name.length - 1, 2))}@${domain[0]}${"*".repeat(Math.max(domain.length - 1, 2))}`;
+  const maskedName = name.length <= 2 ? "***" : `${name[0]}${"*".repeat(name.length - 1)}`;
+  const maskedDomain = domain.length <= 2 ? "***" : `${domain[0]}${"*".repeat(domain.length - 1)}`;
+  return `${maskedName}@${maskedDomain}`;
 }
 
 function maskName(name: string) {
-  if (!name || name.length <= 1) return "***";
+  if (!name || name.length <= 2) return "***";
   return `${name[0]}${"*".repeat(name.length - 1)}`;
 }
 
+const VALID_LOG_CATEGORIES = ["sync", "cron", "auth", "report", "admin", "visite", "erreur"];
+
 // GET /api/admin?type=stats|users|reports
 export async function GET(req: NextRequest) {
+  if (!rateLimit(getIP(req))) return NextResponse.json({ error: "Trop de requêtes" }, { status: 429 });
   const user = await verifyAdmin(req);
   const isAdmin = !!user;
 
@@ -96,20 +98,31 @@ export async function GET(req: NextRequest) {
   }
 
   if (type === "users") {
-    // Get profiles
     const { data: profiles } = await supabaseAdmin
       .from("profiles")
       .select("*")
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(200);
 
-    // Enrich with emails from auth
-    const enriched = await Promise.all(
-      (profiles || []).map(async (p) => {
-        const { data: { user: authUser } } = await supabaseAdmin.auth.admin.getUserById(p.id);
-        const email = authUser?.email ?? p.email ?? "";
-        return { ...p, email: isAdmin ? email : maskEmail(email) };
-      })
-    );
+    // Batch email lookup (limit concurrent calls)
+    const list = profiles || [];
+    const enriched: Record<string, unknown>[] = [];
+    const BATCH = 10;
+    for (let i = 0; i < list.length; i += BATCH) {
+      const batch = list.slice(i, i + BATCH);
+      const results = await Promise.all(
+        batch.map(async (p) => {
+          try {
+            const { data: { user: authUser } } = await supabaseAdmin.auth.admin.getUserById(p.id);
+            const email = authUser?.email ?? p.email ?? "";
+            return { ...p, email: isAdmin ? email : maskEmail(email) };
+          } catch {
+            return { ...p, email: isAdmin ? (p.email ?? "") : "***@***" };
+          }
+        })
+      );
+      enriched.push(...results);
+    }
     return NextResponse.json(enriched);
   }
 
@@ -117,7 +130,8 @@ export async function GET(req: NextRequest) {
     const { data } = await supabaseAdmin
       .from("reports")
       .select("*")
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(500);
     const reports = (data ?? []).map((r: Record<string, unknown>) =>
       isAdmin ? r : {
         ...r,
@@ -130,16 +144,27 @@ export async function GET(req: NextRequest) {
   }
 
   if (type === "snapshots") {
-    const { data } = await supabaseAdmin
-      .from("price_snapshots")
-      .select("snapshot_date, snapshot_at, gas_type, price")
-      .order("snapshot_at", { ascending: false });
+    // Charger TOUTES les lignes avec pagination (Supabase limite à 1000/requête)
+    const allRows: { snapshot_date: string; snapshot_at: string; gas_type: string; price: number }[] = [];
+    const BATCH = 1000;
+    let from = 0;
+    while (true) {
+      const { data } = await supabaseAdmin
+        .from("price_snapshots")
+        .select("snapshot_date, snapshot_at, gas_type, price")
+        .order("snapshot_at", { ascending: false })
+        .range(from, from + BATCH - 1);
+      if (!data || data.length === 0) break;
+      allRows.push(...data);
+      if (data.length < BATCH) break;
+      from += BATCH;
+    }
 
-    if (!data) return NextResponse.json([]);
+    if (allRows.length === 0) return NextResponse.json([]);
 
     // Group by snapshot_at (unique sync timestamp)
     const byTs = new Map<string, { date: string; snapshotAt: string; types: Record<string, { nb: number; sum: number; min: number; max: number }> }>();
-    for (const row of data) {
+    for (const row of allRows) {
       const key = row.snapshot_at ?? row.snapshot_date;
       if (!byTs.has(key)) {
         byTs.set(key, { date: row.snapshot_date, snapshotAt: key, types: {} });
@@ -173,9 +198,26 @@ export async function GET(req: NextRequest) {
   }
 
   if (type === "snapshot_detail") {
-    const snapshotAt = req.nextUrl.searchParams.get("snapshotAt");
+    let snapshotAt = req.nextUrl.searchParams.get("snapshotAt");
     const date = req.nextUrl.searchParams.get("date");
+    const latest = req.nextUrl.searchParams.get("latest");
+
+    // Si latest=1, trouver le dernier snapshot_at
+    if (latest && !snapshotAt && !date) {
+      const { data: latestRow } = await supabaseAdmin
+        .from("price_snapshots")
+        .select("snapshot_at")
+        .order("snapshot_at", { ascending: false })
+        .limit(1);
+      if (latestRow?.[0]) snapshotAt = latestRow[0].snapshot_at;
+      else return NextResponse.json([]);
+    }
+
     if (!snapshotAt && !date) return NextResponse.json({ error: "snapshotAt ou date requis" }, { status: 400 });
+
+    // Valider format date
+    if (snapshotAt && isNaN(new Date(snapshotAt).getTime())) return NextResponse.json({ error: "Format snapshotAt invalide" }, { status: 400 });
+    if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) return NextResponse.json({ error: "Format date invalide (YYYY-MM-DD)" }, { status: 400 });
 
     const allRows: unknown[] = [];
     const BATCH = 1000;
@@ -204,11 +246,41 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(allRows);
   }
 
+  if (type === "logs") {
+    const category = req.nextUrl.searchParams.get("category") || "";
+    if (category && !VALID_LOG_CATEGORIES.includes(category)) {
+      return NextResponse.json({ error: "Catégorie invalide" }, { status: 400 });
+    }
+    const limit = Math.min(Number(req.nextUrl.searchParams.get("limit")) || 100, 200);
+    let query = supabaseAdmin
+      .from("activity_logs")
+      .select("id, category, action, detail, metadata, created_at")
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    if (category) query = query.eq("category", category);
+    const { data } = await query;
+    return NextResponse.json(data ?? []);
+  }
+
+  if (type === "alerts") {
+    const { count: highPrices } = await supabaseAdmin
+      .from("price_snapshots")
+      .select("*", { count: "exact", head: true })
+      .gt("price", 250);
+    const { count: lowPrices } = await supabaseAdmin
+      .from("price_snapshots")
+      .select("*", { count: "exact", head: true })
+      .lt("price", 80)
+      .gt("price", 0);
+    return NextResponse.json({ highPrices: highPrices ?? 0, lowPrices: lowPrices ?? 0 });
+  }
+
   return NextResponse.json({ error: "type requis" }, { status: 400 });
 }
 
 // PATCH /api/admin  body: { action: "report_status", id, status } | { action: "toggle_role", id }
 export async function PATCH(req: NextRequest) {
+  if (!rateLimit(getIP(req))) return NextResponse.json({ error: "Trop de requêtes" }, { status: 429 });
   const user = await verifyAdmin(req);
   if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
 
@@ -218,6 +290,7 @@ export async function PATCH(req: NextRequest) {
     const { id, status } = body;
     if (!id || !status) return NextResponse.json({ error: "id et status requis" }, { status: 400 });
     await supabaseAdmin.from("reports").update({ status }).eq("id", id);
+    await logActivity("admin", `Signalement #${id} → ${status}`, undefined, { reportId: id, status, by: user.email });
     return NextResponse.json({ ok: true });
   }
 
@@ -226,6 +299,7 @@ export async function PATCH(req: NextRequest) {
     if (!id) return NextResponse.json({ error: "id requis" }, { status: 400 });
     const newRole = currentRole === "admin" ? "user" : "admin";
     await supabaseAdmin.from("profiles").update({ role: newRole }).eq("id", id);
+    await logActivity("admin", `Rôle changé → ${newRole}`, undefined, { userId: id, newRole, by: user.email });
     return NextResponse.json({ ok: true });
   }
 
