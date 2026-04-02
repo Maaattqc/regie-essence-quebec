@@ -135,18 +135,31 @@ export async function GET(req: NextRequest) {
     const date = req.nextUrl.searchParams.get("date");
     if (!snapshotAt && !date) return NextResponse.json({ error: "snapshotAt ou date requis" }, { status: 400 });
 
-    let query = supabaseAdmin
-      .from("price_snapshots")
-      .select("station_name, address, gas_type, price");
+    const allRows: unknown[] = [];
+    const BATCH = 1000;
+    let from = 0;
 
-    if (snapshotAt) {
-      query = query.eq("snapshot_at", snapshotAt);
-    } else {
-      query = query.eq("snapshot_date", date!);
+    while (true) {
+      let query = supabaseAdmin
+        .from("price_snapshots")
+        .select("station_name, address, gas_type, price")
+        .order("price", { ascending: true })
+        .range(from, from + BATCH - 1);
+
+      if (snapshotAt) {
+        query = query.eq("snapshot_at", snapshotAt);
+      } else {
+        query = query.eq("snapshot_date", date!);
+      }
+
+      const { data } = await query;
+      if (!data || data.length === 0) break;
+      allRows.push(...data);
+      if (data.length < BATCH) break;
+      from += BATCH;
     }
 
-    const { data } = await query.order("price", { ascending: true });
-    return NextResponse.json(data ?? []);
+    return NextResponse.json(allRows);
   }
 
   return NextResponse.json({ error: "type requis" }, { status: 400 });
