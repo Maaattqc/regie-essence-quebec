@@ -868,7 +868,10 @@ interface Comment {
   my_vote: number;
 }
 
-function CommentItem({ c, replies, allComments, onReply, onVote }: { c: Comment; replies: Comment[]; allComments: Comment[]; onReply: (id: number) => void; onVote: (id: number, vote: number) => void }) {
+function CommentItem({ c, replies, allComments, onVote, onSubmitReply }: { c: Comment; replies: Comment[]; allComments: Comment[]; onVote: (id: number, vote: number) => void; onSubmitReply: (parentId: number, content: string) => Promise<boolean> }) {
+  const [showReply, setShowReply] = useState(false);
+  const [replyText, setReplyText] = useState("");
+  const [sending, setSending] = useState(false);
   const timeAgo = (d: string) => {
     const diff = Date.now() - new Date(d).getTime();
     const mins = Math.floor(diff / 60000);
@@ -877,6 +880,13 @@ function CommentItem({ c, replies, allComments, onReply, onVote }: { c: Comment;
     if (hrs < 24) return `il y a ${hrs}h`;
     return `il y a ${Math.floor(hrs / 24)}j`;
   };
+  async function handleReply() {
+    if (!replyText.trim()) return;
+    setSending(true);
+    const ok = await onSubmitReply(c.id, replyText);
+    if (ok) { setReplyText(""); setShowReply(false); }
+    setSending(false);
+  }
   return (
     <div style={{ padding: "0.5rem 0" }}>
       <div style={{ display: "flex", gap: "0.5rem", alignItems: "flex-start" }}>
@@ -896,14 +906,33 @@ function CommentItem({ c, replies, allComments, onReply, onVote }: { c: Comment;
             <button onClick={() => onVote(c.id, -1)} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "0.25rem", color: c.my_vote === -1 ? "#e63946" : "var(--text-muted)", padding: 0 }}>
               &#128078; {c.dislikes > 0 && c.dislikes}
             </button>
-            <button onClick={() => onReply(c.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 0, fontWeight: 600, fontSize: "0.75rem" }}>
+            <button onClick={() => setShowReply(!showReply)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 0, fontWeight: 600, fontSize: "0.75rem" }}>
               Répondre
             </button>
           </div>
+          {showReply && (
+            <div style={{ display: "flex", gap: "0.375rem", marginTop: "0.375rem" }}>
+              <input
+                className="login-input"
+                placeholder={`Répondre à ${c.author}...`}
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handleReply(); }}
+                style={{ flex: 1, marginBottom: 0, fontSize: "0.75rem" }}
+                autoFocus
+              />
+              <button className="login-btn" onClick={handleReply} disabled={sending || !replyText.trim()} style={{ width: "auto", padding: "0 0.625rem", fontSize: "0.75rem" }}>
+                {sending ? "..." : "Publier"}
+              </button>
+              <button onClick={() => { setShowReply(false); setReplyText(""); }} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", fontSize: "0.75rem", padding: 0 }}>
+                Annuler
+              </button>
+            </div>
+          )}
           {replies.length > 0 && (
             <div style={{ marginLeft: "0.5rem", borderLeft: "2px solid var(--divider)", paddingLeft: "0.75rem", marginTop: "0.375rem" }}>
               {replies.map((r) => (
-                <CommentItem key={r.id} c={r} replies={allComments.filter((x) => x.parent_id === r.id)} allComments={allComments} onReply={onReply} onVote={onVote} />
+                <CommentItem key={r.id} c={r} replies={allComments.filter((x) => x.parent_id === r.id)} allComments={allComments} onVote={onVote} onSubmitReply={onSubmitReply} />
               ))}
             </div>
           )}
@@ -917,7 +946,6 @@ function CommentsModal({ stationName, address, onClose }: { stationName: string;
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
   const [newComment, setNewComment] = useState("");
-  const [replyTo, setReplyTo] = useState<number | null>(null);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
 
@@ -940,32 +968,41 @@ function CommentsModal({ stationName, address, onClose }: { stationName: string;
 
   useEffect(() => { loadComments(); }, [stationName, address]);
 
+  async function submitComment(content: string, parentId: number | null): Promise<boolean> {
+    const token = await getToken();
+    if (!token) { setError("Connectez-vous pour commenter"); return false; }
+    const res = await fetch("/api/reviews", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ station_name: stationName, address, content, parent_id: parentId }),
+    });
+    if (res.ok) { loadComments(); return true; }
+    const d = await res.json();
+    setError(d.error || "Erreur");
+    return false;
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!newComment.trim()) return;
     setError("");
     setSending(true);
-    const token = await getToken();
-    if (!token) { setError("Connectez-vous pour commenter"); setSending(false); return; }
-    const res = await fetch("/api/reviews", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ station_name: stationName, address, content: newComment, parent_id: replyTo }),
-    });
-    if (res.ok) { setNewComment(""); setReplyTo(null); loadComments(); }
-    else { const d = await res.json(); setError(d.error || "Erreur"); }
+    const ok = await submitComment(newComment, null);
+    if (ok) setNewComment("");
     setSending(false);
+  }
+
+  async function handleReply(parentId: number, content: string): Promise<boolean> {
+    return submitComment(content, parentId);
   }
 
   async function handleVote(commentId: number, vote: number) {
     const token = await getToken();
     if (!token) { setError("Connectez-vous pour voter"); return; }
-    // Optimistic update
     setComments((prev) => prev.map((c) => {
       if (c.id !== commentId) return c;
       const wasVote = c.my_vote;
       if (wasVote === vote) {
-        // Toggle off
         return { ...c, my_vote: 0, likes: c.likes - (vote === 1 ? 1 : 0), dislikes: c.dislikes - (vote === -1 ? 1 : 0) };
       }
       return {
@@ -984,7 +1021,6 @@ function CommentsModal({ stationName, address, onClose }: { stationName: string;
 
   const topLevel = comments.filter((c) => !c.parent_id);
   const getReplies = (id: number) => comments.filter((c) => c.parent_id === id);
-  const replyAuthor = replyTo ? comments.find((c) => c.id === replyTo)?.author : null;
 
   return (
     <div className="report-overlay" onClick={onClose}>
@@ -996,12 +1032,6 @@ function CommentsModal({ stationName, address, onClose }: { stationName: string;
         <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: "0.75rem" }}>{comments.length} commentaire{comments.length !== 1 ? "s" : ""}</div>
 
         <form onSubmit={handleSubmit} style={{ flexShrink: 0, marginBottom: "0.75rem" }}>
-          {replyTo && (
-            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: "0.25rem", display: "flex", alignItems: "center", gap: "0.25rem" }}>
-              Répondre à <strong>{replyAuthor}</strong>
-              <button type="button" onClick={() => setReplyTo(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 0, fontSize: "0.75rem" }}>x</button>
-            </div>
-          )}
           <div style={{ display: "flex", gap: "0.375rem" }}>
             <input
               className="login-input"
@@ -1024,7 +1054,7 @@ function CommentsModal({ stationName, address, onClose }: { stationName: string;
             <p style={{ color: "var(--text-muted)", fontSize: "0.8125rem" }}>Aucun commentaire. Soyez le premier !</p>
           ) : (
             topLevel.map((c) => (
-              <CommentItem key={c.id} c={c} replies={getReplies(c.id)} allComments={comments} onReply={setReplyTo} onVote={handleVote} />
+              <CommentItem key={c.id} c={c} replies={getReplies(c.id)} allComments={comments} onVote={handleVote} onSubmitReply={handleReply} />
             ))
           )}
         </div>
