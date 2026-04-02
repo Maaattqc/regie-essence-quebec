@@ -6,14 +6,14 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, Shield, FileText, Info } from "lucide-react";
+import { Settings, Shield, FileText, Info } from "lucide-react";
 
 export default function NavDropdown({ onChangelogClick }: { onChangelogClick: () => void }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger>
-        <span className="flex items-center gap-1 text-white/85 hover:text-white text-[13px] font-medium cursor-pointer">
-          Menu <ChevronDown className="size-3 transition-transform group-data-[popup-open]:rotate-180" />
+        <span className="flex items-center justify-center size-8 rounded-lg text-white/85 hover:text-white hover:bg-white/15 transition-colors cursor-pointer">
+          <Settings className="size-4" />
         </span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[11rem]">
