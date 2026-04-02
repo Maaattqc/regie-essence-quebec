@@ -121,7 +121,7 @@ function NbSelect({
   children: React.ReactNode;
 }) {
   return (
-    <div className="nb-select-wrap">
+    <div className={`nb-select-wrap${value ? " nb-select-wrap--active" : ""}`}>
       <Icon className="nb-select-icon-left" />
       <select className="nb-select" value={value} onChange={(e) => onChange(e.target.value)}>
         {children}
@@ -215,7 +215,8 @@ export default function FilterBar({
                 style={gasType === t.key ? { background: t.color, borderColor: t.color } : undefined}
                 onClick={() => onGasTypeChange(t.key)}
               >
-                {t.label}
+                <span className="nb-pill-label">{t.label}</span>
+                <span className="nb-pill-short">{t.label[0]}</span>
               </button>
             ))}
           </div>
@@ -234,7 +235,7 @@ export default function FilterBar({
             {showFavorites
               ? <Star className="size-3.5 fill-current" />
               : <StarOff className="size-3.5" />}
-            Favoris
+            <span className="nb-label-text">Favoris</span>
           </button>
         </div>
 
@@ -246,7 +247,7 @@ export default function FilterBar({
           ) : (
             <button className="nb-login-btn" onClick={onLoginClick}>
               <User className="size-3.5" />
-              Connexion
+              <span className="nb-label-text">Connexion</span>
             </button>
           )}
         </div>

@@ -292,8 +292,45 @@ body {
     padding: 6px 8px;
     font-size: 12px;
   }
-  .nb-pill { font-size: 12px; padding: 0 8px; }
-  .nb-login-btn { font-size: 12px; padding: 0 10px; }
+  /* Mobile: icônes seulement */
+  .nb-pill-label { display: none; }
+  .nb-pill-short { display: inline; }
+  .nb-label-text { display: none; }
+  .nb-pill { padding: 0 9px; }
+
+  /* Selects: icône seulement, texte transparent */
+  .nb-select {
+    width: 34px;
+    padding-left: 0;
+    padding-right: 0;
+    color: transparent;
+    text-indent: -999px;
+  }
+  .nb-select option { color: var(--text, #fff); text-indent: 0; }
+  /* Icône colorée si filtre actif */
+  .nb-select-wrap--active .nb-select-icon-left { color: #FFD700; }
+  .nb-select-icon-right { display: none; }
+
+  /* Search: icône seule */
+  .nb-input-wrap { width: 34px; overflow: hidden; border-radius: 6px; }
+  .nb-input {
+    width: 34px !important;
+    padding-left: 8px !important;
+    padding-right: 0 !important;
+    color: transparent;
+    caret-color: transparent;
+  }
+  .nb-input::placeholder { color: transparent; }
+  .nb-input:focus {
+    width: 140px !important;
+    color: #fff;
+    caret-color: #fff;
+    padding-left: 28px !important;
+  }
+  .nb-input:focus::placeholder { color: rgba(255,255,255,0.5); }
+  .nb-input-wrap:focus-within { width: 140px; }
+
+  .nb-login-btn { padding: 0 10px; }
   .map-btn {
     padding: 6px 10px;
     font-size: 12px;
@@ -488,6 +525,10 @@ body {
 .nb-select:hover { background: rgba(255,255,255,0.16); border-color: rgba(255,255,255,0.35); }
 .nb-select:focus { background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.5); outline: none; }
 .nb-select option { background: var(--bg-panel, #1e293b); color: var(--text, #fff); }
+
+/* Labels masqués sur mobile */
+.nb-pill-short { display: none; }
+.nb-label-text { display: inline; }
 
 /* Carburant pills */
 .nb-pills {
