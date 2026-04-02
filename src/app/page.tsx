@@ -38,7 +38,7 @@ export default function Home() {
               Comment utiliser la carte interactive des prix d&apos;essence ?
             </h2>
             <p>
-              La carte interactive des prix de l&apos;essence est simple
+              La <Link href="/">carte interactive des prix de l&apos;essence</Link> est simple
               d&apos;utilisation. Entrez votre adresse dans la barre de
               recherche. Vous pouvez aussi activer la géolocalisation de votre
               appareil. La carte se centre sur votre position actuelle.
@@ -58,7 +58,8 @@ export default function Home() {
               Utilisez la recherche par rayon pour trouver la station la moins
               chère. Définissez une distance en kilomètres. La carte identifie
               automatiquement les stations avec le prix le plus bas dans ce
-              rayon.
+              rayon. Consultez notre <Link href="/faq">FAQ</Link> pour plus de
+              réponses.
             </p>
           </section>
 
@@ -203,6 +204,10 @@ export default function Home() {
               (REQ). C&apos;est l&apos;organisme gouvernemental qui encadre les
               prix des carburants. Ces données sont publiques et en format
               ouvert. Elles garantissent la transparence des prix affichés.
+              Consultez la page{" "}
+              <Link href="/tech">informations techniques</Link> pour les
+              détails. En savoir plus sur{" "}
+              <Link href="/a-propos">Essence Québec</Link>.
             </p>
           </section>
 
@@ -238,6 +243,12 @@ export default function Home() {
             <ul>
               <li>
                 <Link href="/">Carte des prix d&apos;essence au Québec</Link>
+              </li>
+              <li>
+                <Link href="/faq">Questions fréquentes</Link>
+              </li>
+              <li>
+                <Link href="/a-propos">À propos d&apos;Essence Québec</Link>
               </li>
               <li>
                 <Link href="/changelog">Historique des mises à jour</Link>
