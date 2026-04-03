@@ -48,6 +48,17 @@ const STATIONS_CACHE_KEY = "stations-api-cache";
 // Fix Chrome subpixel rendering gaps between tiles
 (L.Browser as Record<string, unknown>).any3d = false;
 
+// Patch removeChild pour éviter le crash React/Leaflet quand les deux
+// manipulent le DOM en même temps (race condition sur changement de région)
+if (typeof window !== "undefined") {
+  const origRemoveChild = Node.prototype.removeChild;
+   
+  Node.prototype.removeChild = function <T extends Node>(child: T): T {
+    if (child.parentNode !== this) return child;
+    return origRemoveChild.call(this, child) as T;
+  };
+}
+
 interface StationsApiPayload {
   ok: boolean;
   data: GeoJSON.FeatureCollection | null;
