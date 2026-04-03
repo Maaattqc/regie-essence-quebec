@@ -331,8 +331,8 @@ export async function GET(req: NextRequest) {
     (data ?? []).forEach((row: { created_at: string; page?: string }) => {
       const d = new Date(row.created_at);
       const key = range === "day"
-        ? `${d.getHours()}h`
-        : d.toLocaleDateString("fr-CA", { month: "short", day: "numeric" });
+        ? `${parseInt(new Intl.DateTimeFormat("fr-CA", { timeZone: "America/Montreal", hour: "numeric", hour12: false }).format(d))}h`
+        : d.toLocaleDateString("fr-CA", { month: "short", day: "numeric", timeZone: "America/Montreal" });
       buckets[key] = (buckets[key] ?? 0) + 1;
       const pg = row.page || "/";
       pageBuckets[pg] = (pageBuckets[pg] ?? 0) + 1;
