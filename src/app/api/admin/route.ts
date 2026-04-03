@@ -40,47 +40,36 @@ export async function GET(req: NextRequest) {
   const type = req.nextUrl.searchParams.get("type");
 
   if (type === "stats") {
-    const { count: totalSnapshots } = await supabaseAdmin
-      .from("price_snapshots")
-      .select("*", { count: "exact", head: true });
-
-    const { data: latest } = await supabaseAdmin
-      .from("price_snapshots")
-      .select("snapshot_at")
-      .order("snapshot_at", { ascending: false })
-      .limit(1);
-
-    const { count: totalReports } = await supabaseAdmin
-      .from("reports")
-      .select("*", { count: "exact", head: true });
-
-    const { count: totalUsers } = await supabaseAdmin
-      .from("profiles")
-      .select("*", { count: "exact", head: true });
-
-    let avgs = null;
-    try {
-      const { data } = await supabaseAdmin.rpc("get_avg_prices");
-      avgs = data;
-    } catch {}
-
-    // Visitor stats from page_views
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
     const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7).toISOString();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
     const [
+      { count: totalSnapshots },
+      { data: latest },
+      { count: totalReports },
+      { count: totalUsers },
       { count: totalPageViews },
       { count: todayPageViews },
       { count: weekPageViews },
       { count: monthPageViews },
     ] = await Promise.all([
+      supabaseAdmin.from("price_snapshots").select("*", { count: "estimated", head: true }),
+      supabaseAdmin.from("price_snapshots").select("snapshot_at").order("snapshot_at", { ascending: false }).limit(1),
+      supabaseAdmin.from("reports").select("*", { count: "exact", head: true }),
+      supabaseAdmin.from("profiles").select("*", { count: "exact", head: true }),
       supabaseAdmin.from("page_views").select("*", { count: "exact", head: true }),
       supabaseAdmin.from("page_views").select("*", { count: "exact", head: true }).gte("created_at", todayStart),
       supabaseAdmin.from("page_views").select("*", { count: "exact", head: true }).gte("created_at", weekStart),
       supabaseAdmin.from("page_views").select("*", { count: "exact", head: true }).gte("created_at", monthStart),
     ]);
+
+    let avgs = null;
+    try {
+      const { data } = await supabaseAdmin.rpc("get_avg_prices");
+      avgs = data;
+    } catch {}
 
     return NextResponse.json({
       totalSnapshots: totalSnapshots ?? 0,
