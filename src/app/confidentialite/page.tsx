@@ -12,13 +12,13 @@ const PROCESSORS = [
   {
     name: "Vercel Inc.",
     role: "Hébergement de l'application web",
-    location: "États-Unis",
+    location: "Canada",
     link: "https://vercel.com/legal/privacy-policy",
   },
   {
     name: "Supabase Inc.",
     role: "Base de données PostgreSQL et authentification",
-    location: "États-Unis (AWS)",
+    location: "Canada (AWS ca-central-1)",
     link: "https://supabase.com/privacy",
   },
   {
@@ -182,7 +182,7 @@ export default function ConfidentialitePage() {
           </h2>
           <p className="text-[13px] text-gray-500 dark:text-gray-400">
             Ces entreprises traitent des données en notre nom et sont liées par des obligations contractuelles de confidentialité.
-            Les données peuvent être hébergées aux États-Unis. Des garanties appropriées (clauses contractuelles types) sont en place.
+            Les données sont principalement hébergées au Canada. L&apos;envoi des courriels (Resend) transite par des serveurs aux États-Unis. Des garanties contractuelles appropriées sont en place.
           </p>
           <div className="space-y-3">
             {PROCESSORS.map((p) => (

@@ -138,7 +138,7 @@ function toIsoOrNull(value: string | null) {
 
 function getQuebecSnapshotDate(now = new Date()) {
   const formatter = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Toronto",
+    timeZone: "America/Montreal",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",

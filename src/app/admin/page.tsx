@@ -1589,7 +1589,7 @@ export default function AdminPage() {
                     const globalMin = Math.min(...allPrices);
                     const globalMax = Math.max(...allPrices);
                     const dt = new Date(s.snapshotAt);
-                    const heure = dt.toLocaleTimeString("fr-CA", { timeZone: "America/Toronto", hour: "2-digit", minute: "2-digit", second: "2-digit" });
+                    const heure = dt.toLocaleTimeString("fr-CA", { timeZone: "America/Montreal", hour: "2-digit", minute: "2-digit", second: "2-digit" });
                     return (
                       <TableRow
                         key={s.snapshotAt}
@@ -1622,7 +1622,7 @@ export default function AdminPage() {
           {tab === "data" && selectedSnapshot && (() => {
             const s = snapshots.find(x => x.snapshotAt === selectedSnapshot);
             const dt = s ? new Date(s.snapshotAt) : null;
-            const label = dt ? `${s!.date} à ${dt.toLocaleTimeString("fr-CA", { timeZone: "America/Toronto", hour: "2-digit", minute: "2-digit" })} HNE` : selectedSnapshot;
+            const label = dt ? `${s!.date} à ${dt.toLocaleTimeString("fr-CA", { timeZone: "America/Montreal", hour: "2-digit", minute: "2-digit" })} HNE` : selectedSnapshot;
             const rows = snapshotDetail
               .filter(r => detailGasFilter === "Tous" || r.gas_type === detailGasFilter)
               .sort((a, b) => {
