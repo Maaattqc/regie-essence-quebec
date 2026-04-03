@@ -24,12 +24,15 @@ export async function GET(request: NextRequest) {
 
     const data = await res.json();
 
-    const commits = data.map((c: { sha: string; commit: { message: string; author: { date: string } } }) => ({
-      sha: c.sha,
-      date: c.commit.author.date,
-      message: c.commit.message.split("\n")[0],
-      author: "Mathieu Fournier",
-    }));
+    const SENSITIVE = /token|key|secret|password|credential|apikey|api_key/i;
+    const commits = data
+      .filter((c: { commit: { message: string } }) => !SENSITIVE.test(c.commit.message))
+      .map((c: { sha: string; commit: { message: string; author: { date: string } } }) => ({
+        sha: c.sha,
+        date: c.commit.author.date,
+        message: c.commit.message.split("\n")[0],
+        author: "Mathieu Fournier",
+      }));
 
     return NextResponse.json(commits);
   } catch {
