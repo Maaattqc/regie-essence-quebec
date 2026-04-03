@@ -301,16 +301,23 @@ body {
     right: 12px !important;
   }
   .map-buttons-panel {
+    width: 40px !important;
     bottom: auto !important;
     top: 50%;
     transform: translateY(-50%);
     max-height: calc(100dvh - 7.5rem);
     overflow-y: auto;
     scrollbar-width: none;
+    gap: 4px;
   }
   .map-buttons-panel::-webkit-scrollbar { display: none; }
   .map-btn-label { display: none !important; }
   .map-panel-btn {
+    min-width: 0 !important;
+    width: 36px !important;
+    height: 36px !important;
+    padding: 0 !important;
+    justify-content: center;
     background: transparent !important;
     box-shadow: none !important;
     backdrop-filter: blur(8px);
@@ -394,18 +401,17 @@ body {
     overflow-y: auto;
   }
   .map-buttons-panel {
-    width: 140px !important;
-    left: 6px !important;
+    width: 36px !important;
+    left: 4px !important;
     bottom: auto !important;
     top: 50%;
     transform: translateY(-50%);
-    gap: 4px;
+    gap: 3px;
     max-height: calc(100dvh - 6.5rem);
   }
-  .map-buttons-panel button {
-    font-size: 11px !important;
-    padding-top: 4px;
-    padding-bottom: 4px;
+  .map-panel-btn {
+    width: 32px !important;
+    height: 32px !important;
   }
   .admin-tabs {
     flex-wrap: wrap;
