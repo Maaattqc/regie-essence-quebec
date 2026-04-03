@@ -615,7 +615,7 @@ export default function Map() {
   useEffect(() => {
     if (autoSearchDone.current || !data || !userPos || !geoReady) return;
     autoSearchDone.current = true;
-    findBestEffectivePrice();
+    findBestEffectivePrice(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, userPos, geoReady]);
 
@@ -663,7 +663,7 @@ export default function Map() {
   }
 
 
-  function findBestEffectivePrice() {
+  function findBestEffectivePrice(skipZoom = false) {
     if (!data) return;
     if (radiusKm === 0) setRadiusKm(5);
     const doSearch = (latitude: number, longitude: number) => {
@@ -690,7 +690,7 @@ export default function Map() {
       const saving = best.effectivePrice - best.price;
       const msg = `Selon la distance, le meilleur prix est ${best.name} à ~${best.dist.toFixed(1)} km — ${best.price.toFixed(1)}¢/L (coût réel : ${best.effectivePrice.toFixed(1)}¢/L, +${saving.toFixed(1)}¢ de trajet)`;
       setCheapestResults({ stations: [best], message: msg });
-      setFlyTarget({ center: [best.lat, best.lng], zoom: 15 });
+      if (!skipZoom) setFlyTarget({ center: [best.lat, best.lng], zoom: 15 });
     };
     if (userPos) {
       doSearch(userPos[0], userPos[1]);
@@ -830,7 +830,7 @@ export default function Map() {
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.2 }}
               >
-                <div className="flex flex-col gap-1">
+                <div className="flex flex-col gap-1 relative">
                   <div className="flex gap-0.5">
                     <Button
                       variant={cheapestResults ? "outline" : "default"}
@@ -853,13 +853,26 @@ export default function Map() {
                   <AnimatePresence>
                     {showEffectiveSettings && (
                       <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="bg-[var(--bg-panel)] rounded-md shadow-md px-3 py-2 overflow-hidden"
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        transition={{ duration: 0.15 }}
+                        className="map-settings-panel bg-[var(--bg-panel)] rounded-lg shadow-lg px-4 py-3 overflow-hidden"
+                        ref={(el) => {
+                          if (el) {
+                            L.DomEvent.disableClickPropagation(el);
+                            L.DomEvent.disableScrollPropagation(el);
+                            el.addEventListener("touchstart", (e) => e.stopPropagation(), { passive: false });
+                            el.addEventListener("touchmove", (e) => e.stopPropagation(), { passive: false });
+                          }
+                        }}
                       >
-                        <div className="text-xs font-semibold mb-2">Réglages</div>
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="text-xs font-semibold">Réglages</div>
+                          <button onClick={() => setShowEffectiveSettings(false)} className="text-red-500 hover:text-red-700">
+                            <X className="size-3.5" />
+                          </button>
+                        </div>
                         <div className="mb-2">
                           <div className="text-[11px] text-[var(--text-muted)] mb-1">Rayon : {radiusKm === 0 ? "Tout" : `${radiusKm} km`}</div>
                           <Slider
