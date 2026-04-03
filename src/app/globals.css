@@ -687,9 +687,9 @@ body {
   border-color: rgba(255, 255, 255, 0.12);
 }
 .map-legend-mobile-bar {
-  width: 6px;
+  width: 10px;
   height: 60px;
-  border-radius: 3px;
+  border-radius: 5px;
   background: linear-gradient(to bottom, #e63946, #ef8a17, #f0c808, #6fbf3b, #2d9a2d);
 }
 

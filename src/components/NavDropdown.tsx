@@ -20,7 +20,7 @@ export default function NavDropdown({ onChangelogClick, onSuggestionClick }: { o
           <Settings className="size-4" />
         </span>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-[11rem]">
+      <DropdownMenuContent align="end" className="!w-auto min-w-[12rem]">
         {onSuggestionClick && (
           <DropdownMenuItem className="nav-suggestion-mobile" onClick={onSuggestionClick}>
             <Lightbulb className="size-3.5" /> Suggestion
