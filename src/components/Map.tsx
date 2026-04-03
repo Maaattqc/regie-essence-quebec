@@ -830,7 +830,7 @@ export default function Map() {
                 <Button variant="outline" size="sm" className={`map-panel-btn map-panel-btn-wide w-full shadow-md font-semibold text-[13px] ${showCursors ? "!bg-[#457b9d] !text-white" : "!bg-[var(--bg-panel)] !text-[var(--text)]"} !border-0`} onClick={() => setShowCursors((v) => !v)}>
                   <Users className="size-3.5" />
                   <span className="map-btn-count">{onlineCount}</span>
-                  <span className="map-btn-label">{showCursors ? `En ligne (${onlineCount})` : "Visiteurs en ligne"}</span>
+                  <span className="map-btn-label">{showCursors ? `En ligne (${onlineCount})` : `Visiteurs en ligne (${onlineCount})`}</span>
                 </Button>
                 {/* Rayon : slider desktop, menu mobile */}
                 {userPos && (
