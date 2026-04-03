@@ -317,13 +317,42 @@ async function batchUpsertStations(rows: StationLiveRow[]) {
   }
 }
 
+async function getLatestPrices(): Promise<Map<string, number>> {
+  // Récupère le dernier prix connu par station+gas_type pour comparer
+  const map = new Map<string, number>();
+  const { data } = await supabaseAdmin
+    .from("price_snapshots")
+    .select("station_name, address, gas_type, price, snapshot_at")
+    .order("snapshot_at", { ascending: false });
+
+  if (!data) return map;
+
+  for (const row of data) {
+    const key = `${row.station_name}::${row.address}::${row.gas_type}`;
+    if (!map.has(key)) {
+      map.set(key, row.price);
+    }
+  }
+  return map;
+}
+
 async function batchUpsertSnapshots(rows: PriceSnapshotRow[]) {
-  for (let index = 0; index < rows.length; index += INSERT_BATCH_SIZE) {
-    const batch = rows.slice(index, index + INSERT_BATCH_SIZE);
+  // Ne garder que les prix qui ont changé par rapport au dernier snapshot
+  const latest = await getLatestPrices();
+  const changed = rows.filter((r) => {
+    const key = `${r.station_name}::${r.address}::${r.gas_type}`;
+    const prev = latest.get(key);
+    return prev === undefined || prev !== r.price;
+  });
+
+  if (changed.length === 0) return;
+
+  for (let index = 0; index < changed.length; index += INSERT_BATCH_SIZE) {
+    const batch = changed.slice(index, index + INSERT_BATCH_SIZE);
     const { error } = await supabaseAdmin
       .from("price_snapshots")
       .upsert(batch, {
-        onConflict: "station_name,address,gas_type,snapshot_date",
+        onConflict: "station_name,address,gas_type,snapshot_at",
       });
 
     if (error) {
