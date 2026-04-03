@@ -249,6 +249,8 @@ body {
     height: auto;
   }
   .gov-bar-subtitle { display: none; }
+  .nb-login-btn .nb-label-text { display: none; }
+  .nb-login-btn { padding: 0 10px; }
   /* Cacher filtres desktop, montrer barre 2 */
   .nb-filters-desktop { display: none; }
   .gov-bar-2 {
