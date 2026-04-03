@@ -318,21 +318,36 @@ async function batchUpsertStations(rows: StationLiveRow[]) {
 }
 
 async function getLatestPrices(): Promise<Map<string, number>> {
-  // Récupère le dernier prix connu par station+gas_type pour comparer
+  // Récupère le dernier snapshot_at, puis ses prix uniquement
   const map = new Map<string, number>();
-  const { data } = await supabaseAdmin
+
+  const { data: latest } = await supabaseAdmin
     .from("price_snapshots")
-    .select("station_name, address, gas_type, price, snapshot_at")
-    .order("snapshot_at", { ascending: false });
+    .select("snapshot_at")
+    .order("snapshot_at", { ascending: false })
+    .limit(1);
 
-  if (!data) return map;
+  if (!latest?.length) return map;
 
-  for (const row of data) {
-    const key = `${row.station_name}::${row.address}::${row.gas_type}`;
-    if (!map.has(key)) {
-      map.set(key, row.price);
+  const latestAt = latest[0].snapshot_at;
+
+  // Paginer les résultats du dernier snapshot (~5500 lignes)
+  for (let from = 0; ; from += 1000) {
+    const { data } = await supabaseAdmin
+      .from("price_snapshots")
+      .select("station_name, address, gas_type, price")
+      .eq("snapshot_at", latestAt)
+      .range(from, from + 999);
+
+    if (!data?.length) break;
+
+    for (const row of data) {
+      map.set(`${row.station_name}::${row.address}::${row.gas_type}`, row.price);
     }
+
+    if (data.length < 1000) break;
   }
+
   return map;
 }
 
@@ -345,7 +360,10 @@ async function batchUpsertSnapshots(rows: PriceSnapshotRow[]) {
     return prev === undefined || prev !== r.price;
   });
 
-  if (changed.length === 0) return;
+  if (changed.length === 0) {
+    await cleanupOldSnapshots();
+    return;
+  }
 
   for (let index = 0; index < changed.length; index += INSERT_BATCH_SIZE) {
     const batch = changed.slice(index, index + INSERT_BATCH_SIZE);
@@ -359,6 +377,35 @@ async function batchUpsertSnapshots(rows: PriceSnapshotRow[]) {
       throw new Error(error.message);
     }
   }
+
+  await cleanupOldSnapshots();
+}
+
+async function cleanupOldSnapshots() {
+  // Trouver le snapshot_at le plus récent
+  const { data: latest } = await supabaseAdmin
+    .from("price_snapshots")
+    .select("snapshot_at")
+    .order("snapshot_at", { ascending: false })
+    .limit(1);
+
+  if (!latest?.length) return;
+
+  // Trouver le 2e snapshot_at distinct (le plus récent avant le dernier)
+  const { data: second } = await supabaseAdmin
+    .from("price_snapshots")
+    .select("snapshot_at")
+    .lt("snapshot_at", latest[0].snapshot_at)
+    .order("snapshot_at", { ascending: false })
+    .limit(1);
+
+  if (!second?.length) return;
+
+  // Supprimer tout ce qui est plus ancien que le 2e snapshot
+  await supabaseAdmin
+    .from("price_snapshots")
+    .delete()
+    .lt("snapshot_at", second[0].snapshot_at);
 }
 
 async function fetchSourceDataset() {
