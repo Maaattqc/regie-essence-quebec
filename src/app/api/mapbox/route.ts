@@ -24,22 +24,19 @@ export async function POST(request: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Paramètres invalides" }, { status: 400 });
   }
-  const { type, ...rest } = parsed.data;
-  const coords = "coords" in rest ? rest.coords : undefined;
-  const origin = "origin" in rest ? rest.origin : undefined;
-  const destination = "destination" in rest ? rest.destination : undefined;
+  const body = parsed.data;
 
   try {
-    if (type === "matrix") {
+    if (body.type === "matrix") {
       const res = await fetch(
-        `${MAPBOX_BASE}/directions-matrix/v1/mapbox/driving/${coords}?sources=0&annotations=distance,duration&access_token=${MAPBOX_TOKEN}`,
+        `${MAPBOX_BASE}/directions-matrix/v1/mapbox/driving/${body.coords}?sources=0&annotations=distance,duration&access_token=${MAPBOX_TOKEN}`,
       );
       if (!res.ok) return NextResponse.json({ error: "Erreur Mapbox" }, { status: 502 });
       return NextResponse.json(await res.json());
     }
 
-    if (type === "directions") {
-      const c = `${origin[1]},${origin[0]};${destination[1]},${destination[0]}`;
+    if (body.type === "directions") {
+      const c = `${body.origin[1]},${body.origin[0]};${body.destination[1]},${body.destination[0]}`;
       const res = await fetch(
         `${MAPBOX_BASE}/directions/v5/mapbox/driving-traffic/${c}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`,
       );
