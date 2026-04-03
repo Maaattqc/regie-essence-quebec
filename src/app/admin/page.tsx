@@ -23,6 +23,30 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 
+function formatDate(iso: string): string {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString("fr-CA", { year: "numeric", month: "short", day: "numeric", timeZone: "America/Montreal" })
+      + " à " + d.toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit", timeZone: "America/Montreal" });
+  } catch { return iso; }
+}
+
+function TruncatedText({ text, limit = 80 }: { text: string; limit?: number }) {
+  const [expanded, setExpanded] = useState(false);
+  if (text.length <= limit) return <span className="whitespace-normal">{text}</span>;
+  return (
+    <div className="whitespace-normal">
+      {expanded ? text : `${text.slice(0, limit)}...`}
+      <button
+        className="ml-1 text-xs text-primary font-semibold hover:underline"
+        onClick={() => setExpanded((v) => !v)}
+      >
+        {expanded ? "Réduire" : "Lire plus"}
+      </button>
+    </div>
+  );
+}
+
 function escapeHtml(text: string): string {
   const map: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" };
   return text.replace(/[&<>"']/g, (m) => map[m]);
@@ -98,6 +122,11 @@ interface Suggestion {
 
 interface TrafficPoint {
   label: string;
+  count: number;
+}
+
+interface PageTraffic {
+  page: string;
   count: number;
 }
 
@@ -198,14 +227,12 @@ function ThemeToggleBtn() {
 
 const LOG_CATEGORIES: { key: string; label: string; icon: React.ReactNode }[] = [
   { key: "", label: "Tout", icon: <ScrollText className="size-3.5" /> },
-  { key: "sync", label: "Sync", icon: <RefreshCw className="size-3.5" /> },
   { key: "cron", label: "Cron", icon: <Clock className="size-3.5" /> },
   { key: "auth", label: "Auth", icon: <Shield className="size-3.5" /> },
   { key: "report", label: "Signalements", icon: <Flag className="size-3.5" /> },
   { key: "admin", label: "Admin", icon: <Database className="size-3.5" /> },
   { key: "visite", label: "Visites", icon: <Eye className="size-3.5" /> },
   { key: "erreur", label: "Erreurs", icon: <AlertCircle className="size-3.5" /> },
-  { key: "suggestion", label: "Suggestions", icon: <Lightbulb className="size-3.5" /> },
 ];
 
 interface LogEntry {
@@ -800,6 +827,7 @@ export default function AdminPage() {
   const [detailSort, setDetailSort] = useState<"price_asc" | "price_desc" | "name">("price_asc");
   const [healthChecks, setHealthChecks] = useState<Record<string, { status: "loading" | "ok" | "error"; ms: number; detail?: string }>>({});
   const [trafficData, setTrafficData] = useState<TrafficPoint[]>([]);
+  const [trafficPages, setTrafficPages] = useState<PageTraffic[]>([]);
   const [trafficRange, setTrafficRange] = useState<"day" | "week" | "month">("day");
   const [authLogs, setAuthLogs] = useState<AuthLog[]>([]);
   const [editingComment, setEditingComment] = useState<{ type: "report" | "suggestion"; id: number; value: string } | null>(null);
@@ -885,7 +913,9 @@ export default function AdminPage() {
   async function loadTraffic(range: "day" | "week" | "month") {
     const res = await fetch(`/api/admin?type=traffic&range=${range}`, { headers: authHeaders() });
     if (!res.ok) return;
-    setTrafficData(await res.json());
+    const data = await res.json();
+    setTrafficData(data.chart ?? []);
+    setTrafficPages(data.pages ?? []);
   }
 
   async function loadAuthLogs() {
@@ -979,7 +1009,7 @@ export default function AdminPage() {
   useEffect(() => { loadAll(); loadSnapshots(); }, [token]);
 
   if (loading) return (
-    <div className="admin-page">
+    <div className="admin-page overflow-x-hidden">
       {/* Navbar skeleton */}
       <div style={{ background: "#003DA5", height: "auto", padding: "0.5rem 1.25rem", display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
         <Skeleton className="size-7 rounded-lg bg-white/20" />
@@ -1016,7 +1046,7 @@ export default function AdminPage() {
   const readOnly = !isAdmin;
 
   return (
-    <div className="admin-page">
+    <div className="admin-page overflow-x-hidden">
       <header className="gov-bar" style={{ height: "auto", flexWrap: "wrap", padding: "0.5rem 1.25rem", gap: "0.5rem", overflow: "visible" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
           <Link href="/" className="flex items-center justify-center size-7 rounded-lg text-white hover:bg-white/15 transition-colors">
@@ -1065,7 +1095,16 @@ export default function AdminPage() {
             </Badge>
           )}
           {user ? (
-            <AdminUserDropdown email={user.email!} onLogout={async () => { await supabase.auth.signOut(); setUser(null); setToken(null); setIsAdmin(false); }} />
+            <AdminUserDropdown email={user.email!} onLogout={async () => {
+              if (user?.email) {
+                fetch("/api/auth/log", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ email: user.email, event: "SIGNED_OUT", token }),
+                }).catch(() => {});
+              }
+              await supabase.auth.signOut(); setUser(null); setToken(null); setIsAdmin(false);
+            }} />
           ) : (<>
             <ThemeToggleBtn />
             <a href="/login" className="flex items-center gap-1.5 text-white/80 hover:text-white text-[0.8125rem] font-medium no-underline">
@@ -1136,62 +1175,11 @@ export default function AdminPage() {
               </Card>
             </div>
 
-            {/* Visitor Stats */}
-            <h3 className="text-lg font-semibold mt-6 mb-3 flex items-center gap-2">
-              <Eye className="size-5" /> Trafic du site
-            </h3>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-muted-foreground">
-                    <Eye className="size-4" />
-                    Visites totales
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold">{stats ? stats.totalPageViews.toLocaleString() : <Skeleton className="h-9 w-20" />}</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-muted-foreground">
-                    <Activity className="size-4" />
-                    Aujourd{"'"}hui
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold">{stats ? stats.todayPageViews.toLocaleString() : <Skeleton className="h-9 w-16" />}</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-muted-foreground">
-                    <TrendingUp className="size-4" />
-                    7 derniers jours
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold">{stats ? stats.weekPageViews.toLocaleString() : <Skeleton className="h-9 w-16" />}</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-muted-foreground">
-                    <Calendar className="size-4" />
-                    Ce mois-ci
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold">{stats ? stats.monthPageViews.toLocaleString() : <Skeleton className="h-9 w-16" />}</div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Graphique trafic */}
+            {/* Trafic — stats compactes + graphique */}
             <Card className="mt-4">
-              <CardHeader>
+              <CardHeader className="pb-2">
                 <CardTitle className="flex items-center justify-between">
-                  <span className="flex items-center gap-2 text-muted-foreground"><Activity className="size-4" /> Trafic</span>
+                  <span className="flex items-center gap-2 text-muted-foreground"><Eye className="size-4" /> Trafic du site</span>
                   <div className="flex gap-1">
                     {(["day", "week", "month"] as const).map((r) => (
                       <button
@@ -1204,6 +1192,19 @@ export default function AdminPage() {
                     ))}
                   </div>
                 </CardTitle>
+                <div className="grid grid-cols-4 gap-2 mt-2">
+                  {[
+                    { label: "Total", value: stats?.totalPageViews },
+                    { label: "Aujourd'hui", value: stats?.todayPageViews },
+                    { label: "7 jours", value: stats?.weekPageViews },
+                    { label: "Ce mois", value: stats?.monthPageViews },
+                  ].map((s) => (
+                    <div key={s.label} className="rounded-md border border-border p-2 text-center">
+                      <div className="text-lg font-bold">{s.value != null ? s.value.toLocaleString() : "—"}</div>
+                      <div className="text-[10px] text-muted-foreground">{s.label}</div>
+                    </div>
+                  ))}
+                </div>
               </CardHeader>
               <CardContent>
                 {trafficData.length === 0 ? (
@@ -1211,7 +1212,7 @@ export default function AdminPage() {
                 ) : (() => {
                   const max = Math.max(...trafficData.map((d) => d.count), 1);
                   return (
-                    <div className="flex items-end gap-1" style={{ height: 120 }}>
+                    <div className="flex items-end gap-1" style={{ height: 180 }}>
                       {trafficData.map((d, i) => (
                         <div key={i} className="flex-1 flex flex-col items-center gap-0.5" title={`${d.label}: ${d.count} visites`}>
                           <span className="text-[10px] text-muted-foreground font-semibold">{d.count}</span>
@@ -1228,6 +1229,33 @@ export default function AdminPage() {
               </CardContent>
             </Card>
 
+            {/* Trafic par page */}
+            {trafficPages.length > 0 && (
+              <Card className="mt-4">
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center gap-2 text-muted-foreground text-sm">
+                    <BarChart3 className="size-4" /> Trafic par page
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-col gap-1.5">
+                    {trafficPages.map((p) => {
+                      const pct = trafficPages[0].count > 0 ? (p.count / trafficPages[0].count) * 100 : 0;
+                      return (
+                        <div key={p.page} className="flex items-center gap-2">
+                          <span className="text-xs font-mono text-muted-foreground w-24 truncate shrink-0" title={p.page}>{p.page}</span>
+                          <div className="flex-1 h-5 bg-muted rounded overflow-hidden">
+                            <div className="h-full bg-primary/70 rounded" style={{ width: `${pct}%` }} />
+                          </div>
+                          <span className="text-xs font-bold w-10 text-right shrink-0">{p.count}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* SEO Score — titre toujours visible, données après chargement */}
             <h3 className="text-lg font-semibold mt-6 mb-3 flex items-center gap-2">
               <Search className="size-5" /> Score SEO
@@ -1237,7 +1265,7 @@ export default function AdminPage() {
             </h3>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {[
-                { tag: "Site externe", label: "essence-quebec.ca", score: 92, color: "#22c55e", url: "https://www.seobility.net/en/seocheck/check/?url=https%3A%2F%2Fessence-quebec.ca%2F&mode=standard" },
+                { tag: "Mon site", label: "essence-quebec.ca", score: 92, color: "#22c55e", url: "https://www.seobility.net/en/seocheck/check/?url=https%3A%2F%2Fessence-quebec.ca%2F&mode=standard" },
                 { tag: "Site gouvernemental", label: "regieessencequebec.ca", score: 42, color: "#ef4444", url: "https://www.seobility.net/en/seocheck/check/?url=https%3A%2F%2Fregieessencequebec.ca%2F&mode=standard" },
               ].map(({ tag, label, score, color, url }) => (
                 <Card key={label}>
@@ -1282,9 +1310,9 @@ export default function AdminPage() {
           {tab === "cron" && (
             <div className="space-y-4">
               <p className="text-muted-foreground">
-                Le cron Vercel s{"'"}ex&eacute;cute automatiquement <strong>toutes les 6 heures</strong> (0h, 6h, 12h, 18h UTC).
-                En plus, les prix sont v&eacute;rifi&eacute;s <strong>toutes les 5 minutes</strong> c&ocirc;t&eacute; client tant qu{"'"}un utilisateur est connect&eacute; au site.
-                Vous pouvez aussi d&eacute;clencher manuellement un snapshot :
+                Le cron Vercel s{"'"}exécute automatiquement <strong>toutes les 6 heures</strong> (0h, 6h, 12h, 18h UTC).
+                Les prix sont aussi vérifiés <strong>toutes les 5 minutes</strong> automatiquement.
+                Vous pouvez aussi déclencher manuellement un snapshot :
               </p>
               <Button onClick={triggerCron} disabled={cronLoading || readOnly}>
                 <Play className="size-4" />
@@ -1316,7 +1344,7 @@ export default function AdminPage() {
                         {u.role}
                       </Badge>
                     </TableCell>
-                    <TableCell>{new Date(u.created_at).toLocaleDateString("fr-CA")}</TableCell>
+                    <TableCell>{formatDate(u.created_at)}</TableCell>
                     <TableCell>
                       <Button
                         variant={u.role === "admin" ? "destructive" : "outline"}
@@ -1351,7 +1379,7 @@ export default function AdminPage() {
                     <TableRow key={log.id}>
                       <TableCell>{log.detail}</TableCell>
                       <TableCell><Badge variant="secondary">{(log.metadata as Record<string, string>)?.method ?? "—"}</Badge></TableCell>
-                      <TableCell>{new Date(log.created_at).toLocaleString("fr-CA", { timeZone: "America/Montreal" })}</TableCell>
+                      <TableCell>{formatDate(log.created_at)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -1363,6 +1391,7 @@ export default function AdminPage() {
             reports.length === 0 ? (
               <p className="text-muted-foreground">Aucun signalement.</p>
             ) : (
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -1385,7 +1414,9 @@ export default function AdminPage() {
                         <div>{r.first_name} {r.last_name}</div>
                         <div className="text-xs text-muted-foreground">{r.email}</div>
                       </TableCell>
-                      <TableCell className="max-w-[200px] whitespace-normal">{r.message}</TableCell>
+                      <TableCell className="max-w-[200px]">
+                        <TruncatedText text={r.message} />
+                      </TableCell>
                       <TableCell>
                         <Badge
                           variant={
@@ -1393,14 +1424,18 @@ export default function AdminPage() {
                               ? "destructive"
                               : r.status === "en traitement"
                                 ? "outline"
-                                : "secondary"
+                                : r.status === "rejeté"
+                                  ? "secondary"
+                                  : "default"
                           }
                         >
                           {r.status === "nouveau" && <AlertCircle className="size-3" />}
+                          {r.status === "résolu" && <Check className="size-3" />}
+                          {r.status === "rejeté" && <XIcon className="size-3" />}
                           {r.status}
                         </Badge>
                       </TableCell>
-                      <TableCell>{new Date(r.created_at).toLocaleDateString("fr-CA")}</TableCell>
+                      <TableCell>{formatDate(r.created_at)}</TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-1">
                           {r.status === "nouveau" && (
@@ -1408,9 +1443,14 @@ export default function AdminPage() {
                               En traitement
                             </Button>
                           )}
-                          {r.status !== "résolu" && (
+                          {r.status !== "résolu" && r.status !== "rejeté" && (
                             <Button variant="secondary" size="xs" onClick={() => updateReportStatus(r.id, "résolu")} disabled={readOnly}>
-                              Résolu
+                              <Check className="size-3" /> Résolu
+                            </Button>
+                          )}
+                          {r.status !== "rejeté" && r.status !== "résolu" && (
+                            <Button variant="ghost" size="xs" className="text-muted-foreground" onClick={() => updateReportStatus(r.id, "rejeté")} disabled={readOnly}>
+                              <XIcon className="size-3" /> Rejeter
                             </Button>
                           )}
                           {editingComment?.type === "report" && editingComment.id === r.id ? (
@@ -1444,6 +1484,7 @@ export default function AdminPage() {
                   ))}
                 </TableBody>
               </Table>
+              </div>
             )
           )}
 
@@ -1451,25 +1492,15 @@ export default function AdminPage() {
             suggestions.length === 0 ? (
               <p className="text-muted-foreground">Aucune suggestion.</p>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>De</TableHead>
-                    <TableHead>Suggestion</TableHead>
-                    <TableHead>Statut</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {suggestions.map((s) => (
-                    <TableRow key={s.id}>
-                      <TableCell>
-                        <div>{s.first_name} {s.last_name}</div>
-                        <div className="text-xs text-muted-foreground">{s.email}</div>
-                      </TableCell>
-                      <TableCell className="max-w-[300px] whitespace-normal">{s.message}</TableCell>
-                      <TableCell>
+              <div className="flex flex-col gap-3">
+                {suggestions.map((s) => (
+                  <Card key={s.id}>
+                    <CardContent className="pt-4 pb-3 px-4">
+                      <div className="flex items-start justify-between gap-3 mb-2">
+                        <div>
+                          <div className="font-medium text-sm">{s.first_name} {s.last_name}</div>
+                          <div className="text-xs text-muted-foreground">{s.email} · {formatDate(s.created_at)}</div>
+                        </div>
                         <Badge
                           variant={
                             s.status === "nouveau"
@@ -1486,50 +1517,48 @@ export default function AdminPage() {
                           {s.status === "refusé" && <XIcon className="size-3" />}
                           {s.status}
                         </Badge>
-                        {s.admin_comment && (
-                          <div className="text-xs text-muted-foreground mt-1 italic">{s.admin_comment}</div>
+                      </div>
+                      <div className="text-sm mb-2 whitespace-pre-wrap">{s.message}</div>
+                      {s.admin_comment && (
+                        <div className="text-xs text-muted-foreground italic border-l-2 border-primary/30 pl-2 mb-2">{s.admin_comment}</div>
+                      )}
+                      <div className="flex gap-1.5 flex-wrap">
+                        {s.status === "nouveau" && (
+                          <Button variant="outline" size="xs" onClick={() => updateSuggestionStatus(s.id, "en traitement")} disabled={readOnly}>
+                            En traitement
+                          </Button>
                         )}
-                      </TableCell>
-                      <TableCell>{new Date(s.created_at).toLocaleDateString("fr-CA")}</TableCell>
-                      <TableCell>
-                        <div className="flex flex-col gap-1">
-                          {s.status === "nouveau" && (
-                            <Button variant="outline" size="xs" onClick={() => updateSuggestionStatus(s.id, "en traitement")} disabled={readOnly}>
-                              En traitement
-                            </Button>
-                          )}
-                          {s.status !== "accepté" && s.status !== "refusé" && (
-                            editingComment?.type === "suggestion" && editingComment.id === s.id ? (
-                              <div className="flex flex-col gap-1">
-                                <input
-                                  className="rounded border border-input bg-background px-2 py-1 text-xs"
-                                  value={editingComment.value}
-                                  onChange={(e) => setEditingComment({ ...editingComment, value: e.target.value })}
-                                  placeholder="Raison (optionnel)..."
-                                  autoFocus
-                                />
-                                <div className="flex gap-1">
-                                  <Button variant="default" size="xs" className="flex-1" onClick={() => { updateSuggestionStatus(s.id, "accepté", editingComment.value); setEditingComment(null); }}>
-                                    <Check className="size-3" /> Accepter
-                                  </Button>
-                                  <Button variant="destructive" size="xs" className="flex-1" onClick={() => { updateSuggestionStatus(s.id, "refusé", editingComment.value); setEditingComment(null); }}>
-                                    <XIcon className="size-3" /> Refuser
-                                  </Button>
-                                </div>
-                                <Button variant="ghost" size="xs" onClick={() => setEditingComment(null)}>Annuler</Button>
+                        {s.status !== "accepté" && s.status !== "refusé" && (
+                          editingComment?.type === "suggestion" && editingComment.id === s.id ? (
+                            <div className="flex flex-col gap-1.5 w-full mt-1">
+                              <input
+                                className="rounded border border-input bg-background px-2 py-1.5 text-sm w-full"
+                                value={editingComment.value}
+                                onChange={(e) => setEditingComment({ ...editingComment, value: e.target.value })}
+                                placeholder="Raison (optionnel)..."
+                                autoFocus
+                              />
+                              <div className="flex gap-1.5">
+                                <Button variant="default" size="sm" className="flex-1" onClick={() => { updateSuggestionStatus(s.id, "accepté", editingComment.value); setEditingComment(null); }}>
+                                  <Check className="size-3" /> Accepter
+                                </Button>
+                                <Button variant="destructive" size="sm" className="flex-1" onClick={() => { updateSuggestionStatus(s.id, "refusé", editingComment.value); setEditingComment(null); }}>
+                                  <XIcon className="size-3" /> Refuser
+                                </Button>
+                                <Button variant="ghost" size="sm" onClick={() => setEditingComment(null)}>Annuler</Button>
                               </div>
-                            ) : (
-                              <Button variant="outline" size="xs" onClick={() => setEditingComment({ type: "suggestion", id: s.id, value: s.admin_comment ?? "" })} disabled={readOnly}>
-                                Accepter / Refuser
-                              </Button>
-                            )
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                            </div>
+                          ) : (
+                            <Button variant="outline" size="xs" onClick={() => setEditingComment({ type: "suggestion", id: s.id, value: s.admin_comment ?? "" })} disabled={readOnly}>
+                              Accepter / Refuser
+                            </Button>
+                          )
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             )
           )}
 

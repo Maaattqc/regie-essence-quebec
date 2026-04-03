@@ -317,20 +317,26 @@ export async function GET(req: NextRequest) {
     const since = new Date(Date.now() - days * 86400000).toISOString();
     const { data } = await supabaseAdmin
       .from("page_views")
-      .select("created_at")
+      .select("created_at, page")
       .gte("created_at", since)
       .order("created_at", { ascending: true });
     // Grouper par heure (jour) ou par jour (semaine/mois)
     const buckets: Record<string, number> = {};
-    (data ?? []).forEach((row: { created_at: string }) => {
+    const pageBuckets: Record<string, number> = {};
+    (data ?? []).forEach((row: { created_at: string; page?: string }) => {
       const d = new Date(row.created_at);
       const key = range === "day"
         ? `${d.getHours()}h`
         : d.toLocaleDateString("fr-CA", { month: "short", day: "numeric" });
       buckets[key] = (buckets[key] ?? 0) + 1;
+      const pg = row.page || "/";
+      pageBuckets[pg] = (pageBuckets[pg] ?? 0) + 1;
     });
     const chart = Object.entries(buckets).map(([label, count]) => ({ label, count }));
-    return NextResponse.json(chart);
+    const pages = Object.entries(pageBuckets)
+      .map(([page, count]) => ({ page, count }))
+      .sort((a, b) => b.count - a.count);
+    return NextResponse.json({ chart, pages });
   }
 
   if (type === "auth_logs") {
