@@ -172,6 +172,7 @@ const LOG_CATEGORIES: { key: string; label: string; icon: React.ReactNode }[] = 
   { key: "admin", label: "Admin", icon: <Database className="size-3.5" /> },
   { key: "visite", label: "Visites", icon: <Eye className="size-3.5" /> },
   { key: "erreur", label: "Erreurs", icon: <AlertCircle className="size-3.5" /> },
+  { key: "suggestion", label: "Suggestions", icon: <Lightbulb className="size-3.5" /> },
 ];
 
 interface LogEntry {

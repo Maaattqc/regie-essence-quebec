@@ -29,7 +29,7 @@ function maskName(name: string) {
   return `${name[0]}${"*".repeat(name.length - 1)}`;
 }
 
-const VALID_LOG_CATEGORIES = ["sync", "cron", "auth", "report", "admin", "visite", "erreur"];
+const VALID_LOG_CATEGORIES = ["sync", "cron", "auth", "report", "admin", "visite", "erreur", "suggestion"];
 
 // GET /api/admin?type=stats|users|reports
 export async function GET(req: NextRequest) {
