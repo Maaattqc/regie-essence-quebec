@@ -274,13 +274,14 @@ body {
   .gov-bar-2 .nb-select { width: 100%; min-width: 0; }
   /* Chips visibles sur tout mobile */
   .nb-filter-chip { display: flex; }
-  /* Texte noir dans barre 2 (fond transparent) */
-  .gov-bar-2 .nb-input { color: var(--text) !important; border-color: rgba(0,0,0,0.2) !important; background: rgba(0,0,0,0.05) !important; }
+  /* Texte et contours noirs dans barre 2 (fond transparent) */
+  .gov-bar-2 .nb-input { color: var(--text) !important; border-color: var(--text) !important; background: transparent !important; }
   .gov-bar-2 .nb-input::placeholder { color: var(--text-muted) !important; }
-  .gov-bar-2 .nb-select { color: var(--text) !important; border-color: rgba(0,0,0,0.2) !important; background: rgba(0,0,0,0.05) !important; }
+  .gov-bar-2 .nb-select { color: var(--text) !important; border-color: var(--text) !important; background: transparent !important; }
   .gov-bar-2 .nb-select-icon-left,
   .gov-bar-2 .nb-select-icon-right,
-  .gov-bar-2 .nb-input-icon { color: var(--text-muted) !important; }
+  .gov-bar-2 .nb-input-icon { color: var(--text) !important; }
+  .gov-bar-2 .nb-input-clear { color: var(--text) !important; }
   .legend {
     top: auto;
     bottom: 4.5rem;
@@ -306,7 +307,7 @@ body {
     right: 12px !important;
   }
   .map-buttons-panel {
-    width: 40px !important;
+    width: 46px !important;
     bottom: auto !important;
     top: 50%;
     transform: translateY(-50%);
@@ -320,8 +321,8 @@ body {
   .map-btn-count { display: inline; font-size: 10px; font-weight: 700; }
   .map-panel-btn {
     min-width: 0 !important;
-    width: 36px !important;
-    height: 36px !important;
+    width: 42px !important;
+    height: 42px !important;
     padding: 0 !important;
     justify-content: center;
     background: transparent !important;
@@ -411,7 +412,7 @@ body {
     overflow-y: auto;
   }
   .map-buttons-panel {
-    width: 36px !important;
+    width: 42px !important;
     left: 4px !important;
     bottom: auto !important;
     top: 50%;
@@ -420,8 +421,8 @@ body {
     max-height: calc(100dvh - 6.5rem);
   }
   .map-panel-btn {
-    width: 32px !important;
-    height: 32px !important;
+    width: 38px !important;
+    height: 38px !important;
   }
   .admin-tabs {
     flex-wrap: wrap;
