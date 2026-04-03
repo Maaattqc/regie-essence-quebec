@@ -768,6 +768,7 @@ export default function AdminPage() {
   const [cronLoading, setCronLoading] = useState(false);
   const [tab, setTab] = useState<"stats" | "logs" | "alerts" | "exports" | "rapports" | "conformite" | "cron" | "users" | "reports" | "suggestions" | "data">("stats");
   const [snapshots, setSnapshots] = useState<SnapshotSummary[]>([]);
+  const [snapshotsLoading, setSnapshotsLoading] = useState(false);
   const [selectedSnapshot, setSelectedSnapshot] = useState<string | null>(null);
   const [snapshotDetail, setSnapshotDetail] = useState<SnapshotRow[]>([]);
   const [snapshotDetailLoading, setSnapshotDetailLoading] = useState(false);
@@ -864,9 +865,10 @@ export default function AdminPage() {
   }
 
   async function loadSnapshots() {
+    setSnapshotsLoading(true);
     const res = await fetch("/api/admin?type=snapshots", { headers: authHeaders() });
-    if (!res.ok) return;
-    setSnapshots(await res.json());
+    if (res.ok) setSnapshots(await res.json());
+    setSnapshotsLoading(false);
   }
 
   async function loadSnapshotDetail(snapshotAt: string) {
@@ -922,10 +924,7 @@ export default function AdminPage() {
   }
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { loadAll(); }, [token]);
-
-  // Charger les snapshots seulement quand on ouvre l'onglet Données
-  useEffect(() => { if (tab === "data" && snapshots.length === 0) loadSnapshots(); }, [tab]);
+  useEffect(() => { loadAll(); loadSnapshots(); }, [token]);
 
   if (loading) return (
     <div className="admin-page">
@@ -1363,7 +1362,14 @@ export default function AdminPage() {
             )
           )}
 
-          {tab === "data" && !selectedSnapshot && (
+          {tab === "data" && !selectedSnapshot && snapshotsLoading && (
+            <div className="flex items-center justify-center gap-2 py-12 text-muted-foreground">
+              <Loader2 className="size-5 animate-spin" />
+              <span>Chargement des snapshots...</span>
+            </div>
+          )}
+
+          {tab === "data" && !selectedSnapshot && !snapshotsLoading && (
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">{snapshots.length} snapshot{snapshots.length !== 1 ? "s" : ""} en base · Cliquez une ligne pour voir le détail</p>
               <Table>
