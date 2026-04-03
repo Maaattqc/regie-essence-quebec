@@ -166,7 +166,7 @@ function formatPopup(props: StationProperties, lat: number, lng: number) {
 function FlyTo({ center, zoom }: { center: [number, number]; zoom: number }) {
   const map = useMap();
   useEffect(() => {
-    map.flyTo(center, zoom);
+    map.flyTo(center, zoom, { duration: 0.5 });
   }, [map, center, zoom]);
   return null;
 }
