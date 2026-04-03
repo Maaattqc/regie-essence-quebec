@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
       supabaseAdmin.from("profiles").select("*").order("created_at", { ascending: false }).limit(200),
       supabaseAdmin.from("reports").select("*").order("created_at", { ascending: false }).limit(500),
       supabaseAdmin.from("suggestions").select("*").order("created_at", { ascending: false }).limit(500),
-      supabaseAdmin.rpc("get_avg_prices").catch(() => ({ data: null })),
+      supabaseAdmin.rpc("get_avg_prices").then(res => res, () => ({ data: null })),
     ]);
 
     const avgs = avgsResult?.data ?? null;
