@@ -7,7 +7,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import { Settings, Shield, FileText, Info, Lock, Lightbulb, Sun, Moon } from "lucide-react";
+import { Settings, Shield, FileText, Info, Lock, Lightbulb, Sun, Moon, BookOpen, Cpu } from "lucide-react";
 
 export default function NavDropdown({ onChangelogClick, onSuggestionClick }: { onChangelogClick: () => void; onSuggestionClick?: () => void }) {
   const { resolvedTheme, setTheme } = useTheme();
@@ -39,8 +39,13 @@ export default function NavDropdown({ onChangelogClick, onSuggestionClick }: { o
           <FileText className="size-3.5" /> Changelogs Code
         </DropdownMenuItem>
         <DropdownMenuItem>
+          <a href="/a-propos" className="flex items-center gap-2 w-full no-underline text-inherit">
+            <BookOpen className="size-3.5" /> Résumé
+          </a>
+        </DropdownMenuItem>
+        <DropdownMenuItem>
           <a href="/tech" className="flex items-center gap-2 w-full no-underline text-inherit">
-            <Info className="size-3.5" /> À propos
+            <Cpu className="size-3.5" /> Fiche technique
           </a>
         </DropdownMenuItem>
         <DropdownMenuItem>
