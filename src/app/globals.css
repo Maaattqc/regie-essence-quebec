@@ -318,7 +318,12 @@ body {
   }
   .map-buttons-panel::-webkit-scrollbar { display: none; }
   .map-btn-label { display: none !important; }
-  .map-btn-count { display: inline; font-size: 10px; font-weight: 700; }
+  .map-btn-count { display: inline; font-size: 11px; font-weight: 700; }
+  .map-panel-btn-wide {
+    width: auto !important;
+    padding: 0 8px !important;
+    gap: 4px;
+  }
   .map-panel-btn {
     min-width: 0 !important;
     width: 42px !important;
