@@ -309,6 +309,47 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ highPrices: highPrices ?? 0, lowPrices: lowPrices ?? 0 });
   }
 
+  if (type === "traffic") {
+    const range = req.nextUrl.searchParams.get("range") || "day";
+    let days = 1;
+    if (range === "week") days = 7;
+    else if (range === "month") days = 30;
+    const since = new Date(Date.now() - days * 86400000).toISOString();
+    const { data } = await supabaseAdmin
+      .from("page_views")
+      .select("created_at")
+      .gte("created_at", since)
+      .order("created_at", { ascending: true });
+    // Grouper par heure (jour) ou par jour (semaine/mois)
+    const buckets: Record<string, number> = {};
+    (data ?? []).forEach((row: { created_at: string }) => {
+      const d = new Date(row.created_at);
+      const key = range === "day"
+        ? `${d.getHours()}h`
+        : d.toLocaleDateString("fr-CA", { month: "short", day: "numeric" });
+      buckets[key] = (buckets[key] ?? 0) + 1;
+    });
+    const chart = Object.entries(buckets).map(([label, count]) => ({ label, count }));
+    return NextResponse.json(chart);
+  }
+
+  if (type === "auth_logs") {
+    const { data } = await supabaseAdmin
+      .from("activity_logs")
+      .select("id, action, detail, metadata, created_at")
+      .eq("category", "auth")
+      .order("created_at", { ascending: false })
+      .limit(50);
+    if (!isAdmin) {
+      const masked = (data ?? []).map((log: Record<string, unknown>) => ({
+        ...log,
+        detail: typeof log.detail === "string" && log.detail.includes("@") ? maskEmail(log.detail) : log.detail,
+      }));
+      return NextResponse.json(masked);
+    }
+    return NextResponse.json(data ?? []);
+  }
+
   if (type === "suggestions") {
     const { data } = await supabaseAdmin
       .from("suggestions")
@@ -355,10 +396,20 @@ export async function PATCH(req: NextRequest) {
   }
 
   if (body.action === "suggestion_status") {
-    const { id, status } = body;
+    const { id, status, admin_comment } = body;
     if (!id || !status) return NextResponse.json({ error: "id et status requis" }, { status: 400 });
-    await supabaseAdmin.from("suggestions").update({ status }).eq("id", id);
-    await logActivity("admin", `Suggestion #${id} → ${status}`, undefined, { suggestionId: id, status, by: user.email });
+    const update: Record<string, unknown> = { status };
+    if (admin_comment !== undefined) update.admin_comment = admin_comment;
+    await supabaseAdmin.from("suggestions").update(update).eq("id", id);
+    await logActivity("admin", `Suggestion #${id} → ${status}`, admin_comment ?? undefined, { suggestionId: id, status, by: user.email });
+    return NextResponse.json({ ok: true });
+  }
+
+  if (body.action === "report_comment") {
+    const { id, admin_comment } = body;
+    if (!id) return NextResponse.json({ error: "id requis" }, { status: 400 });
+    await supabaseAdmin.from("reports").update({ admin_comment }).eq("id", id);
+    await logActivity("admin", `Commentaire signalement #${id}`, admin_comment ?? undefined, { reportId: id, by: user.email });
     return NextResponse.json({ ok: true });
   }
 

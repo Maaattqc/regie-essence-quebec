@@ -60,6 +60,9 @@ import {
   ShieldCheck,
   GitCommit,
   Lightbulb,
+  MessageSquare,
+  Check,
+  X as XIcon,
 } from "lucide-react";
 
 interface Profile {
@@ -78,6 +81,7 @@ interface Report {
   email: string;
   message: string;
   status: string;
+  admin_comment: string | null;
   created_at: string;
 }
 
@@ -88,6 +92,20 @@ interface Suggestion {
   email: string;
   message: string;
   status: string;
+  admin_comment: string | null;
+  created_at: string;
+}
+
+interface TrafficPoint {
+  label: string;
+  count: number;
+}
+
+interface AuthLog {
+  id: number;
+  action: string;
+  detail: string;
+  metadata: Record<string, unknown>;
   created_at: string;
 }
 
@@ -781,6 +799,10 @@ export default function AdminPage() {
   const [detailGasFilter, setDetailGasFilter] = useState<string>("Tous");
   const [detailSort, setDetailSort] = useState<"price_asc" | "price_desc" | "name">("price_asc");
   const [healthChecks, setHealthChecks] = useState<Record<string, { status: "loading" | "ok" | "error"; ms: number; detail?: string }>>({});
+  const [trafficData, setTrafficData] = useState<TrafficPoint[]>([]);
+  const [trafficRange, setTrafficRange] = useState<"day" | "week" | "month">("day");
+  const [authLogs, setAuthLogs] = useState<AuthLog[]>([]);
+  const [editingComment, setEditingComment] = useState<{ type: "report" | "suggestion"; id: number; value: string } | null>(null);
 
    
   useEffect(() => {
@@ -851,13 +873,35 @@ export default function AdminPage() {
     setSuggestions(await res.json());
   }
 
-  async function updateSuggestionStatus(id: number, status: string) {
+  async function updateSuggestionStatus(id: number, status: string, adminComment?: string) {
     await fetch("/api/admin", {
       method: "PATCH",
       headers: { ...authHeaders(), "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "suggestion_status", id, status }),
+      body: JSON.stringify({ action: "suggestion_status", id, status, admin_comment: adminComment }),
     });
     loadSuggestions();
+  }
+
+  async function loadTraffic(range: "day" | "week" | "month") {
+    const res = await fetch(`/api/admin?type=traffic&range=${range}`, { headers: authHeaders() });
+    if (!res.ok) return;
+    setTrafficData(await res.json());
+  }
+
+  async function loadAuthLogs() {
+    const res = await fetch("/api/admin?type=auth_logs", { headers: authHeaders() });
+    if (!res.ok) return;
+    setAuthLogs(await res.json());
+  }
+
+  async function saveReportComment(id: number, comment: string) {
+    await fetch("/api/admin", {
+      method: "PATCH",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "report_comment", id, admin_comment: comment }),
+    });
+    setEditingComment(null);
+    loadReports();
   }
 
   async function triggerCron() {
@@ -927,6 +971,8 @@ export default function AdminPage() {
     setUsers(data.users);
     setReports(data.reports);
     setSuggestions(data.suggestions);
+    loadTraffic("day");
+    loadAuthLogs();
   }
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1141,6 +1187,47 @@ export default function AdminPage() {
               </Card>
             </div>
 
+            {/* Graphique trafic */}
+            <Card className="mt-4">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span className="flex items-center gap-2 text-muted-foreground"><Activity className="size-4" /> Trafic</span>
+                  <div className="flex gap-1">
+                    {(["day", "week", "month"] as const).map((r) => (
+                      <button
+                        key={r}
+                        onClick={() => { setTrafficRange(r); loadTraffic(r); }}
+                        className={`px-2 py-0.5 rounded text-xs font-semibold transition-colors ${trafficRange === r ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
+                      >
+                        {r === "day" ? "Jour" : r === "week" ? "Semaine" : "Mois"}
+                      </button>
+                    ))}
+                  </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {trafficData.length === 0 ? (
+                  <div className="text-center text-muted-foreground text-sm py-4">Aucune donnée</div>
+                ) : (() => {
+                  const max = Math.max(...trafficData.map((d) => d.count), 1);
+                  return (
+                    <div className="flex items-end gap-1" style={{ height: 120 }}>
+                      {trafficData.map((d, i) => (
+                        <div key={i} className="flex-1 flex flex-col items-center gap-0.5" title={`${d.label}: ${d.count} visites`}>
+                          <span className="text-[10px] text-muted-foreground font-semibold">{d.count}</span>
+                          <div
+                            className="w-full rounded-t bg-primary/80 min-h-[2px] transition-all"
+                            style={{ height: `${(d.count / max) * 90}px` }}
+                          />
+                          <span className="text-[9px] text-muted-foreground truncate w-full text-center">{d.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+
             {/* SEO Score — titre toujours visible, données après chargement */}
             <h3 className="text-lg font-semibold mt-6 mb-3 flex items-center gap-2">
               <Search className="size-5" /> Score SEO
@@ -1209,12 +1296,12 @@ export default function AdminPage() {
             </div>
           )}
 
-          {tab === "users" && (
+          {tab === "users" && (<>
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Email</TableHead>
-                  <TableHead>R&ocirc;le</TableHead>
+                  <TableHead>Rôle</TableHead>
                   <TableHead>Inscrit le</TableHead>
                   <TableHead>Action</TableHead>
                 </TableRow>
@@ -1245,7 +1332,32 @@ export default function AdminPage() {
                 ))}
               </TableBody>
             </Table>
-          )}
+            <h3 className="text-lg font-semibold mt-6 mb-3 flex items-center gap-2">
+              <Shield className="size-5" /> Connexions récentes
+            </h3>
+            {authLogs.length === 0 ? (
+              <div className="text-muted-foreground text-sm">Aucune connexion enregistrée.</div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Méthode</TableHead>
+                    <TableHead>Date</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {authLogs.map((log) => (
+                    <TableRow key={log.id}>
+                      <TableCell>{log.detail}</TableCell>
+                      <TableCell><Badge variant="secondary">{(log.metadata as Record<string, string>)?.method ?? "—"}</Badge></TableCell>
+                      <TableCell>{new Date(log.created_at).toLocaleString("fr-CA", { timeZone: "America/Montreal" })}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </>)}
 
           {tab === "reports" && (
             reports.length === 0 ? (
@@ -1298,8 +1410,33 @@ export default function AdminPage() {
                           )}
                           {r.status !== "résolu" && (
                             <Button variant="secondary" size="xs" onClick={() => updateReportStatus(r.id, "résolu")} disabled={readOnly}>
-                              R&eacute;solu
+                              Résolu
                             </Button>
+                          )}
+                          {editingComment?.type === "report" && editingComment.id === r.id ? (
+                            <div className="flex gap-1 mt-1">
+                              <input
+                                className="flex-1 rounded border border-input bg-background px-2 py-1 text-xs"
+                                value={editingComment.value}
+                                onChange={(e) => setEditingComment({ ...editingComment, value: e.target.value })}
+                                placeholder="Commentaire..."
+                                autoFocus
+                              />
+                              <Button variant="outline" size="xs" onClick={() => saveReportComment(r.id, editingComment.value)}>
+                                <Check className="size-3" />
+                              </Button>
+                              <Button variant="ghost" size="xs" onClick={() => setEditingComment(null)}>
+                                <XIcon className="size-3" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <Button variant="ghost" size="xs" onClick={() => setEditingComment({ type: "report", id: r.id, value: r.admin_comment ?? "" })} disabled={readOnly}>
+                              <MessageSquare className="size-3" />
+                              {r.admin_comment ? "Modifier" : "Commenter"}
+                            </Button>
+                          )}
+                          {r.admin_comment && editingComment?.id !== r.id && (
+                            <div className="text-xs text-muted-foreground mt-1 italic">{r.admin_comment}</div>
                           )}
                         </div>
                       </TableCell>
@@ -1339,12 +1476,19 @@ export default function AdminPage() {
                               ? "destructive"
                               : s.status === "en traitement"
                                 ? "outline"
-                                : "secondary"
+                                : s.status === "accepté"
+                                  ? "default"
+                                  : "secondary"
                           }
                         >
                           {s.status === "nouveau" && <Lightbulb className="size-3" />}
+                          {s.status === "accepté" && <Check className="size-3" />}
+                          {s.status === "refusé" && <XIcon className="size-3" />}
                           {s.status}
                         </Badge>
+                        {s.admin_comment && (
+                          <div className="text-xs text-muted-foreground mt-1 italic">{s.admin_comment}</div>
+                        )}
                       </TableCell>
                       <TableCell>{new Date(s.created_at).toLocaleDateString("fr-CA")}</TableCell>
                       <TableCell>
@@ -1354,10 +1498,31 @@ export default function AdminPage() {
                               En traitement
                             </Button>
                           )}
-                          {s.status !== "résolu" && (
-                            <Button variant="secondary" size="xs" onClick={() => updateSuggestionStatus(s.id, "résolu")} disabled={readOnly}>
-                              Résolu
-                            </Button>
+                          {s.status !== "accepté" && s.status !== "refusé" && (
+                            editingComment?.type === "suggestion" && editingComment.id === s.id ? (
+                              <div className="flex flex-col gap-1">
+                                <input
+                                  className="rounded border border-input bg-background px-2 py-1 text-xs"
+                                  value={editingComment.value}
+                                  onChange={(e) => setEditingComment({ ...editingComment, value: e.target.value })}
+                                  placeholder="Raison (optionnel)..."
+                                  autoFocus
+                                />
+                                <div className="flex gap-1">
+                                  <Button variant="default" size="xs" className="flex-1" onClick={() => { updateSuggestionStatus(s.id, "accepté", editingComment.value); setEditingComment(null); }}>
+                                    <Check className="size-3" /> Accepter
+                                  </Button>
+                                  <Button variant="destructive" size="xs" className="flex-1" onClick={() => { updateSuggestionStatus(s.id, "refusé", editingComment.value); setEditingComment(null); }}>
+                                    <XIcon className="size-3" /> Refuser
+                                  </Button>
+                                </div>
+                                <Button variant="ghost" size="xs" onClick={() => setEditingComment(null)}>Annuler</Button>
+                              </div>
+                            ) : (
+                              <Button variant="outline" size="xs" onClick={() => setEditingComment({ type: "suggestion", id: s.id, value: s.admin_comment ?? "" })} disabled={readOnly}>
+                                Accepter / Refuser
+                              </Button>
+                            )
                           )}
                         </div>
                       </TableCell>

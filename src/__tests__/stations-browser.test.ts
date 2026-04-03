@@ -35,6 +35,7 @@ describe('favorites', () => {
 describe('reverseGeocode', () => {
   it('retourne la ville quand le service en fournit une', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
       json: async () => ({
         address: {
           city: 'Montreal',
@@ -54,6 +55,7 @@ describe('reverseGeocode', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue({
+        ok: true,
         json: async () => ({
           address: {},
         }),
