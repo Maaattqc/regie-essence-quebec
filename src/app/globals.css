@@ -249,7 +249,7 @@ body {
     height: auto;
   }
   .gov-bar-subtitle { display: none; }
-  .nb-label-text { display: none; }
+  .nb-label-text { display: none !important; }
   .nb-login-btn { padding: 0 10px; }
   /* Cacher filtres desktop, montrer barre 2 */
   .nb-filters-desktop { display: none; }
@@ -296,6 +296,9 @@ body {
     right: 12px !important;
   }
   .map-buttons-panel {
+    bottom: auto !important;
+    top: 50%;
+    transform: translateY(-50%);
     max-height: calc(100dvh - 7.5rem);
     overflow-y: auto;
     scrollbar-width: none;
@@ -370,7 +373,9 @@ body {
   .map-buttons-panel {
     width: 140px !important;
     left: 6px !important;
-    bottom: 12px !important;
+    bottom: auto !important;
+    top: 50%;
+    transform: translateY(-50%);
     gap: 4px;
     max-height: calc(100dvh - 6.5rem);
   }
