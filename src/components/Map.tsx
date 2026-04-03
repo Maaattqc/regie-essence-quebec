@@ -895,14 +895,16 @@ export default function Map() {
               </motion.div>
             )}
           </AnimatePresence>
-          {/* Jauge prix verticale — mobile seulement, en bas de la colonne */}
-          <div className="map-legend-mobile">
-            <div className="map-legend-mobile-inner">
-              <span style={{ color: "#e63946", fontSize: 10, fontWeight: 700 }}>{priceMax.toFixed(1)}¢</span>
-              <div className="map-legend-mobile-bar" />
-              <span style={{ color: "#2d9a2d", fontSize: 10, fontWeight: 700 }}>{priceMin.toFixed(1)}¢</span>
+          {/* Jauge prix verticale — mobile seulement, masquée quand panneau fermé */}
+          {mapPanelOpen && (
+            <div className="map-legend-mobile">
+              <div className="map-legend-mobile-inner">
+                <span style={{ color: "#e63946", fontSize: 10, fontWeight: 700 }}>{priceMax.toFixed(1)}¢</span>
+                <div className="map-legend-mobile-bar" />
+                <span style={{ color: "#2d9a2d", fontSize: 10, fontWeight: 700 }}>{priceMin.toFixed(1)}¢</span>
+              </div>
             </div>
-          </div>
+          )}
         </div>
         <AttributionControl position="bottomleft" />
         {userPos && radiusKm > 0 && (
