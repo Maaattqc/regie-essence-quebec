@@ -899,7 +899,10 @@ export default function AdminPage() {
   // Charger les données publiques même sans auth (déclaré après les fonctions appelées)
    
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { loadStats(); loadUsers(); loadReports(); loadSuggestions(); loadSnapshots(); }, [token]);
+  useEffect(() => { loadStats(); loadUsers(); loadReports(); loadSuggestions(); }, [token]);
+
+  // Charger les snapshots seulement quand on ouvre l'onglet Données
+  useEffect(() => { if (tab === "data" && snapshots.length === 0) loadSnapshots(); }, [tab]);
 
   if (loading) return (
     <div className="admin-page">

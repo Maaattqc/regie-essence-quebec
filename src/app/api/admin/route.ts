@@ -133,57 +133,10 @@ export async function GET(req: NextRequest) {
   }
 
   if (type === "snapshots") {
-    // Charger TOUTES les lignes avec pagination (Supabase limite à 1000/requête)
-    const allRows: { snapshot_date: string; snapshot_at: string; gas_type: string; price: number }[] = [];
-    const BATCH = 1000;
-    let from = 0;
-    while (true) {
-      const { data } = await supabaseAdmin
-        .from("price_snapshots")
-        .select("snapshot_date, snapshot_at, gas_type, price")
-        .order("snapshot_at", { ascending: false })
-        .range(from, from + BATCH - 1);
-      if (!data || data.length === 0) break;
-      allRows.push(...data);
-      if (data.length < BATCH) break;
-      from += BATCH;
-    }
-
-    if (allRows.length === 0) return NextResponse.json([]);
-
-    // Group by snapshot_at (unique sync timestamp)
-    const byTs = new Map<string, { date: string; snapshotAt: string; types: Record<string, { nb: number; sum: number; min: number; max: number }> }>();
-    for (const row of allRows) {
-      const key = row.snapshot_at ?? row.snapshot_date;
-      if (!byTs.has(key)) {
-        byTs.set(key, { date: row.snapshot_date, snapshotAt: key, types: {} });
-      }
-      const entry = byTs.get(key)!;
-      if (!entry.types[row.gas_type]) {
-        entry.types[row.gas_type] = { nb: 0, sum: 0, min: Infinity, max: -Infinity };
-      }
-      const t = entry.types[row.gas_type];
-      t.nb++;
-      t.sum += Number(row.price);
-      if (Number(row.price) < t.min) t.min = Number(row.price);
-      if (Number(row.price) > t.max) t.max = Number(row.price);
-    }
-
-    const result = Array.from(byTs.values()).map(({ date, snapshotAt, types }) => ({
-      date,
-      snapshotAt,
-      totalStations: Object.values(types).reduce((s, t) => s + t.nb, 0),
-      types: Object.fromEntries(
-        Object.entries(types).map(([k, t]) => [k, {
-          nb: t.nb,
-          avg: Math.round(t.sum / t.nb * 10) / 10,
-          min: t.min,
-          max: t.max,
-        }])
-      ),
-    }));
-
-    return NextResponse.json(result);
+    // Résumé agrégé directement en SQL — rapide même sur 260k+ lignes
+    const { data, error } = await supabaseAdmin.rpc("get_snapshot_summary");
+    if (error || !data) return NextResponse.json([]);
+    return NextResponse.json(data);
   }
 
   if (type === "snapshot_detail") {
