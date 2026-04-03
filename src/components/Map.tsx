@@ -804,18 +804,6 @@ export default function Map() {
                     <Trophy className="size-3.5" />
                     <span className="map-btn-label">{cheapestResults ? "Masquer" : "Meilleur prix proche"}</span>
                   </Button>
-                  <AnimatePresence>
-                    {cheapestResults?.message && (
-                      <motion.div
-                        className="bg-[var(--bg-panel)] text-[var(--text)] p-1.5 rounded text-[11px] mt-1 leading-tight shadow-md"
-                        initial={{ opacity: 0, y: -5 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -5 }}
-                      >
-                        {cheapestResults.message}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
                 </div>
                 <Button variant="outline" size="sm" className="map-panel-btn w-full shadow-md !bg-[var(--bg-panel)] !text-[var(--text)] !border-0 font-semibold text-[13px]" onClick={() => { setShowCityPanel(false); setShowRegionPanel((v) => !v); }}>
                   <BarChart3 className="size-3.5" />
@@ -841,6 +829,7 @@ export default function Map() {
                 </div>
                 <Button variant="outline" size="sm" className={`map-panel-btn w-full shadow-md font-semibold text-[13px] ${showCursors ? "!bg-[#457b9d] !text-white" : "!bg-[var(--bg-panel)] !text-[var(--text)]"} !border-0`} onClick={() => setShowCursors((v) => !v)}>
                   <Users className="size-3.5" />
+                  {showCursors && <span className="map-btn-count">({onlineCount})</span>}
                   <span className="map-btn-label">{showCursors ? `En ligne (${onlineCount})` : "Visiteurs en ligne"}</span>
                 </Button>
                 {/* Rayon : slider desktop, menu mobile */}

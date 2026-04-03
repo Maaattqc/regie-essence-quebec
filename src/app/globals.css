@@ -262,6 +262,8 @@ body {
     display: flex;
     padding: 5px 12px;
     gap: 6px;
+    background: transparent;
+    border-top: none;
   }
   /* Tous les enfants directs de gov-bar-2 prennent l'espace équitablement */
   .gov-bar-2 > * { flex: 1 1 0; min-width: 0; }
@@ -312,6 +314,7 @@ body {
   }
   .map-buttons-panel::-webkit-scrollbar { display: none; }
   .map-btn-label { display: none !important; }
+  .map-btn-count { display: inline; font-size: 10px; font-weight: 700; }
   .map-panel-btn {
     min-width: 0 !important;
     width: 36px !important;
@@ -677,7 +680,7 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 3px;
-  padding: 4px 6px;
+  padding: 5px 10px;
   border-radius: 8px;
   border: 1px solid rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(8px);
@@ -687,11 +690,14 @@ body {
   border-color: rgba(255, 255, 255, 0.12);
 }
 .map-legend-mobile-bar {
-  width: 10px;
+  width: 14px;
   height: 60px;
-  border-radius: 5px;
+  border-radius: 6px;
   background: linear-gradient(to bottom, #e63946, #ef8a17, #f0c808, #6fbf3b, #2d9a2d);
 }
+
+/* Compteur connectés — mobile seulement */
+.map-btn-count { display: none; }
 
 /* ── Map panel toggle ── */
 .map-panel-toggle {
