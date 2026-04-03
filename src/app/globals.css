@@ -260,28 +260,40 @@ body {
   .nb-filters-desktop { display: none; }
   .gov-bar-2 {
     display: flex;
-    padding: 5px 12px;
-    gap: 6px;
+    padding: 4px 8px;
+    gap: 4px;
     background: transparent;
     border-top: none;
   }
-  /* Tous les enfants directs de gov-bar-2 prennent l'espace équitablement */
   .gov-bar-2 > * { flex: 1 1 0; min-width: 0; }
-  /* Chips : taille auto (ne grandissent pas) */
   .gov-bar-2 > .nb-filter-chip { flex: 0 0 auto; }
-  /* Inputs et selects remplissent leur conteneur */
-  .gov-bar-2 .nb-input { width: 100% !important; min-width: 0; }
-  .gov-bar-2 .nb-select { width: 100%; min-width: 0; }
-  /* Chips visibles sur tout mobile */
-  .nb-filter-chip { display: flex; }
-  /* Texte et contours noirs dans barre 2 (fond transparent) */
-  .gov-bar-2 .nb-input { color: var(--text) !important; border-color: var(--text) !important; background: transparent !important; }
+  .gov-bar-2 .nb-input {
+    width: 100% !important;
+    min-width: 0;
+    height: 30px !important;
+    font-size: 0.75rem !important;
+    color: var(--text) !important;
+    border-color: var(--text) !important;
+    background: transparent !important;
+    border-radius: 8px !important;
+  }
   .gov-bar-2 .nb-input::placeholder { color: var(--text-muted) !important; }
-  .gov-bar-2 .nb-select { color: var(--text) !important; border-color: var(--text) !important; background: transparent !important; }
+  .gov-bar-2 .nb-select {
+    width: 100%;
+    min-width: 0;
+    height: 30px !important;
+    font-size: 0.7rem !important;
+    padding: 0 20px 0 24px !important;
+    color: var(--text) !important;
+    border-color: var(--text) !important;
+    background: transparent !important;
+    border-radius: 8px !important;
+  }
   .gov-bar-2 .nb-select-icon-left,
   .gov-bar-2 .nb-select-icon-right,
   .gov-bar-2 .nb-input-icon { color: var(--text) !important; }
   .gov-bar-2 .nb-input-clear { color: var(--text) !important; }
+  .nb-filter-chip { display: flex; }
   .legend {
     top: auto;
     bottom: 4.5rem;
@@ -1109,6 +1121,11 @@ body {
 }
 
 /* ── Cheapest station pulse ── */
+.cheapest-icon-passthrough,
+.cheapest-icon-passthrough * {
+  pointer-events: none !important;
+}
+
 .cheapest-pulse {
   position: relative;
   display: flex;

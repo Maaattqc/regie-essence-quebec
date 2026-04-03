@@ -621,6 +621,10 @@ export default function Map() {
 
   function handleSearchChange(v: string) {
     setSearch(v);
+    if (!v) {
+      setRadiusKm(0);
+      setCheapestResults(null);
+    }
     const vNorm = normalize(v);
     if (v && data) {
       const match = data.features.find((f) => {
@@ -644,6 +648,8 @@ export default function Map() {
         const cityZoom = normalize(v) === normalize("Saint-Georges") ? 13 : 12;
         setFlyTarget({ center: [avgLat, avgLng], zoom: cityZoom });
       }
+    } else if (region && REGION_CENTERS[region]) {
+      setFlyTarget({ center: REGION_CENTERS[region], zoom: REGION_ZOOM[region] ?? 9 });
     } else {
       setFlyTarget(null);
     }
@@ -652,7 +658,11 @@ export default function Map() {
   function handleRegionChange(v: string) {
     setRegion(v);
     setSearch("");
-    if (v && REGION_CENTERS[v]) {
+    if (!v) {
+      setRadiusKm(0);
+      setCheapestResults(null);
+      setFlyTarget({ center: QUEBEC_CENTER, zoom: QUEBEC_ZOOM });
+    } else if (REGION_CENTERS[v]) {
       setFlyTarget({ center: REGION_CENTERS[v], zoom: REGION_ZOOM[v] ?? 9 });
     } else {
       setFlyTarget(null);
@@ -694,8 +704,18 @@ export default function Map() {
     };
     if (userPos) {
       doSearch(userPos[0], userPos[1]);
+    } else if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (p) => {
+          setUserPos([p.coords.latitude, p.coords.longitude]);
+          doSearch(p.coords.latitude, p.coords.longitude);
+        },
+        () => {
+          setCheapestResults({ stations: [], message: "Activez la géolocalisation pour utiliser cette fonctionnalité." });
+        },
+      );
     } else {
-      navigator.geolocation.getCurrentPosition((p) => doSearch(p.coords.latitude, p.coords.longitude));
+      setCheapestResults({ stations: [], message: "La géolocalisation n'est pas disponible sur cet appareil." });
     }
   }
 
@@ -1036,9 +1056,10 @@ export default function Map() {
           <Marker
             key={`cheapest-${i}`}
             position={[s.lat, s.lng]}
+            interactive={false}
             icon={L.divIcon({
               html: `<div class="cheapest-pulse"><div class="cheapest-label">${s.name}<br><small>~${s.dist.toFixed(1)} km</small></div></div>`,
-              className: "",
+              className: "cheapest-icon-passthrough",
               iconSize: [20, 20],
               iconAnchor: [10, 20],
             })}
