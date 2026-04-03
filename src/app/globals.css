@@ -249,7 +249,7 @@ body {
     height: auto;
   }
   .gov-bar-subtitle { display: none; }
-  .nb-login-btn .nb-label-text { display: none; }
+  .nb-label-text { display: none; }
   .nb-login-btn { padding: 0 10px; }
   /* Cacher filtres desktop, montrer barre 2 */
   .nb-filters-desktop { display: none; }
@@ -291,10 +291,16 @@ body {
     right: 6px;
   }
   .panel {
-    width: calc(100vw - 24px) !important;
+    width: calc(100% - 24px) !important;
     left: 12px !important;
     right: 12px !important;
   }
+  .map-buttons-panel {
+    max-height: calc(100dvh - 7.5rem);
+    overflow-y: auto;
+    scrollbar-width: none;
+  }
+  .map-buttons-panel::-webkit-scrollbar { display: none; }
   .admin-table {
     display: block;
     overflow-x: auto;
@@ -355,11 +361,23 @@ body {
     right: 0.5rem;
   }
   .panel {
-    width: calc(100vw - 1rem) !important;
+    width: calc(100% - 1rem) !important;
     left: 0.5rem !important;
     right: 0.5rem !important;
     max-height: 60vh;
     overflow-y: auto;
+  }
+  .map-buttons-panel {
+    width: 140px !important;
+    left: 6px !important;
+    bottom: 12px !important;
+    gap: 4px;
+    max-height: calc(100dvh - 6.5rem);
+  }
+  .map-buttons-panel button {
+    font-size: 11px !important;
+    padding-top: 4px;
+    padding-bottom: 4px;
   }
   .admin-tabs {
     flex-wrap: wrap;
@@ -608,6 +626,20 @@ body {
 /* ── Leaflet overrides ── */
 .leaflet-container {
   background: #aad3df !important;
+  max-width: 100%;
+}
+.leaflet-control-attribution {
+  max-width: calc(100vw - 190px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px !important;
+}
+@media (max-width: 480px) {
+  .leaflet-control-attribution {
+    max-width: calc(100vw - 160px);
+    font-size: 8px !important;
+  }
 }
 
 :root.dark .leaflet-popup-content-wrapper,

@@ -45,8 +45,12 @@ import "leaflet/dist/leaflet.css";
 const PriceChart = dynamic(() => import("./PriceChart"), { ssr: false });
 const STATIONS_CACHE_KEY = "stations-api-cache";
 
-// Fix Chrome subpixel rendering gaps between tiles
-(L.Browser as Record<string, unknown>).any3d = false;
+// Fix Chrome subpixel rendering gaps between tiles (desktop only)
+// Sur mobile, les transforms 3D sont nécessaires pour synchroniser
+// les marqueurs avec le pan tactile du GPU
+if (typeof window !== "undefined" && !("ontouchstart" in window)) {
+  (L.Browser as Record<string, unknown>).any3d = false;
+}
 
 // Patch removeChild pour éviter le crash React/Leaflet quand les deux
 // manipulent le DOM en même temps (race condition sur changement de région)
@@ -770,7 +774,7 @@ export default function Map() {
           }
         />
         <ZoomControl position="bottomright" />
-        <div className="flex flex-col gap-1.5 leaflet-control" style={{ position: "absolute", bottom: 30, left: 12, zIndex: 1000, width: 170 }}>
+        <div className="map-buttons-panel flex flex-col gap-1.5 leaflet-control" style={{ position: "absolute", bottom: 30, left: 12, zIndex: 1000, width: 170 }}>
           <div>
             <Button
               variant={cheapestResults ? "outline" : "default"}
