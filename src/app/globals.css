@@ -673,11 +673,13 @@ body {
 }
 
 /* ── Nav dropdown mobile-only items ── */
-.nav-suggestion-mobile {
+.nav-suggestion-mobile,
+.nav-theme-mobile {
   display: none;
 }
 @media (max-width: 768px) {
-  .nav-suggestion-mobile { display: flex; }
+  .nav-suggestion-mobile,
+  .nav-theme-mobile { display: flex; }
 }
 
 /* ── Map mobile radius/legend ── */

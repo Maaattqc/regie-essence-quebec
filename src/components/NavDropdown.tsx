@@ -26,7 +26,7 @@ export default function NavDropdown({ onChangelogClick, onSuggestionClick }: { o
             <Lightbulb className="size-3.5" /> Suggestion
           </DropdownMenuItem>
         )}
-        <DropdownMenuItem onClick={() => setTheme(isDark ? "light" : "dark")}>
+        <DropdownMenuItem className="nav-theme-mobile" onClick={() => setTheme(isDark ? "light" : "dark")}>
           {isDark ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
           {isDark ? "Mode clair" : "Mode sombre"}
         </DropdownMenuItem>
