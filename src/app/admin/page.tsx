@@ -53,6 +53,7 @@ import {
   FileBarChart,
   ShieldCheck,
   GitCommit,
+  Lightbulb,
 } from "lucide-react";
 
 interface Profile {
@@ -66,6 +67,16 @@ interface Report {
   id: number;
   station_name: string;
   address: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  message: string;
+  status: string;
+  created_at: string;
+}
+
+interface Suggestion {
+  id: number;
   first_name: string;
   last_name: string;
   email: string;
@@ -739,11 +750,12 @@ export default function AdminPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [reports, setReports] = useState<Report[]>([]);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [users, setUsers] = useState<Profile[]>([]);
   const [cronResult, setCronResult] = useState<string | null>(null);
   const [cronLoading, setCronLoading] = useState(false);
-  const [tab, setTab] = useState<"stats" | "logs" | "alerts" | "exports" | "rapports" | "conformite" | "cron" | "users" | "reports" | "data">("stats");
+  const [tab, setTab] = useState<"stats" | "logs" | "alerts" | "exports" | "rapports" | "conformite" | "cron" | "users" | "reports" | "suggestions" | "data">("stats");
   const [snapshots, setSnapshots] = useState<SnapshotSummary[]>([]);
   const [selectedSnapshot, setSelectedSnapshot] = useState<string | null>(null);
   const [snapshotDetail, setSnapshotDetail] = useState<SnapshotRow[]>([]);
@@ -815,6 +827,21 @@ export default function AdminPage() {
     loadReports();
   }
 
+  async function loadSuggestions() {
+    const res = await fetch("/api/admin?type=suggestions", { headers: authHeaders() });
+    if (!res.ok) return;
+    setSuggestions(await res.json());
+  }
+
+  async function updateSuggestionStatus(id: number, status: string) {
+    await fetch("/api/admin", {
+      method: "PATCH",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "suggestion_status", id, status }),
+    });
+    loadSuggestions();
+  }
+
   async function triggerCron() {
     setCronLoading(true);
     setCronResult(null);
@@ -859,8 +886,9 @@ export default function AdminPage() {
   }
 
   // Charger les données publiques même sans auth (déclaré après les fonctions appelées)
+   
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { loadStats(); loadUsers(); loadReports(); loadSnapshots(); }, [token]);
+  useEffect(() => { loadStats(); loadUsers(); loadReports(); loadSuggestions(); loadSnapshots(); }, [token]);
 
   if (loading) return (
     <div className="admin-page">
@@ -922,6 +950,7 @@ export default function AdminPage() {
             { key: "cron", icon: <Clock className="size-3.5" />, label: "Cron" },
             { key: "users", icon: <Users className="size-3.5" />, label: "Utilisateurs" },
             { key: "reports", icon: <Flag className="size-3.5" />, label: `Signalements (${reports.length})` },
+            { key: "suggestions", icon: <Lightbulb className="size-3.5" />, label: `Suggestions (${suggestions.length})` },
             { key: "data", icon: <Database className="size-3.5" />, label: "Données" },
           ] as const).map((t) => (
             <button
@@ -1228,6 +1257,64 @@ export default function AdminPage() {
                           {r.status !== "résolu" && (
                             <Button variant="secondary" size="xs" onClick={() => updateReportStatus(r.id, "résolu")} disabled={readOnly}>
                               R&eacute;solu
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )
+          )}
+
+          {tab === "suggestions" && (
+            suggestions.length === 0 ? (
+              <p className="text-muted-foreground">Aucune suggestion.</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>De</TableHead>
+                    <TableHead>Suggestion</TableHead>
+                    <TableHead>Statut</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {suggestions.map((s) => (
+                    <TableRow key={s.id}>
+                      <TableCell>
+                        <div>{s.first_name} {s.last_name}</div>
+                        <div className="text-xs text-muted-foreground">{s.email}</div>
+                      </TableCell>
+                      <TableCell className="max-w-[300px] whitespace-normal">{s.message}</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            s.status === "nouveau"
+                              ? "destructive"
+                              : s.status === "en traitement"
+                                ? "outline"
+                                : "secondary"
+                          }
+                        >
+                          {s.status === "nouveau" && <Lightbulb className="size-3" />}
+                          {s.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{new Date(s.created_at).toLocaleDateString("fr-CA")}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1">
+                          {s.status === "nouveau" && (
+                            <Button variant="outline" size="xs" onClick={() => updateSuggestionStatus(s.id, "en traitement")} disabled={readOnly}>
+                              En traitement
+                            </Button>
+                          )}
+                          {s.status !== "résolu" && (
+                            <Button variant="secondary" size="xs" onClick={() => updateSuggestionStatus(s.id, "résolu")} disabled={readOnly}>
+                              Résolu
                             </Button>
                           )}
                         </div>

@@ -18,6 +18,7 @@ import { createBrowserClient } from "@/lib/auth";
 import LoginModal from "@/components/LoginModal";
 import ChangelogModal from "@/components/ChangelogModal";
 import ReportModal from "@/components/ReportModal";
+import SuggestionModal from "@/components/SuggestionModal";
 import CommentsModal from "@/components/CommentsModal";
 import CityPricePanel from "@/components/CityPricePanel";
 import RegionPricePanel from "@/components/RegionPricePanel";
@@ -414,6 +415,7 @@ export default function Map() {
     return new URLSearchParams(window.location.search).has("openLogin");
   });
   const [showChangelog, setShowChangelog] = useState(false);
+  const [showSuggestion, setShowSuggestion] = useState(false);
   const [commentStation, setCommentStation] = useState<{ name: string; address: string } | null>(null);
   const [currentUser, setCurrentUser] = useState<{ email: string } | null>(null);
   const [cheapestResults, setCheapestResults] = useState<{ stations: { lat: number; lng: number; price: number; name: string; dist: number }[]; message: string } | null>(null);
@@ -725,6 +727,7 @@ export default function Map() {
         totalStations={totalStations}
         onLoginClick={() => setShowLogin(true)}
         onChangelogClick={() => setShowChangelog(true)}
+        onSuggestionClick={() => setShowSuggestion(true)}
         currentUser={currentUser}
         onLogout={async () => {
           await createBrowserClient().auth.signOut();
@@ -923,6 +926,7 @@ export default function Map() {
         window.history.replaceState(null, "", url.toString());
       }} />}
       {showChangelog && <ChangelogModal onClose={() => setShowChangelog(false)} />}
+      {showSuggestion && <SuggestionModal onClose={() => setShowSuggestion(false)} />}
       <AnimatePresence>
         {shareToast && (
           <motion.div

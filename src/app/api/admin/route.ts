@@ -275,10 +275,27 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ highPrices: highPrices ?? 0, lowPrices: lowPrices ?? 0 });
   }
 
+  if (type === "suggestions") {
+    const { data } = await supabaseAdmin
+      .from("suggestions")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(500);
+    const suggestions = (data ?? []).map((s: Record<string, unknown>) =>
+      isAdmin ? s : {
+        ...s,
+        email: typeof s.email === "string" ? maskEmail(s.email) : "***",
+        first_name: typeof s.first_name === "string" ? maskName(s.first_name) : "***",
+        last_name: typeof s.last_name === "string" ? maskName(s.last_name) : "***",
+      }
+    );
+    return NextResponse.json(suggestions);
+  }
+
   return NextResponse.json({ error: "type requis" }, { status: 400 });
 }
 
-// PATCH /api/admin  body: { action: "report_status", id, status } | { action: "toggle_role", id }
+// PATCH /api/admin  body: { action: "report_status", id, status } | { action: "toggle_role", id } | { action: "suggestion_status", id, status }
 export async function PATCH(req: NextRequest) {
   if (!rateLimit(getIP(req))) return NextResponse.json({ error: "Trop de requêtes" }, { status: 429 });
   const user = await verifyAdmin(req);
@@ -300,6 +317,14 @@ export async function PATCH(req: NextRequest) {
     const newRole = currentRole === "admin" ? "user" : "admin";
     await supabaseAdmin.from("profiles").update({ role: newRole }).eq("id", id);
     await logActivity("admin", `Rôle changé → ${newRole}`, undefined, { userId: id, newRole, by: user.email });
+    return NextResponse.json({ ok: true });
+  }
+
+  if (body.action === "suggestion_status") {
+    const { id, status } = body;
+    if (!id || !status) return NextResponse.json({ error: "id et status requis" }, { status: 400 });
+    await supabaseAdmin.from("suggestions").update({ status }).eq("id", id);
+    await logActivity("admin", `Suggestion #${id} → ${status}`, undefined, { suggestionId: id, status, by: user.email });
     return NextResponse.json({ ok: true });
   }
 

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTheme } from "next-themes";
 import { Input } from "@/components/ui/input";
-import { Search, Star, StarOff, X, User, ChevronDown, MapPin, Building2, Sun, Moon } from "lucide-react";
+import { Search, Star, StarOff, X, User, ChevronDown, MapPin, Building2, Sun, Moon, Lightbulb } from "lucide-react";
 import {
   type GasTypeKey,
   GAS_TYPES,
@@ -163,6 +163,7 @@ export default function FilterBar({
   totalStations,
   onLoginClick,
   onChangelogClick,
+  onSuggestionClick,
   currentUser,
   onLogout,
 }: {
@@ -183,6 +184,7 @@ export default function FilterBar({
   totalStations: number;
   onLoginClick: () => void;
   onChangelogClick: () => void;
+  onSuggestionClick: () => void;
   currentUser: { email: string } | null;
   onLogout: () => void;
 }) {
@@ -246,6 +248,14 @@ export default function FilterBar({
         </div>
 
         <div className="gov-bar-right">
+          <button
+            className="nb-fav"
+            onClick={onSuggestionClick}
+            title="Suggestion"
+          >
+            <Lightbulb className="size-3.5" />
+            <span className="nb-label-text">Suggestion</span>
+          </button>
           <NavDropdown onChangelogClick={onChangelogClick} />
           <ThemeToggle />
           {currentUser ? (

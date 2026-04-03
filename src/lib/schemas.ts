@@ -38,3 +38,21 @@ export const voteSchema = z.object({
   vote: z.union([z.literal(1), z.literal(-1)]),
   anonymous_id: z.string().uuid("Identifiant anonyme invalide").optional(),
 });
+
+export const suggestionSchema = z.object({
+  first_name: z
+    .string()
+    .min(2, "Le prénom doit contenir au moins 2 caractères"),
+  last_name: z
+    .string()
+    .min(2, "Le nom doit contenir au moins 2 caractères"),
+  email: z
+    .string()
+    .email("L'adresse courriel est invalide"),
+  message: z
+    .string()
+    .min(10, "La suggestion doit contenir au moins 10 caractères")
+    .max(2000, "La suggestion ne peut pas dépasser 2000 caractères"),
+});
+
+export type SuggestionInput = z.infer<typeof suggestionSchema>;
