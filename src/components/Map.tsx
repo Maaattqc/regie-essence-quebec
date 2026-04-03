@@ -531,7 +531,10 @@ export default function Map() {
     const loadStations = async () => {
       try {
         const response = await fetch("/api/stations", { cache: "no-store" });
-        if (!response.ok && response.status !== 202) throw new Error(`HTTP ${response.status}`);
+        if (!response.ok && response.status !== 202) {
+          if (response.status === 429) { retryTimer = window.setTimeout(loadStations, 3000); return; }
+          throw new Error(`HTTP ${response.status}`);
+        }
         const payload = (await response.json()) as StationsApiPayload;
 
         if (payload.data) {
@@ -644,6 +647,17 @@ export default function Map() {
     findBestEffectivePrice(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, userPos, geoReady]);
+
+  // Recalculer le meilleur prix quand le type d'essence change
+  const prevGasType = useRef(gasType);
+  useEffect(() => {
+    if (prevGasType.current === gasType) return;
+    prevGasType.current = gasType;
+    if (cheapestResults && userPos && data) {
+      findBestEffectivePrice(true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gasType]);
 
   function handleSearchChange(v: string) {
     setSearch(v);
@@ -829,7 +843,7 @@ export default function Map() {
     <div style={{ position: "relative", height: "100%", width: "100%" }}>
       <FilterBar
         gasType={gasType}
-        onGasTypeChange={(v) => { setGasType(v); setRadiusKm(0); setCheapestResults(null); setCheapestRoute(null); }}
+        onGasTypeChange={(v) => { setGasType(v); }}
         brand={brand}
         onBrandChange={handleBrandChange}
         region={region}

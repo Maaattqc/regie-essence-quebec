@@ -62,7 +62,7 @@ export default function LoginModal({ onClose }: { onClose: () => void }) {
   // Auto-fermer après 2.5s une fois connecté
   useEffect(() => {
     if (step !== "done") return;
-    const t = setTimeout(onClose, 2500);
+    const t = setTimeout(onClose, 1500);
     return () => clearTimeout(t);
   }, [step, onClose]);
 
