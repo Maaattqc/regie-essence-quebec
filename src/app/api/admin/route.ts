@@ -46,8 +46,8 @@ export async function GET(req: NextRequest) {
 
     const { data: latest } = await supabaseAdmin
       .from("price_snapshots")
-      .select("snapshot_date")
-      .order("snapshot_date", { ascending: false })
+      .select("snapshot_at")
+      .order("snapshot_at", { ascending: false })
       .limit(1);
 
     const { count: totalReports } = await supabaseAdmin
@@ -84,7 +84,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       totalSnapshots: totalSnapshots ?? 0,
-      lastSnapshot: latest?.[0]?.snapshot_date ?? "Aucun",
+      lastSnapshot: latest?.[0]?.snapshot_at ?? "Aucun",
       totalReports: totalReports ?? 0,
       totalUsers: totalUsers ?? 0,
       avgRegulier: avgs?.regulier ?? 0,
