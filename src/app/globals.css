@@ -250,6 +250,7 @@ body {
   }
   .gov-bar-subtitle { display: none; }
   .nb-label-text { display: none !important; }
+  .nb-hide-mobile { display: none !important; }
   .gov-bar-right { gap: 0.375rem; }
   .nb-pills { padding: 2px; gap: 1px; }
   .nb-pill { padding: 0 8px; height: 26px; font-size: 11px; }

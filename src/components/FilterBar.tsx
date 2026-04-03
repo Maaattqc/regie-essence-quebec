@@ -249,7 +249,7 @@ export default function FilterBar({
 
         <div className="gov-bar-right">
           <button
-            className="nb-fav"
+            className="nb-fav nb-hide-mobile"
             onClick={onSuggestionClick}
             title="Suggestion"
           >
@@ -257,7 +257,7 @@ export default function FilterBar({
             <span className="nb-label-text">Suggestion</span>
           </button>
           <NavDropdown onChangelogClick={onChangelogClick} onSuggestionClick={onSuggestionClick} />
-          <ThemeToggle />
+          <span className="nb-hide-mobile"><ThemeToggle /></span>
           {currentUser ? (
             <UserDropdown email={currentUser.email} onLogout={onLogout} />
           ) : (
