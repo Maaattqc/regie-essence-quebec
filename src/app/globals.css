@@ -309,7 +309,7 @@ body {
   .map-buttons-panel {
     width: 46px !important;
     bottom: auto !important;
-    top: 5rem;
+    top: 8rem;
     transform: none;
     max-height: calc(100dvh - 7.5rem);
     overflow: visible !important;
@@ -419,10 +419,10 @@ body {
     width: 42px !important;
     left: 4px !important;
     bottom: auto !important;
-    top: 4.5rem;
+    top: 7rem;
     transform: none;
     gap: 3px;
-    max-height: calc(100dvh - 6.5rem);
+    max-height: calc(100dvh - 8rem);
   }
   .map-panel-btn {
     width: 38px !important;
