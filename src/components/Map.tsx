@@ -11,7 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import {
-  X, Share2, BarChart3, Building2, Crosshair, Users,
+  X, Share2, BarChart3, Building2, Crosshair, Users, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import FilterBar from "@/components/FilterBar";
 import { createBrowserClient } from "@/lib/auth";
@@ -442,6 +442,7 @@ export default function Map() {
   const [geoReady, setGeoReady] = useState(false);
   const [flyTarget, setFlyTarget] = useState<{ center: [number, number]; zoom: number } | null>(null);
   const [showCursors, setShowCursors] = useState(false);
+  const [mapPanelOpen, setMapPanelOpen] = useState(true);
   const [onlineCount, setOnlineCount] = useState(0);
   const handleOnlineCount = useCallback((n: number) => setOnlineCount(n), []);
 
@@ -775,75 +776,94 @@ export default function Map() {
         />
         <ZoomControl position="bottomright" />
         <div className="map-buttons-panel flex flex-col gap-1.5 leaflet-control" style={{ position: "absolute", bottom: 30, left: 12, zIndex: 1000, width: 170 }}>
-          <div>
-            <Button
-              variant={cheapestResults ? "outline" : "default"}
-              size="sm"
-              className={`w-full shadow-md font-semibold text-[13px] ${!cheapestResults ? "!bg-[#2d9a2d] hover:!bg-[#2d9a2d]/90 !text-white" : "!bg-[var(--bg-panel)] !text-[var(--text)]"}`}
-              onClick={() => { if (cheapestResults) { setCheapestResults(null); setRadiusKm(0); } else findCheapestNearby(); }}
-            >
-              <Crosshair className="size-3.5" />
-              {cheapestResults ? "Masquer" : "Meilleur prix proche"}
-            </Button>
-            <AnimatePresence>
-              {cheapestResults?.message && (
-                <motion.div
-                  className="bg-[var(--bg-panel)] text-[var(--text)] p-1.5 rounded text-[11px] mt-1 leading-tight shadow-md"
-                  initial={{ opacity: 0, y: -5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -5 }}
-                >
-                  {cheapestResults.message}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-          <Button variant="outline" size="sm" className="w-full shadow-md !bg-[var(--bg-panel)] !text-[var(--text)] !border-0 font-semibold text-[13px]" onClick={() => { setShowCityPanel(false); setShowRegionPanel((v) => !v); }}>
-            <BarChart3 className="size-3.5" />
-            Prix par région
-          </Button>
-          <Button variant="outline" size="sm" className="w-full shadow-md !bg-[var(--bg-panel)] !text-[var(--text)] !border-0 font-semibold text-[13px]" onClick={() => { setShowRegionPanel(false); setShowCityPanel((v) => !v); }}>
-            <Building2 className="size-3.5" />
-            Prix par ville
-          </Button>
-          <Button variant="outline" size="sm" className="w-full shadow-md !bg-[var(--bg-panel)] !text-[var(--text)] !border-0 font-semibold text-[13px]" onClick={shareLink}>
-            <Share2 className="size-3.5" />
-            Partager
-          </Button>
-          <div className="flex gap-1.5">
-            <Button variant="outline" size="sm" className={`flex-1 shadow-md !border-0 font-semibold text-[13px] ${mapStyle === "satellite" ? "!bg-[#457b9d] !text-white" : "!bg-[var(--bg-panel)] !text-[var(--text)]"}`} onClick={() => setMapStyle(mapStyle === "satellite" ? "carte" : "satellite")}>
-              Satellite
-            </Button>
-            <Button variant="outline" size="sm" className={`flex-1 shadow-md !border-0 font-semibold text-[13px] ${mapStyle === "dark" ? "!bg-[#1a1a2e] !text-white" : "!bg-[var(--bg-panel)] !text-[var(--text)]"}`} onClick={() => setMapStyle(mapStyle === "dark" ? "carte" : "dark")}>
-              Carte Dark
-            </Button>
-          </div>
-          <Button variant="outline" size="sm" className={`w-full shadow-md font-semibold text-[13px] ${showCursors ? "!bg-[#457b9d] !text-white" : "!bg-[var(--bg-panel)] !text-[var(--text)]"} !border-0`} onClick={() => setShowCursors((v) => !v)}>
-            <Users className="size-3.5" />
-            {showCursors ? `En ligne (${onlineCount})` : "Visiteurs en ligne"}
-          </Button>
-          {userPos && (
-            <div className="bg-[var(--bg-panel)] rounded-md shadow-md px-3 py-2">
-              <div className="text-xs font-semibold mb-1">
-                Rayon : {radiusKm === 0 ? "Tout" : `${radiusKm} km`}
-              </div>
-              <Slider
-                min={0}
-                max={50}
-                step={5}
-                value={[radiusKm]}
-                onValueChange={(v) => setRadiusKm(Array.isArray(v) ? v[0] : v)}
-                className="w-full"
-              />
-            </div>
-          )}
-          <div className="bg-[var(--bg-panel)] rounded-md shadow-md px-3 py-2">
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, fontWeight: 700, marginBottom: 3 }}>
-              <span style={{ color: "#2d9a2d" }}>{priceMin.toFixed(1)}¢</span>
-              <span style={{ color: "#e63946" }}>{priceMax.toFixed(1)}¢</span>
-            </div>
-            <div style={{ height: 6, borderRadius: 3, background: "linear-gradient(to right, #2d9a2d, #6fbf3b, #f0c808, #ef8a17, #e63946)" }} />
-          </div>
+          <button
+            className="map-panel-toggle"
+            onClick={() => setMapPanelOpen((v) => !v)}
+            aria-label={mapPanelOpen ? "Masquer les boutons" : "Afficher les boutons"}
+          >
+            {mapPanelOpen ? <ChevronLeft className="size-4" /> : <ChevronRight className="size-4" />}
+          </button>
+          <AnimatePresence>
+            {mapPanelOpen && (
+              <motion.div
+                className="flex flex-col gap-1.5"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.2 }}
+              >
+                <div>
+                  <Button
+                    variant={cheapestResults ? "outline" : "default"}
+                    size="sm"
+                    className={`map-panel-btn w-full shadow-md font-semibold text-[13px] ${!cheapestResults ? "!bg-[#2d9a2d] hover:!bg-[#2d9a2d]/90 !text-white" : "!bg-[var(--bg-panel)] !text-[var(--text)]"}`}
+                    onClick={() => { if (cheapestResults) { setCheapestResults(null); setRadiusKm(0); } else findCheapestNearby(); }}
+                  >
+                    <Crosshair className="size-3.5" />
+                    {cheapestResults ? "Masquer" : "Meilleur prix proche"}
+                  </Button>
+                  <AnimatePresence>
+                    {cheapestResults?.message && (
+                      <motion.div
+                        className="bg-[var(--bg-panel)] text-[var(--text)] p-1.5 rounded text-[11px] mt-1 leading-tight shadow-md"
+                        initial={{ opacity: 0, y: -5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -5 }}
+                      >
+                        {cheapestResults.message}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+                <Button variant="outline" size="sm" className="map-panel-btn w-full shadow-md !bg-[var(--bg-panel)] !text-[var(--text)] !border-0 font-semibold text-[13px]" onClick={() => { setShowCityPanel(false); setShowRegionPanel((v) => !v); }}>
+                  <BarChart3 className="size-3.5" />
+                  Prix par région
+                </Button>
+                <Button variant="outline" size="sm" className="map-panel-btn w-full shadow-md !bg-[var(--bg-panel)] !text-[var(--text)] !border-0 font-semibold text-[13px]" onClick={() => { setShowRegionPanel(false); setShowCityPanel((v) => !v); }}>
+                  <Building2 className="size-3.5" />
+                  Prix par ville
+                </Button>
+                <Button variant="outline" size="sm" className="map-panel-btn w-full shadow-md !bg-[var(--bg-panel)] !text-[var(--text)] !border-0 font-semibold text-[13px]" onClick={shareLink}>
+                  <Share2 className="size-3.5" />
+                  Partager
+                </Button>
+                <div className="flex gap-1.5">
+                  <Button variant="outline" size="sm" className={`map-panel-btn flex-1 shadow-md !border-0 font-semibold text-[13px] ${mapStyle === "satellite" ? "!bg-[#457b9d] !text-white" : "!bg-[var(--bg-panel)] !text-[var(--text)]"}`} onClick={() => setMapStyle(mapStyle === "satellite" ? "carte" : "satellite")}>
+                    Satellite
+                  </Button>
+                  <Button variant="outline" size="sm" className={`map-panel-btn flex-1 shadow-md !border-0 font-semibold text-[13px] ${mapStyle === "dark" ? "!bg-[#1a1a2e] !text-white" : "!bg-[var(--bg-panel)] !text-[var(--text)]"}`} onClick={() => setMapStyle(mapStyle === "dark" ? "carte" : "dark")}>
+                    Carte Dark
+                  </Button>
+                </div>
+                <Button variant="outline" size="sm" className={`map-panel-btn w-full shadow-md font-semibold text-[13px] ${showCursors ? "!bg-[#457b9d] !text-white" : "!bg-[var(--bg-panel)] !text-[var(--text)]"} !border-0`} onClick={() => setShowCursors((v) => !v)}>
+                  <Users className="size-3.5" />
+                  {showCursors ? `En ligne (${onlineCount})` : "Visiteurs en ligne"}
+                </Button>
+                {userPos && (
+                  <div className="map-panel-widget bg-[var(--bg-panel)] rounded-md shadow-md px-3 py-2">
+                    <div className="text-xs font-semibold mb-1">
+                      Rayon : {radiusKm === 0 ? "Tout" : `${radiusKm} km`}
+                    </div>
+                    <Slider
+                      min={0}
+                      max={50}
+                      step={5}
+                      value={[radiusKm]}
+                      onValueChange={(v) => setRadiusKm(Array.isArray(v) ? v[0] : v)}
+                      className="w-full"
+                    />
+                  </div>
+                )}
+                <div className="map-panel-widget bg-[var(--bg-panel)] rounded-md shadow-md px-3 py-2">
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, fontWeight: 700, marginBottom: 3 }}>
+                    <span style={{ color: "#2d9a2d" }}>{priceMin.toFixed(1)}¢</span>
+                    <span style={{ color: "#e63946" }}>{priceMax.toFixed(1)}¢</span>
+                  </div>
+                  <div style={{ height: 6, borderRadius: 3, background: "linear-gradient(to right, #2d9a2d, #6fbf3b, #f0c808, #ef8a17, #e63946)" }} />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
         <AttributionControl position="bottomleft" />
         {userPos && radiusKm > 0 && (

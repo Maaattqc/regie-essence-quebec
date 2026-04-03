@@ -256,7 +256,7 @@ export default function FilterBar({
             <Lightbulb className="size-3.5" />
             <span className="nb-label-text">Suggestion</span>
           </button>
-          <NavDropdown onChangelogClick={onChangelogClick} />
+          <NavDropdown onChangelogClick={onChangelogClick} onSuggestionClick={onSuggestionClick} />
           <ThemeToggle />
           {currentUser ? (
             <UserDropdown email={currentUser.email} onLogout={onLogout} />

@@ -308,6 +308,22 @@ body {
     scrollbar-width: none;
   }
   .map-buttons-panel::-webkit-scrollbar { display: none; }
+  .map-panel-btn {
+    background: transparent !important;
+    box-shadow: none !important;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(0, 0, 0, 0.12) !important;
+  }
+  :root.dark .map-panel-btn {
+    border-color: rgba(255, 255, 255, 0.15) !important;
+  }
+  .map-panel-widget {
+    background: transparent !important;
+    box-shadow: none !important;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
   .admin-table {
     display: block;
     overflow-x: auto;
@@ -630,6 +646,40 @@ body {
   }
   .gov-bar-subtitle {
     display: none;
+  }
+}
+
+/* ── Nav dropdown mobile-only items ── */
+.nav-suggestion-mobile {
+  display: none;
+}
+@media (max-width: 768px) {
+  .nav-suggestion-mobile { display: flex; }
+}
+
+/* ── Map panel toggle ── */
+.map-panel-toggle {
+  display: none;
+}
+@media (max-width: 768px) {
+  .map-panel-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    cursor: pointer;
+    color: var(--text);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+  }
+  :root.dark .map-panel-toggle {
+    background: rgba(30, 30, 30, 0.7);
+    border-color: rgba(255, 255, 255, 0.15);
   }
 }
 
