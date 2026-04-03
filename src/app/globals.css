@@ -333,6 +333,10 @@ body {
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
   }
+  .map-radius-desktop { display: none !important; }
+  .map-legend-desktop { display: none !important; }
+  .map-radius-mobile { display: block; }
+  .map-legend-mobile { display: flex !important; }
   .admin-table {
     display: block;
     overflow-x: auto;
@@ -663,6 +667,37 @@ body {
 }
 @media (max-width: 768px) {
   .nav-suggestion-mobile { display: flex; }
+}
+
+/* ── Map mobile radius/legend ── */
+.map-radius-mobile { display: none; }
+.map-legend-mobile { display: none; }
+.map-legend-mobile {
+  bottom: 20px;
+  right: 50px;
+}
+.map-legend-mobile-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+:root.dark .map-legend-mobile-inner {
+  background: rgba(30, 30, 30, 0.85);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+.map-legend-mobile-bar {
+  width: 8px;
+  height: 80px;
+  border-radius: 4px;
+  background: linear-gradient(to bottom, #e63946, #ef8a17, #f0c808, #6fbf3b, #2d9a2d);
 }
 
 /* ── Map panel toggle ── */

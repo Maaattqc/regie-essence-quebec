@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import {
   X, Share2, BarChart3, Building2, Crosshair, Users, ChevronLeft, ChevronRight,
-  Trophy, Satellite, Moon,
+  Trophy, Satellite, Moon, Locate,
 } from "lucide-react";
 import FilterBar from "@/components/FilterBar";
 import { createBrowserClient } from "@/lib/auth";
@@ -444,6 +444,7 @@ export default function Map() {
   const [flyTarget, setFlyTarget] = useState<{ center: [number, number]; zoom: number } | null>(null);
   const [showCursors, setShowCursors] = useState(false);
   const [mapPanelOpen, setMapPanelOpen] = useState(true);
+  const [showRadiusMenu, setShowRadiusMenu] = useState(false);
   const [onlineCount, setOnlineCount] = useState(0);
   const handleOnlineCount = useCallback((n: number) => setOnlineCount(n), []);
 
@@ -842,22 +843,60 @@ export default function Map() {
                   <Users className="size-3.5" />
                   <span className="map-btn-label">{showCursors ? `En ligne (${onlineCount})` : "Visiteurs en ligne"}</span>
                 </Button>
+                {/* Rayon : slider desktop, menu mobile */}
                 {userPos && (
-                  <div className="map-panel-widget bg-[var(--bg-panel)] rounded-md shadow-md px-3 py-2">
-                    <div className="text-xs font-semibold mb-1">
-                      Rayon : {radiusKm === 0 ? "Tout" : `${radiusKm} km`}
+                  <>
+                    <div className="map-panel-widget map-radius-desktop bg-[var(--bg-panel)] rounded-md shadow-md px-3 py-2">
+                      <div className="text-xs font-semibold mb-1">
+                        Rayon : {radiusKm === 0 ? "Tout" : `${radiusKm} km`}
+                      </div>
+                      <Slider
+                        min={0}
+                        max={50}
+                        step={5}
+                        value={[radiusKm]}
+                        onValueChange={(v) => setRadiusKm(Array.isArray(v) ? v[0] : v)}
+                        className="w-full"
+                      />
                     </div>
-                    <Slider
-                      min={0}
-                      max={50}
-                      step={5}
-                      value={[radiusKm]}
-                      onValueChange={(v) => setRadiusKm(Array.isArray(v) ? v[0] : v)}
-                      className="w-full"
-                    />
-                  </div>
+                    <div className="map-radius-mobile relative">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className={`map-panel-btn w-full shadow-md !border-0 font-semibold text-[13px] ${radiusKm > 0 ? "!bg-[#457b9d] !text-white" : "!bg-[var(--bg-panel)] !text-[var(--text)]"}`}
+                        onClick={() => setShowRadiusMenu((v) => !v)}
+                      >
+                        <Locate className="size-3.5" />
+                        <span className="map-btn-label">Rayon</span>
+                      </Button>
+                      <AnimatePresence>
+                        {showRadiusMenu && (
+                          <motion.div
+                            className="absolute left-[calc(100%+6px)] top-0 bg-[var(--bg-panel)] rounded-lg shadow-lg border border-[var(--divider)] p-1.5 grid grid-cols-3 gap-1 z-10"
+                            style={{ width: 120 }}
+                            initial={{ opacity: 0, x: -8 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -8 }}
+                            transition={{ duration: 0.15 }}
+                          >
+                            {[0, 5, 10, 15, 20, 30, 50].map((km) => (
+                              <button
+                                key={km}
+                                className={`rounded px-1 py-1 text-[11px] font-semibold transition-colors ${radiusKm === km ? "bg-[#457b9d] text-white" : "text-[var(--text)] hover:bg-[var(--bg-hover)]"}`}
+                                onClick={() => { setRadiusKm(km); setShowRadiusMenu(false); }}
+                                style={{ border: "none", cursor: "pointer", background: radiusKm === km ? "#457b9d" : "transparent" }}
+                              >
+                                {km === 0 ? "Tout" : `${km}km`}
+                              </button>
+                            ))}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </>
                 )}
-                <div className="map-panel-widget bg-[var(--bg-panel)] rounded-md shadow-md px-3 py-2">
+                {/* Jauge prix : desktop horizontal inline */}
+                <div className="map-panel-widget map-legend-desktop bg-[var(--bg-panel)] rounded-md shadow-md px-3 py-2">
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, fontWeight: 700, marginBottom: 3 }}>
                     <span style={{ color: "#2d9a2d" }}>{priceMin.toFixed(1)}¢</span>
                     <span style={{ color: "#e63946" }}>{priceMax.toFixed(1)}¢</span>
@@ -867,6 +906,14 @@ export default function Map() {
               </motion.div>
             )}
           </AnimatePresence>
+        </div>
+        {/* Jauge prix verticale — mobile seulement */}
+        <div className="map-legend-mobile leaflet-control" style={{ position: "absolute", zIndex: 1000 }}>
+          <div className="map-legend-mobile-inner">
+            <span style={{ color: "#e63946", fontSize: 10, fontWeight: 700 }}>{priceMax.toFixed(1)}¢</span>
+            <div className="map-legend-mobile-bar" />
+            <span style={{ color: "#2d9a2d", fontSize: 10, fontWeight: 700 }}>{priceMin.toFixed(1)}¢</span>
+          </div>
         </div>
         <AttributionControl position="bottomleft" />
         {userPos && radiusKm > 0 && (
