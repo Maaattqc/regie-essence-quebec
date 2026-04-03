@@ -96,34 +96,31 @@ export function distanceKm(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
-const MAPBOX_BASE = "https://api.mapbox.com";
-
 export type RoadInfo = {
   distKm: number | null;
   durationMin: number | null;
 };
 
 /**
- * Distances et durées routières réelles via Mapbox Matrix API (avec trafic).
- * Retourne un tableau de { distKm, durationMin } (null si pas de route).
- * Limite Mapbox : 25 coordonnées max par appel.
+ * Distances et durées routières via proxy serveur /api/mapbox (token jamais exposé côté client).
  */
 export async function roadDistances(
   origin: [number, number],
   destinations: [number, number][],
 ): Promise<RoadInfo[]> {
   const fallback = destinations.map(() => ({ distKm: null, durationMin: null }));
-  if (destinations.length === 0 || !MAPBOX_TOKEN) return fallback;
+  if (destinations.length === 0) return fallback;
   try {
     const coords = [
       `${origin[1]},${origin[0]}`,
       ...destinations.map(([lat, lng]) => `${lng},${lat}`),
     ].join(";");
-    const res = await fetch(
-      `${MAPBOX_BASE}/directions-matrix/v1/mapbox/driving/${coords}?sources=0&annotations=distance,duration&access_token=${MAPBOX_TOKEN}`,
-    );
-    if (!res.ok) { console.error("[Mapbox Matrix]", res.status, res.statusText); return fallback; }
+    const res = await fetch("/api/mapbox", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "matrix", coords }),
+    });
+    if (!res.ok) { console.error("[Mapbox Matrix]", res.status); return fallback; }
     const data = await res.json();
     const distRow = data.distances?.[0];
     const durRow = data.durations?.[0];
@@ -145,20 +142,19 @@ export type RouteDetails = {
 };
 
 /**
- * Tracé routier réel via Mapbox Directions API (avec trafic temps réel).
- * Retourne le tracé + distance + durée.
+ * Tracé routier via proxy serveur /api/mapbox (token jamais exposé côté client).
  */
 export async function roadRoute(
   origin: [number, number],
   destination: [number, number],
 ): Promise<RouteDetails | null> {
-  if (!MAPBOX_TOKEN) return null;
   try {
-    const coords = `${origin[1]},${origin[0]};${destination[1]},${destination[0]}`;
-    const res = await fetch(
-      `${MAPBOX_BASE}/directions/v5/mapbox/driving-traffic/${coords}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`,
-    );
-    if (!res.ok) { console.error("[Mapbox Directions]", res.status, res.statusText); return null; }
+    const res = await fetch("/api/mapbox", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "directions", origin, destination }),
+    });
+    if (!res.ok) { console.error("[Mapbox Directions]", res.status); return null; }
     const data = await res.json();
     const route = data.routes?.[0];
     if (!route?.geometry?.coordinates) return null;

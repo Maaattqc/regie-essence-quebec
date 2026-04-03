@@ -68,8 +68,6 @@ import {
   Moon,
   Eye,
   TrendingUp,
-  Calendar,
-  Activity,
   Search,
   ExternalLink,
   Wifi,
@@ -839,12 +837,13 @@ export default function AdminPage() {
       setUser(session?.user ?? null);
       setToken(session?.access_token ?? null);
       if (session?.user) {
-        const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
+        const adminEmails = (process.env.ADMIN_EMAILS || "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
         setIsAdmin(!!session.user.email && adminEmails.includes(session.user.email.toLowerCase()));
       }
       setLoading(false);
     }
     init();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // L'effet de chargement est déclaré plus bas, après les fonctions qu'il appelle

@@ -19,7 +19,6 @@ export interface Comment {
   my_vote: number;
 }
 
-const ADMIN_EMAILS_CLIENT = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
 
 function CommentItem({ c, replies, allComments, onVote, onSubmitReply, isAdmin, onDelete }: {
   c: Comment;
@@ -36,7 +35,7 @@ function CommentItem({ c, replies, allComments, onVote, onSubmitReply, isAdmin, 
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const timeAgo = (d: string) => {
-    const diff = Date.now() - new Date(d).getTime();
+    const diff = new Date().getTime() - new Date(d).getTime();
     const mins = Math.floor(diff / 60000);
     if (mins < 60) return `il y a ${mins}m`;
     const hrs = Math.floor(mins / 60);
@@ -165,7 +164,17 @@ export default function CommentsModal({ stationName, address, onClose, userEmail
   const [newComment, setNewComment] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
-  const isAdmin = !!userEmail && ADMIN_EMAILS_CLIENT.includes(userEmail.toLowerCase());
+  const [isAdmin, setIsAdmin] = useState(false);
+  useEffect(() => {
+    if (!userEmail) return;
+    const sb = createBrowserClient();
+    sb.auth.getSession().then(({ data: { session } }) => {
+      if (!session?.user?.id) return;
+      sb.from("profiles").select("role").eq("id", session.user.id).single().then(({ data }) => {
+        setIsAdmin(data?.role === "admin");
+      });
+    });
+  }, [userEmail]);
 
   async function getToken() {
     const { data: { session } } = await createBrowserClient().auth.getSession();
