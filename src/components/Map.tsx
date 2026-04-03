@@ -506,6 +506,7 @@ export default function Map() {
     const loadStations = async () => {
       try {
         const response = await fetch("/api/stations", { cache: "no-store" });
+        if (!response.ok && response.status !== 202) throw new Error(`HTTP ${response.status}`);
         const payload = (await response.json()) as StationsApiPayload;
 
         if (payload.data) {
@@ -621,10 +622,8 @@ export default function Map() {
 
   function handleSearchChange(v: string) {
     setSearch(v);
-    if (!v) {
-      setRadiusKm(0);
-      setCheapestResults(null);
-    }
+    setRadiusKm(0);
+    setCheapestResults(null);
     const vNorm = normalize(v);
     if (v && data) {
       const match = data.features.find((f) => {
@@ -658,9 +657,9 @@ export default function Map() {
   function handleRegionChange(v: string) {
     setRegion(v);
     setSearch("");
+    setRadiusKm(0);
+    setCheapestResults(null);
     if (!v) {
-      setRadiusKm(0);
-      setCheapestResults(null);
       setFlyTarget({ center: QUEBEC_CENTER, zoom: QUEBEC_ZOOM });
     } else if (REGION_CENTERS[v]) {
       setFlyTarget({ center: REGION_CENTERS[v], zoom: REGION_ZOOM[v] ?? 9 });
@@ -670,6 +669,8 @@ export default function Map() {
   }
   function handleBrandChange(v: string) {
     setBrand(v);
+    setRadiusKm(0);
+    setCheapestResults(null);
   }
 
 
@@ -785,7 +786,7 @@ export default function Map() {
     <div style={{ position: "relative", height: "100%", width: "100%" }}>
       <FilterBar
         gasType={gasType}
-        onGasTypeChange={setGasType}
+        onGasTypeChange={(v) => { setGasType(v); setRadiusKm(0); setCheapestResults(null); }}
         brand={brand}
         onBrandChange={handleBrandChange}
         region={region}
@@ -794,7 +795,7 @@ export default function Map() {
         onSearchChange={handleSearchChange}
         cities={cities}
         showFavorites={showFavorites}
-        onToggleFavorites={() => setShowFavorites((v) => !v)}
+        onToggleFavorites={() => { setShowFavorites((v) => !v); setRadiusKm(0); setCheapestResults(null); }}
         regionCounts={regionCounts}
         brandCounts={brandCounts}
         cityCounts={cityCounts}
