@@ -949,7 +949,7 @@ export default function Map() {
                             L.DomEvent.disableClickPropagation(el);
                             L.DomEvent.disableScrollPropagation(el);
                             el.addEventListener("touchstart", (e) => e.stopPropagation(), { passive: false });
-                            el.addEventListener("touchmove", (e) => e.stopPropagation(), { passive: false });
+                            el.addEventListener("touchmove", (e) => { e.stopPropagation(); e.preventDefault(); }, { passive: false });
                           }
                         }}
                       >
