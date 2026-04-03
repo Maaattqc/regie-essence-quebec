@@ -816,7 +816,7 @@ export default function Map() {
           </div>
           <Button variant="outline" size="sm" className={`w-full shadow-md font-semibold text-[13px] ${showCursors ? "!bg-[#457b9d] !text-white" : "!bg-[var(--bg-panel)] !text-[var(--text)]"} !border-0`} onClick={() => setShowCursors((v) => !v)}>
             <Users className="size-3.5" />
-            {showCursors ? `En ligne (${onlineCount})` : "Visiteurs"}
+            {showCursors ? `En ligne (${onlineCount})` : "Visiteurs en ligne"}
           </Button>
           {userPos && (
             <div className="bg-[var(--bg-panel)] rounded-md shadow-md px-3 py-2">
