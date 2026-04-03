@@ -114,6 +114,15 @@ interface Stats {
   monthPageViews: number;
 }
 
+function formatSnapshot(iso: string): string {
+  try {
+    const d = new Date(iso);
+    const date = d.toLocaleDateString("fr-CA", { year: "numeric", month: "long", day: "numeric", timeZone: "America/Montreal" });
+    const time = d.toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit", timeZone: "America/Montreal" });
+    return `${date} à ${time}`;
+  } catch { return iso; }
+}
+
 function AdminUserDropdown({ email, onLogout }: { email: string; onLogout: () => void }) {
   const username = email.split("@")[0];
   const initial = username[0]?.toUpperCase() || "?";
@@ -275,7 +284,7 @@ function AlertsPanel({ stats }: { stats: Stats | null }) {
         if (stats?.lastSnapshot) {
           const last = new Date(stats.lastSnapshot);
           const hoursAgo = (Date.now() - last.getTime()) / 3600000;
-          const fmtDate = new Date(stats.lastSnapshot).toLocaleString("fr-CA", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Montreal" });
+          const fmtDate = formatSnapshot(stats.lastSnapshot);
           if (hoursAgo > 24) results.push({ level: "error", title: "Sync inactive depuis 24h+", detail: `Dernier snapshot : ${fmtDate}` });
           else if (hoursAgo > 6) results.push({ level: "warn", title: "Sync inactive depuis 6h+", detail: `Dernier snapshot : ${fmtDate}` });
           else results.push({ level: "ok", title: "Sync active", detail: `Dernier snapshot : ${fmtDate}` });
@@ -651,7 +660,7 @@ function ConformitePanel({
   const avgMs = servicesTotal > 0 ? Math.round(Object.values(checks).reduce((s, c) => s + c.ms, 0) / servicesTotal) : 0;
 
   const securityItems = [
-    { icon: <Clock className="size-4" />, label: "Dernier snapshot", value: stats?.lastSnapshot && stats.lastSnapshot !== "Aucun" ? new Date(stats.lastSnapshot).toLocaleString("fr-CA", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Montreal" }) : (stats?.lastSnapshot ?? "...") },
+    { icon: <Clock className="size-4" />, label: "Dernier snapshot", value: stats?.lastSnapshot && stats.lastSnapshot !== "Aucun" ? formatSnapshot(stats.lastSnapshot) : (stats?.lastSnapshot ?? "...") },
     { icon: <Database className="size-4" />, label: "Snapshots en base", value: stats?.totalSnapshots?.toLocaleString() ?? "..." },
     { icon: <GitCommit className="size-4" />, label: "Version", value: "Production (Vercel)" },
     { icon: <Shield className="size-4" />, label: "Auth OTP", value: "Supabase (sans mot de passe)" },
@@ -1023,7 +1032,7 @@ export default function AdminPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-lg font-bold">{stats ? stats.lastSnapshot : <Skeleton className="h-7 w-36" />}</div>
+                  <div className="text-lg font-bold">{stats ? (stats.lastSnapshot !== "Aucun" ? formatSnapshot(stats.lastSnapshot) : "Aucun") : <Skeleton className="h-7 w-36" />}</div>
                 </CardContent>
               </Card>
               <Card>
