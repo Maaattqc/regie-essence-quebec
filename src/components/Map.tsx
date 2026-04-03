@@ -895,13 +895,13 @@ export default function Map() {
               </motion.div>
             )}
           </AnimatePresence>
-          {/* Jauge prix verticale — mobile seulement, toujours visible en bas des icônes */}
-          <div className="map-legend-mobile">
-            <div className="map-legend-mobile-inner">
-              <span style={{ color: "#e63946", fontSize: 10, fontWeight: 700 }}>{priceMax.toFixed(1)}¢</span>
-              <div className="map-legend-mobile-bar" />
-              <span style={{ color: "#2d9a2d", fontSize: 10, fontWeight: 700 }}>{priceMin.toFixed(1)}¢</span>
-            </div>
+        </div>
+        {/* Jauge prix verticale — mobile seulement, positionnée en bas à gauche */}
+        <div className="map-legend-mobile leaflet-control" style={{ position: "absolute", bottom: 16, left: 12, zIndex: 1000 }}>
+          <div className="map-legend-mobile-inner">
+            <span style={{ color: "#e63946", fontSize: 10, fontWeight: 700 }}>{priceMax.toFixed(1)}¢</span>
+            <div className="map-legend-mobile-bar" />
+            <span style={{ color: "#2d9a2d", fontSize: 10, fontWeight: 700 }}>{priceMin.toFixed(1)}¢</span>
           </div>
         </div>
         <AttributionControl position="bottomleft" />
