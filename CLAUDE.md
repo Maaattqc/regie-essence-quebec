@@ -34,6 +34,8 @@
 | Leaflet 1.9.4 | Librairie de cartes |
 | react-leaflet 5 | Bindings React pour Leaflet |
 | react-leaflet-cluster | Clustering de marqueurs |
+| Mapbox Directions API | Distances routières réelles + trafic temps réel |
+| Mapbox Matrix API | Calcul distances multi-destinations en un appel |
 
 ### Backend / BDD
 | Technologie | Rôle |

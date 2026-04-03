@@ -34,6 +34,8 @@ import {
   getPriceColor,
   distanceKm,
   effectivePrice,
+  roadDistances,
+  roadRoute,
   normalize,
   extractCity,
   deduplicateCities,
@@ -443,7 +445,8 @@ export default function Map() {
   const [showSuggestion, setShowSuggestion] = useState(false);
   const [commentStation, setCommentStation] = useState<{ name: string; address: string } | null>(null);
   const [currentUser, setCurrentUser] = useState<{ email: string } | null>(null);
-  const [cheapestResults, setCheapestResults] = useState<{ stations: { lat: number; lng: number; price: number; name: string; dist: number; effectivePrice?: number }[]; message: string } | null>(null);
+  const [cheapestResults, setCheapestResults] = useState<{ stations: { lat: number; lng: number; price: number; name: string; dist: number; durationMin?: number; effectivePrice?: number }[]; message: string } | null>(null);
+  const [cheapestRoute, setCheapestRoute] = useState<[number, number][] | null>(null);
   const [radiusKm, setRadiusKm] = useState(0);
   const [userPos, setUserPos] = useState<[number, number] | null>(null);
   const [showFavorites, setShowFavorites] = useState(false);
@@ -623,7 +626,7 @@ export default function Map() {
   function handleSearchChange(v: string) {
     setSearch(v);
     setRadiusKm(0);
-    setCheapestResults(null);
+    setCheapestResults(null); setCheapestRoute(null);
     const vNorm = normalize(v);
     if (v && data) {
       const match = data.features.find((f) => {
@@ -658,7 +661,7 @@ export default function Map() {
     setRegion(v);
     setSearch("");
     setRadiusKm(0);
-    setCheapestResults(null);
+    setCheapestResults(null); setCheapestRoute(null);
     if (!v) {
       setFlyTarget({ center: QUEBEC_CENTER, zoom: QUEBEC_ZOOM });
     } else if (REGION_CENTERS[v]) {
@@ -670,16 +673,17 @@ export default function Map() {
   function handleBrandChange(v: string) {
     setBrand(v);
     setRadiusKm(0);
-    setCheapestResults(null);
+    setCheapestResults(null); setCheapestRoute(null);
   }
 
 
   function findBestEffectivePrice(skipZoom = false) {
     if (!data) return;
     if (radiusKm === 0) setRadiusKm(5);
-    const doSearch = (latitude: number, longitude: number) => {
+    const doSearch = async (latitude: number, longitude: number) => {
       const r = radiusKm > 0 ? radiusKm : 5;
-      const candidates: { lat: number; lng: number; price: number; name: string; dist: number; effectivePrice: number }[] = [];
+      // 1) Filtrage Haversine rapide
+      const prefiltered: { lat: number; lng: number; price: number; name: string; haversineDist: number }[] = [];
       data.features.forEach((f) => {
         const feature = f as Feature<Point, StationProperties>;
         const props = feature.properties;
@@ -688,20 +692,37 @@ export default function Map() {
         if (dist > r) return;
         const p = props.Prices.find((pr) => pr.GasType === gasType && pr.IsAvailable);
         if (!p) return;
-        const price = parsePrice(p.Price);
-        const ep = effectivePrice(price, dist, consoLper100, tankVolume);
-        candidates.push({ lat, lng, price, name: props.Name, dist, effectivePrice: ep });
+        prefiltered.push({ lat, lng, price: parsePrice(p.Price), name: props.Name, haversineDist: dist });
       });
-      if (candidates.length === 0) {
+      if (prefiltered.length === 0) {
         setCheapestResults({ stations: [], message: `Aucune station trouvée dans un rayon de ${r} km` });
         return;
       }
+      // 2) Trier par prix effectif Haversine, garder top 15 pour Mapbox
+      prefiltered.sort((a, b) =>
+        effectivePrice(a.price, a.haversineDist, consoLper100, tankVolume) -
+        effectivePrice(b.price, b.haversineDist, consoLper100, tankVolume),
+      );
+      const top = prefiltered.slice(0, 15);
+      // 3) Distances + durées routières réelles (Mapbox avec trafic)
+      const destinations = top.map((c) => [c.lat, c.lng] as [number, number]);
+      const roadInfos = await roadDistances([latitude, longitude], destinations);
+      // 4) Recalculer avec distances réelles (fallback Haversine)
+      const candidates = top.map((c, i) => {
+        const dist = roadInfos[i].distKm ?? c.haversineDist;
+        const durationMin = roadInfos[i].durationMin ?? undefined;
+        return { ...c, dist, durationMin, effectivePrice: effectivePrice(c.price, dist, consoLper100, tankVolume) };
+      });
       candidates.sort((a, b) => a.effectivePrice - b.effectivePrice);
       const best = candidates[0];
       const saving = best.effectivePrice - best.price;
-      const msg = `Selon la distance, le meilleur prix est ${best.name} à ~${best.dist.toFixed(1)} km — ${best.price.toFixed(1)}¢/L (coût réel : ${best.effectivePrice.toFixed(1)}¢/L, +${saving.toFixed(1)}¢ de trajet)`;
+      const durText = best.durationMin != null ? ` · ~${Math.round(best.durationMin)} min` : "";
+      const msg = `${best.name} — ${best.price.toFixed(1)}¢/L · ${best.dist.toFixed(1)} km${durText} (réel : ${best.effectivePrice.toFixed(1)}¢/L, +${saving.toFixed(1)}¢ trajet)`;
       setCheapestResults({ stations: [best], message: msg });
       if (!skipZoom) setFlyTarget({ center: [best.lat, best.lng], zoom: 15 });
+      roadRoute([latitude, longitude], [best.lat, best.lng]).then((details) => {
+        if (details) setCheapestRoute(details.path);
+      });
     };
     if (userPos) {
       doSearch(userPos[0], userPos[1]);
@@ -786,7 +807,7 @@ export default function Map() {
     <div style={{ position: "relative", height: "100%", width: "100%" }}>
       <FilterBar
         gasType={gasType}
-        onGasTypeChange={(v) => { setGasType(v); setRadiusKm(0); setCheapestResults(null); }}
+        onGasTypeChange={(v) => { setGasType(v); setRadiusKm(0); setCheapestResults(null); setCheapestRoute(null); }}
         brand={brand}
         onBrandChange={handleBrandChange}
         region={region}
@@ -795,7 +816,7 @@ export default function Map() {
         onSearchChange={handleSearchChange}
         cities={cities}
         showFavorites={showFavorites}
-        onToggleFavorites={() => { setShowFavorites((v) => !v); setRadiusKm(0); setCheapestResults(null); }}
+        onToggleFavorites={() => { setShowFavorites((v) => !v); setRadiusKm(0); setCheapestResults(null); setCheapestRoute(null); }}
         regionCounts={regionCounts}
         brandCounts={brandCounts}
         cityCounts={cityCounts}
@@ -857,7 +878,7 @@ export default function Map() {
                       variant={cheapestResults ? "outline" : "default"}
                       size="sm"
                       className={`map-panel-btn flex-1 shadow-md font-semibold text-[13px] !rounded-r-none ${cheapestResults ? "!bg-[var(--bg-panel)] !text-[var(--text)]" : "!bg-[#2d9a2d] hover:!bg-[#2d9a2d]/90 !text-white"}`}
-                      onClick={() => { if (cheapestResults) { setCheapestResults(null); setRadiusKm(0); } else { findBestEffectivePrice(); } }}
+                      onClick={() => { if (cheapestResults) { setCheapestResults(null); setCheapestRoute(null); setRadiusKm(0); } else { findBestEffectivePrice(); } }}
                     >
                       <Trophy className="size-4" />
                       <span className="map-btn-label">{cheapestResults ? "Masquer" : "Meilleur prix"}</span>
@@ -873,6 +894,14 @@ export default function Map() {
                   </div>
                   <AnimatePresence>
                     {showEffectiveSettings && (
+                      <>
+                      <motion.div
+                        className="fixed inset-0 z-[1999]"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setShowEffectiveSettings(false)}
+                      />
                       <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
@@ -937,6 +966,7 @@ export default function Map() {
                           <span className="text-[11px] text-[var(--text-muted)]">Afficher le cercle du rayon</span>
                         </label>
                       </motion.div>
+                      </>
                     )}
                   </AnimatePresence>
                 </div>
@@ -1049,8 +1079,8 @@ export default function Map() {
         {userPos && cheapestResults?.stations.map((s, i) => (
           <Polyline
             key={`cheapest-line-${i}`}
-            positions={[userPos, [s.lat, s.lng]]}
-            pathOptions={{ color: "#2d9a2d", weight: 3, opacity: 0.7, dashArray: "8 6" }}
+            positions={cheapestRoute ?? [userPos, [s.lat, s.lng]]}
+            pathOptions={{ color: "#2d9a2d", weight: 5, opacity: 0.9, dashArray: "10 8" }}
           />
         ))}
         {cheapestResults?.stations.map((s, i) => (
@@ -1059,7 +1089,7 @@ export default function Map() {
             position={[s.lat, s.lng]}
             interactive={false}
             icon={L.divIcon({
-              html: `<div class="cheapest-pulse"><div class="cheapest-label">${s.name}<br><small>~${s.dist.toFixed(1)} km</small></div></div>`,
+              html: `<div class="cheapest-pulse"><div class="cheapest-label">${s.name}<br><small>${s.dist.toFixed(1)} km${s.durationMin ? ` · ${Math.round(s.durationMin)} min <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-1px"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>` : ""}</small></div></div>`,
               className: "cheapest-icon-passthrough",
               iconSize: [20, 20],
               iconAnchor: [10, 20],

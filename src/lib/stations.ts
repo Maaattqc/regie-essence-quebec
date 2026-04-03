@@ -96,6 +96,83 @@ export function distanceKm(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
+const MAPBOX_BASE = "https://api.mapbox.com";
+
+export type RoadInfo = {
+  distKm: number | null;
+  durationMin: number | null;
+};
+
+/**
+ * Distances et durées routières réelles via Mapbox Matrix API (avec trafic).
+ * Retourne un tableau de { distKm, durationMin } (null si pas de route).
+ * Limite Mapbox : 25 coordonnées max par appel.
+ */
+export async function roadDistances(
+  origin: [number, number],
+  destinations: [number, number][],
+): Promise<RoadInfo[]> {
+  const fallback = destinations.map(() => ({ distKm: null, durationMin: null }));
+  if (destinations.length === 0 || !MAPBOX_TOKEN) return fallback;
+  try {
+    const coords = [
+      `${origin[1]},${origin[0]}`,
+      ...destinations.map(([lat, lng]) => `${lng},${lat}`),
+    ].join(";");
+    const res = await fetch(
+      `${MAPBOX_BASE}/directions-matrix/v1/mapbox/driving/${coords}?sources=0&annotations=distance,duration&access_token=${MAPBOX_TOKEN}`,
+    );
+    if (!res.ok) { console.error("[Mapbox Matrix]", res.status, res.statusText); return fallback; }
+    const data = await res.json();
+    const distRow = data.distances?.[0];
+    const durRow = data.durations?.[0];
+    if (!distRow) return fallback;
+    return distRow.slice(1).map((m: number | null, i: number) => ({
+      distKm: m != null && m > 0 ? m / 1000 : null,
+      durationMin: durRow?.[i + 1] != null && durRow[i + 1] > 0 ? durRow[i + 1] / 60 : null,
+    }));
+  } catch (err) {
+    console.error("[Mapbox Matrix]", err);
+    return fallback;
+  }
+}
+
+export type RouteDetails = {
+  path: [number, number][];
+  distKm: number;
+  durationMin: number;
+};
+
+/**
+ * Tracé routier réel via Mapbox Directions API (avec trafic temps réel).
+ * Retourne le tracé + distance + durée.
+ */
+export async function roadRoute(
+  origin: [number, number],
+  destination: [number, number],
+): Promise<RouteDetails | null> {
+  if (!MAPBOX_TOKEN) return null;
+  try {
+    const coords = `${origin[1]},${origin[0]};${destination[1]},${destination[0]}`;
+    const res = await fetch(
+      `${MAPBOX_BASE}/directions/v5/mapbox/driving-traffic/${coords}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`,
+    );
+    if (!res.ok) { console.error("[Mapbox Directions]", res.status, res.statusText); return null; }
+    const data = await res.json();
+    const route = data.routes?.[0];
+    if (!route?.geometry?.coordinates) return null;
+    return {
+      path: route.geometry.coordinates.map(([lng, lat]: [number, number]) => [lat, lng]),
+      distKm: (route.distance ?? 0) / 1000,
+      durationMin: (route.duration ?? 0) / 60,
+    };
+  } catch (err) {
+    console.error("[Mapbox Directions]", err);
+    return null;
+  }
+}
+
 /** Prix effectif incluant le coût du trajet aller-retour. */
 export function effectivePrice(price: number, distKm: number, consoLper100: number, tankVolume: number): number {
   return price * (1 + (2 * distKm * consoLper100) / (100 * tankVolume));
@@ -149,15 +226,20 @@ export function toggleFavorite(id: string): Set<string> {
 }
 
 export async function reverseGeocode(lat: number, lon: number): Promise<string | null> {
-  const res = await fetch(
-    `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&zoom=10`
-  );
-  const data = await res.json();
-  return (
-    data.address?.city ||
-    data.address?.town ||
-    data.address?.village ||
-    data.address?.municipality ||
-    null
-  );
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&zoom=10`
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    return (
+      data.address?.city ||
+      data.address?.town ||
+      data.address?.village ||
+      data.address?.municipality ||
+      null
+    );
+  } catch {
+    return null;
+  }
 }

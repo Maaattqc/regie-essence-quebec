@@ -12,23 +12,27 @@ export async function GET(request: NextRequest) {
     headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
   }
 
-  const res = await fetch(
-    "https://api.github.com/repos/Maaattqc/regie-essence-quebec/commits?per_page=50",
-    { headers, next: { revalidate: 300 } }
-  );
+  try {
+    const res = await fetch(
+      "https://api.github.com/repos/Maaattqc/regie-essence-quebec/commits?per_page=50",
+      { headers, next: { revalidate: 300 } }
+    );
 
-  if (!res.ok) {
+    if (!res.ok) {
+      return NextResponse.json([], { status: 200 });
+    }
+
+    const data = await res.json();
+
+    const commits = data.map((c: { sha: string; commit: { message: string; author: { date: string } } }) => ({
+      sha: c.sha,
+      date: c.commit.author.date,
+      message: c.commit.message.split("\n")[0],
+      author: "Mathieu Fournier",
+    }));
+
+    return NextResponse.json(commits);
+  } catch {
     return NextResponse.json([], { status: 200 });
   }
-
-  const data = await res.json();
-
-  const commits = data.map((c: { sha: string; commit: { message: string; author: { date: string } } }) => ({
-    sha: c.sha,
-    date: c.commit.author.date,
-    message: c.commit.message.split("\n")[0],
-    author: "Mathieu Fournier",
-  }));
-
-  return NextResponse.json(commits);
 }

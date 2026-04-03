@@ -42,6 +42,7 @@ const STACK = [
       { name: "shadcn/ui + Base UI", desc: "Composants accessibles, conformes WCAG 2.1" },
       { name: "Framer Motion 12", desc: "Animations fluides 60 fps, transitions d'état" },
       { name: "Leaflet 1.9 + React-Leaflet 5", desc: "Cartographie vectorielle haute performance" },
+      { name: "Mapbox Directions API", desc: "Distances routières réelles et trafic en temps réel" },
     ],
   },
   {
