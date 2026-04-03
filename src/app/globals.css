@@ -312,13 +312,12 @@ body {
     top: 50%;
     transform: translateY(-50%);
     max-height: calc(100dvh - 7.5rem);
-    overflow-y: auto;
-    scrollbar-width: none;
+    overflow: visible !important;
     gap: 4px;
   }
   .map-buttons-panel::-webkit-scrollbar { display: none; }
   .map-btn-label { display: none !important; }
-  .map-btn-count { display: inline; font-size: 11px; font-weight: 700; }
+  .map-btn-count { display: inline !important; font-size: 11px; font-weight: 700; }
   .map-panel-btn-wide {
     width: auto !important;
     padding: 0 8px !important;
@@ -700,7 +699,7 @@ body {
 }
 .map-legend-mobile-bar {
   width: 14px;
-  height: 60px;
+  height: 78px;
   border-radius: 6px;
   background: linear-gradient(to bottom, #e63946, #ef8a17, #f0c808, #6fbf3b, #2d9a2d);
 }
