@@ -195,7 +195,7 @@ describe('/api/admin', () => {
       // price_snapshots count, price_snapshots latest, reports count,
       // profiles count, page_views x4
       const snapshotsCount = makeChain({ count: 42 })
-      const snapshotsLatest = makeChain({ data: [{ snapshot_date: '2026-04-01' }] })
+      const snapshotsLatest = makeChain({ data: [{ snapshot_at: '2026-04-01' }] })
       const reportsCount = makeChain({ count: 5 })
       const profilesCount = makeChain({ count: 10 })
       const pageViewsTotal = makeChain({ count: 1000 })

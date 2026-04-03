@@ -325,8 +325,8 @@ body {
   }
   .map-panel-btn {
     min-width: 0 !important;
-    width: 42px !important;
-    height: 42px !important;
+    width: 34px !important;
+    height: 34px !important;
     padding: 0 !important;
     justify-content: center;
     background: transparent !important;
@@ -334,6 +334,7 @@ body {
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     border: 1px solid rgba(0, 0, 0, 0.12) !important;
+    flex: none !important;
   }
   :root.dark .map-panel-btn {
     border-color: rgba(255, 255, 255, 0.15) !important;
@@ -425,8 +426,8 @@ body {
     max-height: calc(100dvh - 8rem);
   }
   .map-panel-btn {
-    width: 38px !important;
-    height: 38px !important;
+    width: 30px !important;
+    height: 30px !important;
   }
   .admin-tabs {
     flex-wrap: wrap;
@@ -1162,6 +1163,42 @@ body {
 @keyframes cheapest-glow {
   0%, 100% { box-shadow: 0 4px 12px rgba(45, 154, 45, 0.3); }
   50% { box-shadow: 0 4px 20px rgba(45, 154, 45, 0.7), 0 0 30px rgba(45, 154, 45, 0.3); }
+}
+
+/* ── User position marker ── */
+.user-pos-marker {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+}
+
+.user-pos-dot {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #4285f4;
+  border: 3px solid #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  z-index: 2;
+}
+
+.user-pos-pulse {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(66, 133, 244, 0.3);
+  animation: user-pos-ping 2s ease-out infinite;
+  z-index: 1;
+}
+
+@keyframes user-pos-ping {
+  0% { transform: scale(0.5); opacity: 0.8; }
+  100% { transform: scale(2.5); opacity: 0; }
 }
 
 .login-code-input {

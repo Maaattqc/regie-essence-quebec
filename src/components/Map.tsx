@@ -1,9 +1,9 @@
 "use client";
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { MapContainer, TileLayer, ZoomControl, AttributionControl, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, ZoomControl, AttributionControl, useMap, useMapEvents } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
-import { Marker, Popup, Circle } from "react-leaflet";
+import { Marker, Popup, Circle, Polyline } from "react-leaflet";
 import L from "leaflet";
 import type { Feature, Point } from "geojson";
 import dynamic from "next/dynamic";
@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import {
   X, Share2, BarChart3, Building2, Crosshair, Users, ChevronLeft, ChevronRight,
-  Trophy, Satellite, Moon, Locate,
+  Trophy, Satellite, Moon, Locate, Route, MapPin, Settings, Map as MapIcon,
 } from "lucide-react";
 import FilterBar from "@/components/FilterBar";
 import { createBrowserClient } from "@/lib/auth";
@@ -21,8 +21,7 @@ import ChangelogModal from "@/components/ChangelogModal";
 import ReportModal from "@/components/ReportModal";
 import SuggestionModal from "@/components/SuggestionModal";
 import CommentsModal from "@/components/CommentsModal";
-import CityPricePanel from "@/components/CityPricePanel";
-import RegionPricePanel from "@/components/RegionPricePanel";
+import PricePanel from "@/components/PricePanel";
 import {
   type StationProperties,
   type StationPrice,
@@ -34,6 +33,7 @@ import {
   parsePrice,
   getPriceColor,
   distanceKm,
+  effectivePrice,
   normalize,
   extractCity,
   deduplicateCities,
@@ -169,6 +169,15 @@ function FlyTo({ center, zoom }: { center: [number, number]; zoom: number }) {
   useEffect(() => {
     map.flyTo(center, zoom, { duration: 0.5 });
   }, [map, center, zoom]);
+  return null;
+}
+
+function DevClickHandler({ onPin }: { onPin: (lat: number, lng: number) => void }) {
+  useMapEvents({
+    click(e) {
+      onPin(e.latlng.lat, e.latlng.lng);
+    },
+  });
   return null;
 }
 
@@ -389,6 +398,7 @@ function LiveCursors({ showCursors, onOnlineCount }: { showCursors: boolean; onO
     });
 
     const onMouseMove = (e: L.LeafletMouseEvent) => {
+      if (!showRef.current) return;
       const now = Date.now();
       if (now - lastSendRef.current < 60) return;
       lastSendRef.current = now;
@@ -421,8 +431,7 @@ export default function Map() {
   const [mapStyle, setMapStyle] = useState<"carte" | "satellite" | "dark">(
     () => (readSearchParam("style") as "carte" | "satellite" | "dark") || "carte"
   );
-  const [showRegionPanel, setShowRegionPanel] = useState(false);
-  const [showCityPanel, setShowCityPanel] = useState(false);
+  const [showPricePanel, setShowPricePanel] = useState(false);
   const [shareToast, setShareToast] = useState(false);
   const [historyStation, setHistoryStation] = useState<{ name: string; address: string } | null>(null);
   const [reportStation, setReportStation] = useState<{ name: string; address: string } | null>(null);
@@ -434,7 +443,7 @@ export default function Map() {
   const [showSuggestion, setShowSuggestion] = useState(false);
   const [commentStation, setCommentStation] = useState<{ name: string; address: string } | null>(null);
   const [currentUser, setCurrentUser] = useState<{ email: string } | null>(null);
-  const [cheapestResults, setCheapestResults] = useState<{ stations: { lat: number; lng: number; price: number; name: string; dist: number }[]; message: string } | null>(null);
+  const [cheapestResults, setCheapestResults] = useState<{ stations: { lat: number; lng: number; price: number; name: string; dist: number; effectivePrice?: number }[]; message: string } | null>(null);
   const [radiusKm, setRadiusKm] = useState(0);
   const [userPos, setUserPos] = useState<[number, number] | null>(null);
   const [showFavorites, setShowFavorites] = useState(false);
@@ -447,6 +456,21 @@ export default function Map() {
   const [showRadiusMenu, setShowRadiusMenu] = useState(false);
   const [onlineCount, setOnlineCount] = useState(0);
   const handleOnlineCount = useCallback((n: number) => setOnlineCount(n), []);
+  const [devPinMode, setDevPinMode] = useState(false);
+  const isDev = process.env.NODE_ENV === "development";
+  const [showEffectiveSettings, setShowEffectiveSettings] = useState(false);
+  const [showRadiusCircle, setShowRadiusCircle] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("eff_showRadius") === "true";
+  });
+  const [consoLper100, setConsoLper100] = useState(() => {
+    if (typeof window === "undefined") return 9;
+    return Number(localStorage.getItem("eff_conso")) || 9;
+  });
+  const [tankVolume, setTankVolume] = useState(() => {
+    if (typeof window === "undefined") return 40;
+    return Number(localStorage.getItem("eff_tank")) || 40;
+  });
 
   useEffect(() => {
     const sb = createBrowserClient();
@@ -587,6 +611,14 @@ export default function Map() {
     );
   }, [data]);
 
+  const autoSearchDone = useRef(false);
+  useEffect(() => {
+    if (autoSearchDone.current || !data || !userPos || !geoReady) return;
+    autoSearchDone.current = true;
+    findBestEffectivePrice();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, userPos, geoReady]);
+
   function handleSearchChange(v: string) {
     setSearch(v);
     const vNorm = normalize(v);
@@ -630,12 +662,13 @@ export default function Map() {
     setBrand(v);
   }
 
-  function findCheapestNearby() {
+
+  function findBestEffectivePrice() {
     if (!data) return;
     if (radiusKm === 0) setRadiusKm(5);
     const doSearch = (latitude: number, longitude: number) => {
       const r = radiusKm > 0 ? radiusKm : 5;
-      const candidates: { lat: number; lng: number; price: number; name: string; dist: number }[] = [];
+      const candidates: { lat: number; lng: number; price: number; name: string; dist: number; effectivePrice: number }[] = [];
       data.features.forEach((f) => {
         const feature = f as Feature<Point, StationProperties>;
         const props = feature.properties;
@@ -644,17 +677,20 @@ export default function Map() {
         if (dist > r) return;
         const p = props.Prices.find((pr) => pr.GasType === gasType && pr.IsAvailable);
         if (!p) return;
-        candidates.push({ lat, lng, price: parsePrice(p.Price), name: props.Name, dist });
+        const price = parsePrice(p.Price);
+        const ep = effectivePrice(price, dist, consoLper100, tankVolume);
+        candidates.push({ lat, lng, price, name: props.Name, dist, effectivePrice: ep });
       });
       if (candidates.length === 0) {
         setCheapestResults({ stations: [], message: `Aucune station trouvée dans un rayon de ${r} km` });
         return;
       }
-      const bestPrice = Math.min(...candidates.map((c) => c.price));
-      const closest = candidates.filter((c) => c.price === bestPrice).sort((a, b) => a.dist - b.dist)[0];
-      const msg = `${closest.name} — ${bestPrice.toFixed(1)}¢ à environ ${closest.dist.toFixed(1)} km`;
-      setCheapestResults({ stations: [closest], message: msg });
-      setFlyTarget({ center: [closest.lat, closest.lng], zoom: 15 });
+      candidates.sort((a, b) => a.effectivePrice - b.effectivePrice);
+      const best = candidates[0];
+      const saving = best.effectivePrice - best.price;
+      const msg = `Selon la distance, le meilleur prix est ${best.name} à ~${best.dist.toFixed(1)} km — ${best.price.toFixed(1)}¢/L (coût réel : ${best.effectivePrice.toFixed(1)}¢/L, +${saving.toFixed(1)}¢ de trajet)`;
+      setCheapestResults({ stations: [best], message: msg });
+      setFlyTarget({ center: [best.lat, best.lng], zoom: 15 });
     };
     if (userPos) {
       doSearch(userPos[0], userPos[1]);
@@ -794,95 +830,123 @@ export default function Map() {
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.2 }}
               >
-                <div>
-                  <Button
-                    variant={cheapestResults ? "outline" : "default"}
-                    size="sm"
-                    className={`map-panel-btn w-full shadow-md font-semibold text-[13px] ${!cheapestResults ? "!bg-[#2d9a2d] hover:!bg-[#2d9a2d]/90 !text-white" : "!bg-[var(--bg-panel)] !text-[var(--text)]"}`}
-                    onClick={() => { if (cheapestResults) { setCheapestResults(null); setRadiusKm(0); } else findCheapestNearby(); }}
-                  >
-                    <Trophy className="size-3.5" />
-                    <span className="map-btn-label">{cheapestResults ? "Masquer" : "Meilleur prix proche"}</span>
-                  </Button>
+                <div className="flex flex-col gap-1">
+                  <div className="flex gap-0.5">
+                    <Button
+                      variant={cheapestResults ? "outline" : "default"}
+                      size="sm"
+                      className={`map-panel-btn flex-1 shadow-md font-semibold text-[13px] !rounded-r-none ${cheapestResults ? "!bg-[var(--bg-panel)] !text-[var(--text)]" : "!bg-[#2d9a2d] hover:!bg-[#2d9a2d]/90 !text-white"}`}
+                      onClick={() => { if (cheapestResults) { setCheapestResults(null); setRadiusKm(0); } else { findBestEffectivePrice(); } }}
+                    >
+                      <Trophy className="size-4" />
+                      <span className="map-btn-label">{cheapestResults ? "Masquer" : "Meilleur prix"}</span>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={`map-panel-btn shadow-md !rounded-l-none !px-2 ${showEffectiveSettings ? "!bg-[#2d7a9a] !text-white" : "!bg-[var(--bg-panel)] !text-[var(--text)] !border-0"}`}
+                      onClick={() => setShowEffectiveSettings((v) => !v)}
+                    >
+                      <Settings className="size-4" />
+                    </Button>
+                  </div>
+                  <AnimatePresence>
+                    {showEffectiveSettings && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="bg-[var(--bg-panel)] rounded-md shadow-md px-3 py-2 overflow-hidden"
+                      >
+                        <div className="text-xs font-semibold mb-2">Réglages</div>
+                        <div className="mb-2">
+                          <div className="text-[11px] text-[var(--text-muted)] mb-1">Rayon : {radiusKm === 0 ? "Tout" : `${radiusKm} km`}</div>
+                          <Slider
+                            min={0}
+                            max={50}
+                            step={5}
+                            value={[radiusKm]}
+                            onValueChange={(v) => setRadiusKm(Array.isArray(v) ? v[0] : v)}
+                            className="w-full"
+                          />
+                        </div>
+                        <div className="mb-2">
+                          <div className="text-[11px] text-[var(--text-muted)] mb-1">Consommation : {consoLper100} L/100km</div>
+                          <Slider
+                            min={4}
+                            max={20}
+                            step={0.5}
+                            value={[consoLper100]}
+                            onValueChange={(v) => { const val = Array.isArray(v) ? v[0] : v; setConsoLper100(val); localStorage.setItem("eff_conso", String(val)); }}
+                            className="w-full"
+                          />
+                        </div>
+                        <div className="mb-2">
+                          <div className="text-[11px] text-[var(--text-muted)] mb-1">Réservoir : {tankVolume} L</div>
+                          <Slider
+                            min={15}
+                            max={100}
+                            step={5}
+                            value={[tankVolume]}
+                            onValueChange={(v) => { const val = Array.isArray(v) ? v[0] : v; setTankVolume(val); localStorage.setItem("eff_tank", String(val)); }}
+                            className="w-full"
+                          />
+                        </div>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={showRadiusCircle}
+                            onChange={(e) => { setShowRadiusCircle(e.target.checked); localStorage.setItem("eff_showRadius", String(e.target.checked)); }}
+                            className="accent-[#4285f4] w-3.5 h-3.5"
+                          />
+                          <span className="text-[11px] text-[var(--text-muted)]">Afficher le cercle du rayon</span>
+                        </label>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
-                <Button variant="outline" size="sm" className="map-panel-btn w-full shadow-md !bg-[var(--bg-panel)] !text-[var(--text)] !border-0 font-semibold text-[13px]" onClick={() => { setShowCityPanel(false); setShowRegionPanel((v) => !v); }}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={`map-panel-btn w-full shadow-md !border-0 font-semibold text-[13px] ${showPricePanel ? "!bg-[#457b9d] !text-white" : "!bg-[var(--bg-panel)] !text-[var(--text)]"}`}
+                  onClick={() => setShowPricePanel((v) => !v)}
+                >
                   <BarChart3 className="size-3.5" />
-                  <span className="map-btn-label">Prix par région</span>
-                </Button>
-                <Button variant="outline" size="sm" className="map-panel-btn w-full shadow-md !bg-[var(--bg-panel)] !text-[var(--text)] !border-0 font-semibold text-[13px]" onClick={() => { setShowRegionPanel(false); setShowCityPanel((v) => !v); }}>
-                  <Building2 className="size-3.5" />
-                  <span className="map-btn-label">Prix par ville</span>
+                  <span className="map-btn-label">Prix moyens</span>
                 </Button>
                 <Button variant="outline" size="sm" className="map-panel-btn w-full shadow-md !bg-[var(--bg-panel)] !text-[var(--text)] !border-0 font-semibold text-[13px]" onClick={shareLink}>
                   <Share2 className="size-3.5" />
                   <span className="map-btn-label">Partager</span>
                 </Button>
-                <div className="flex gap-1.5">
-                  <Button variant="outline" size="sm" className={`map-panel-btn flex-1 shadow-md !border-0 font-semibold text-[13px] ${mapStyle === "satellite" ? "!bg-[#457b9d] !text-white" : "!bg-[var(--bg-panel)] !text-[var(--text)]"}`} onClick={() => setMapStyle(mapStyle === "satellite" ? "carte" : "satellite")}>
-                    <Satellite className="size-3.5" />
-                    <span className="map-btn-label">Satellite</span>
-                  </Button>
-                  <Button variant="outline" size="sm" className={`map-panel-btn flex-1 shadow-md !border-0 font-semibold text-[13px] ${mapStyle === "dark" ? "!bg-[#1a1a2e] !text-white" : "!bg-[var(--bg-panel)] !text-[var(--text)]"}`} onClick={() => setMapStyle(mapStyle === "dark" ? "carte" : "dark")}>
-                    <Moon className="size-3.5" />
-                    <span className="map-btn-label">Dark</span>
-                  </Button>
-                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={`map-panel-btn w-full shadow-md !border-0 font-semibold text-[13px] ${mapStyle !== "carte" ? "!bg-[#457b9d] !text-white" : "!bg-[var(--bg-panel)] !text-[var(--text)]"}`}
+                  onClick={() => {
+                    const styles = ["carte", "satellite", "dark"] as const;
+                    const idx = styles.indexOf(mapStyle as typeof styles[number]);
+                    setMapStyle(styles[(idx + 1) % styles.length]);
+                  }}
+                >
+                  {mapStyle === "satellite" ? <Satellite className="size-3.5" /> : mapStyle === "dark" ? <Moon className="size-3.5" /> : <MapIcon className="size-3.5" />}
+                  <span className="map-btn-label">{mapStyle === "carte" ? "Carte" : mapStyle === "satellite" ? "Satellite" : "Dark"}</span>
+                </Button>
                 <Button variant="outline" size="sm" className={`map-panel-btn map-panel-btn-wide w-full shadow-md font-semibold text-[13px] ${showCursors ? "!bg-[#457b9d] !text-white" : "!bg-[var(--bg-panel)] !text-[var(--text)]"} !border-0`} onClick={() => setShowCursors((v) => !v)}>
                   <Users className="size-3.5" />
                   <span className="map-btn-count">{onlineCount}</span>
                   <span className="map-btn-label">{showCursors ? `En ligne (${onlineCount})` : `Visiteurs en ligne (${onlineCount})`}</span>
                 </Button>
-                {/* Rayon : slider desktop, menu mobile */}
-                {userPos && (
-                  <>
-                    <div className="map-panel-widget map-radius-desktop bg-[var(--bg-panel)] rounded-md shadow-md px-3 py-2">
-                      <div className="text-xs font-semibold mb-1">
-                        Rayon : {radiusKm === 0 ? "Tout" : `${radiusKm} km`}
-                      </div>
-                      <Slider
-                        min={0}
-                        max={50}
-                        step={5}
-                        value={[radiusKm]}
-                        onValueChange={(v) => setRadiusKm(Array.isArray(v) ? v[0] : v)}
-                        className="w-full"
-                      />
-                    </div>
-                    <div className="map-radius-mobile relative">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className={`map-panel-btn w-full shadow-md !border-0 font-semibold text-[13px] ${radiusKm > 0 ? "!bg-[#457b9d] !text-white" : "!bg-[var(--bg-panel)] !text-[var(--text)]"}`}
-                        onClick={() => setShowRadiusMenu((v) => !v)}
-                      >
-                        <Locate className="size-3.5" />
-                        <span className="map-btn-label">Rayon</span>
-                      </Button>
-                      <AnimatePresence>
-                        {showRadiusMenu && (
-                          <motion.div
-                            className="absolute left-[calc(100%+6px)] top-0 bg-[var(--bg-panel)] rounded-lg shadow-lg border border-[var(--divider)] p-1.5 grid grid-cols-3 gap-1 z-10"
-                            style={{ width: 120 }}
-                            initial={{ opacity: 0, x: -8 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: -8 }}
-                            transition={{ duration: 0.15 }}
-                          >
-                            {[0, 5, 10, 15, 20, 30, 50].map((km) => (
-                              <button
-                                key={km}
-                                className={`rounded px-1 py-1 text-[11px] font-semibold transition-colors ${radiusKm === km ? "bg-[#457b9d] text-white" : "text-[var(--text)] hover:bg-[var(--bg-hover)]"}`}
-                                onClick={() => { setRadiusKm(km); setShowRadiusMenu(false); }}
-                                style={{ border: "none", cursor: "pointer", background: radiusKm === km ? "#457b9d" : "transparent" }}
-                              >
-                                {km === 0 ? "Tout" : `${km}km`}
-                              </button>
-                            ))}
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  </>
+                {isDev && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={`map-panel-btn w-full shadow-md !border-0 font-semibold text-[13px] ${devPinMode ? "!bg-[#e63946] !text-white" : "!bg-[var(--bg-panel)] !text-[var(--text)]"}`}
+                    onClick={() => setDevPinMode((v) => !v)}
+                  >
+                    <MapPin className="size-3.5" />
+                    <span className="map-btn-label">{devPinMode ? "Cliquer sur la carte..." : "DEV: Simuler position"}</span>
+                  </Button>
                 )}
                 {/* Jauge prix : desktop horizontal inline */}
                 <div className="map-panel-widget map-legend-desktop bg-[var(--bg-panel)] rounded-md shadow-md px-3 py-2">
@@ -907,15 +971,34 @@ export default function Map() {
           )}
         </div>
         <AttributionControl position="bottomleft" />
-        {userPos && radiusKm > 0 && (
-          <Circle
-            center={userPos}
-            radius={radiusKm * 1000}
-            pathOptions={{ color: "#4285f4", fillColor: "#4285f4", fillOpacity: 0.08, weight: 2 }}
-          />
+        {userPos && (
+          <>
+            <Marker
+              position={userPos}
+              icon={L.divIcon({
+                html: `<div class="user-pos-marker"><div class="user-pos-pulse"></div><div class="user-pos-dot"></div></div>`,
+                className: "",
+                iconSize: [40, 40],
+                iconAnchor: [20, 20],
+              })}
+            />
+            {radiusKm > 0 && showRadiusCircle && (
+              <Circle
+                center={userPos}
+                radius={radiusKm * 1000}
+                pathOptions={{ color: "#4285f4", fillColor: "#4285f4", fillOpacity: 0.08, weight: 2 }}
+              />
+            )}
+          </>
         )}
         <LiveCursors showCursors={showCursors} onOnlineCount={handleOnlineCount} />
         {flyTarget && <FlyTo center={flyTarget.center} zoom={flyTarget.zoom} />}
+        {devPinMode && (
+          <DevClickHandler onPin={(lat, lng) => {
+            setUserPos([lat, lng]);
+            setDevPinMode(false);
+          }} />
+        )}
         <AnimatePresence>
           {(!data || !geoReady) && (
             <motion.div
@@ -929,12 +1012,19 @@ export default function Map() {
           )}
         </AnimatePresence>
         {filtered && geoReady && <StationsLayer gasType={gasType} data={filtered} priceMin={priceMin} priceMax={priceMax} hasFilter={!!(search || region || brand || showFavorites || radiusKm > 0)} />}
+        {userPos && cheapestResults?.stations.map((s, i) => (
+          <Polyline
+            key={`cheapest-line-${i}`}
+            positions={[userPos, [s.lat, s.lng]]}
+            pathOptions={{ color: "#2d9a2d", weight: 3, opacity: 0.7, dashArray: "8 6" }}
+          />
+        ))}
         {cheapestResults?.stations.map((s, i) => (
           <Marker
             key={`cheapest-${i}`}
             position={[s.lat, s.lng]}
             icon={L.divIcon({
-              html: `<div class="cheapest-pulse"><div class="cheapest-label">${s.price.toFixed(1)}¢<br><small>${s.name}</small><br><small>~${s.dist.toFixed(1)} km</small></div></div>`,
+              html: `<div class="cheapest-pulse"><div class="cheapest-label">${s.name}<br><small>~${s.dist.toFixed(1)} km</small></div></div>`,
               className: "",
               iconSize: [140, 70],
               iconAnchor: [70, 35],
@@ -943,19 +1033,11 @@ export default function Map() {
         ))}
       </MapContainer>
       {data && (
-        <RegionPricePanel
+        <PricePanel
           data={data}
           gasType={gasType}
-          visible={showRegionPanel}
-          onClose={() => setShowRegionPanel(false)}
-        />
-      )}
-      {data && (
-        <CityPricePanel
-          data={data}
-          gasType={gasType}
-          visible={showCityPanel}
-          onClose={() => setShowCityPanel(false)}
+          visible={showPricePanel}
+          onClose={() => setShowPricePanel(false)}
         />
       )}
       <AnimatePresence>

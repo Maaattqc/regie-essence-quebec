@@ -3,9 +3,10 @@ import * as Sentry from "@sentry/nextjs";
 Sentry.init({
   dsn: process.env.SENTRY_DSN ?? process.env.NEXT_PUBLIC_SENTRY_DSN,
   environment: process.env.NODE_ENV,
+  enabled: process.env.NODE_ENV === "production",
 
   sendDefaultPii: false,
-  tracesSampleRate: process.env.NODE_ENV === "development" ? 1.0 : 0.1,
+  tracesSampleRate: 0.1,
 
   // Attache les valeurs des variables locales aux stack frames
   includeLocalVariables: true,

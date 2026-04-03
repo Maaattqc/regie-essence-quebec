@@ -22,6 +22,12 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+
+function escapeHtml(text: string): string {
+  const map: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" };
+  return text.replace(/[&<>"']/g, (m) => map[m]);
+}
+
 import {
   Users,
   BarChart3,
@@ -500,13 +506,13 @@ function RapportsPanel({ stats, token }: { stats: Stats | null; token: string | 
     if (reportData) {
       printWindow.document.write(`<h2>Top 10 stations les moins chères (Ordinaire)</h2>
       <table><tr><th>#</th><th>Station</th><th>Adresse</th><th>Prix</th></tr>
-        ${reportData.topStations.map((s, i) => `<tr><td>${i + 1}</td><td>${s.name}</td><td>${s.address}</td><td>${s.price.toFixed(1)}¢</td></tr>`).join("")}
+        ${reportData.topStations.map((s, i) => `<tr><td>${i + 1}</td><td>${escapeHtml(s.name)}</td><td>${escapeHtml(s.address)}</td><td>${s.price.toFixed(1)}¢</td></tr>`).join("")}
       </table>`);
 
       if (reportData.regions.length > 0) {
         printWindow.document.write(`<h2>Prix par ville (Ordinaire)</h2>
         <table><tr><th>Ville</th><th>Stations</th><th>Moy.</th><th>Min</th><th>Max</th></tr>
-          ${reportData.regions.slice(0, 30).map((r) => `<tr><td>${r.region}</td><td>${r.count}</td><td>${r.avg.toFixed(1)}¢</td><td>${r.min.toFixed(1)}¢</td><td>${r.max.toFixed(1)}¢</td></tr>`).join("")}
+          ${reportData.regions.slice(0, 30).map((r) => `<tr><td>${escapeHtml(r.region)}</td><td>${r.count}</td><td>${r.avg.toFixed(1)}¢</td><td>${r.min.toFixed(1)}¢</td><td>${r.max.toFixed(1)}¢</td></tr>`).join("")}
         </table>`);
       }
     }

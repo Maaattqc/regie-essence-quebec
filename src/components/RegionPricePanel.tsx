@@ -18,11 +18,13 @@ const RegionPricePanel = memo(function RegionPricePanel({
   gasType: mapGasType,
   visible,
   onClose,
+  onSwitchView,
 }: {
   data: GeoJSON.FeatureCollection;
   gasType: GasTypeKey;
   visible: boolean;
   onClose: () => void;
+  onSwitchView?: () => void;
 }) {
   const [activeType, setActiveType] = useState<GasTypeKey>(mapGasType);
 
@@ -96,11 +98,17 @@ const RegionPricePanel = memo(function RegionPricePanel({
             {/* Header */}
             <div className="mb-3 flex items-start justify-between gap-2">
               <div>
-                <div className="text-[15px] font-bold">Prix par région</div>
+                <div className="text-[15px] font-bold">Prix moyens</div>
                 <div className="text-[11px] text-[var(--text-muted)]">{stats.entries.length} régions · {stats.entries.reduce((s, e) => s + e.count, 0)} stations</div>
               </div>
               <Button variant="ghost" size="icon-xs" onClick={onClose}><X className="size-3.5" /></Button>
             </div>
+            {onSwitchView && (
+              <div className="flex gap-1 mb-3 p-0.5 bg-[var(--bg-hover)] rounded-lg">
+                <button className="flex-1 py-1 px-2 rounded-md text-[12px] font-semibold bg-[#457b9d] text-white">Par région</button>
+                <button className="flex-1 py-1 px-2 rounded-md text-[12px] font-semibold text-[var(--text-secondary)] bg-transparent" onClick={onSwitchView}>Par ville</button>
+              </div>
+            )}
 
             {/* Gas type tabs */}
             <div className="flex gap-1 mb-4 p-0.5 bg-[var(--bg-hover)] rounded-lg">

@@ -96,6 +96,11 @@ export function distanceKm(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+/** Prix effectif incluant le coût du trajet aller-retour. */
+export function effectivePrice(price: number, distKm: number, consoLper100: number, tankVolume: number): number {
+  return price * (1 + (2 * distKm * consoLper100) / (100 * tankVolume));
+}
+
 export function normalize(s: string): string {
   return s
     .normalize("NFD")
