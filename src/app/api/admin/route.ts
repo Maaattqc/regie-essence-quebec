@@ -39,6 +39,90 @@ export async function GET(req: NextRequest) {
 
   const type = req.nextUrl.searchParams.get("type");
 
+  // ── Init : tout charger en une seule requête ──
+  if (type === "init") {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+    const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7).toISOString();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+    const [
+      { count: totalSnapshots },
+      { data: latest },
+      { count: totalReports },
+      { count: totalUsers },
+      { count: totalPageViews },
+      { count: todayPageViews },
+      { count: weekPageViews },
+      { count: monthPageViews },
+      { data: profiles },
+      { data: reportsData },
+      { data: suggestionsData },
+      avgsResult,
+    ] = await Promise.all([
+      supabaseAdmin.from("price_snapshots").select("*", { count: "estimated", head: true }),
+      supabaseAdmin.from("price_snapshots").select("snapshot_at").order("snapshot_at", { ascending: false }).limit(1),
+      supabaseAdmin.from("reports").select("*", { count: "exact", head: true }),
+      supabaseAdmin.from("profiles").select("*", { count: "exact", head: true }),
+      supabaseAdmin.from("page_views").select("*", { count: "exact", head: true }),
+      supabaseAdmin.from("page_views").select("*", { count: "exact", head: true }).gte("created_at", todayStart),
+      supabaseAdmin.from("page_views").select("*", { count: "exact", head: true }).gte("created_at", weekStart),
+      supabaseAdmin.from("page_views").select("*", { count: "exact", head: true }).gte("created_at", monthStart),
+      supabaseAdmin.from("profiles").select("*").order("created_at", { ascending: false }).limit(200),
+      supabaseAdmin.from("reports").select("*").order("created_at", { ascending: false }).limit(500),
+      supabaseAdmin.from("suggestions").select("*").order("created_at", { ascending: false }).limit(500),
+      supabaseAdmin.rpc("get_avg_prices").catch(() => ({ data: null })),
+    ]);
+
+    const avgs = avgsResult?.data ?? null;
+
+    // Enrichir les profils avec les emails
+    const profileList = profiles || [];
+    const enrichedUsers: Record<string, unknown>[] = [];
+    const UBATCH = 10;
+    for (let i = 0; i < profileList.length; i += UBATCH) {
+      const batch = profileList.slice(i, i + UBATCH);
+      const results = await Promise.all(
+        batch.map(async (p: Record<string, unknown>) => {
+          try {
+            const { data: { user: authUser } } = await supabaseAdmin.auth.admin.getUserById(p.id as string);
+            const email = authUser?.email ?? (p.email as string) ?? "";
+            return { ...p, email: isAdmin ? email : maskEmail(email) };
+          } catch {
+            return { ...p, email: isAdmin ? ((p.email as string) ?? "") : "***@***" };
+          }
+        })
+      );
+      enrichedUsers.push(...results);
+    }
+
+    const reports = (reportsData ?? []).map((r: Record<string, unknown>) =>
+      isAdmin ? r : { ...r, email: typeof r.email === "string" ? maskEmail(r.email) : "***", first_name: typeof r.first_name === "string" ? maskName(r.first_name) : "***", last_name: typeof r.last_name === "string" ? maskName(r.last_name) : "***" }
+    );
+    const suggestions = (suggestionsData ?? []).map((s: Record<string, unknown>) =>
+      isAdmin ? s : { ...s, email: typeof s.email === "string" ? maskEmail(s.email) : "***", first_name: typeof s.first_name === "string" ? maskName(s.first_name) : "***", last_name: typeof s.last_name === "string" ? maskName(s.last_name) : "***" }
+    );
+
+    return NextResponse.json({
+      stats: {
+        totalSnapshots: totalSnapshots ?? 0,
+        lastSnapshot: latest?.[0]?.snapshot_at ?? "Aucun",
+        totalReports: totalReports ?? 0,
+        totalUsers: totalUsers ?? 0,
+        avgRegulier: avgs?.regulier ?? 0,
+        avgSuper: avgs?.super ?? 0,
+        avgDiesel: avgs?.diesel ?? 0,
+        totalPageViews: totalPageViews ?? 0,
+        todayPageViews: todayPageViews ?? 0,
+        weekPageViews: weekPageViews ?? 0,
+        monthPageViews: monthPageViews ?? 0,
+      },
+      users: enrichedUsers,
+      reports,
+      suggestions,
+    });
+  }
+
   if (type === "stats") {
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
