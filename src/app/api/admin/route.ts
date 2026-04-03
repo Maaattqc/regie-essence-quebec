@@ -259,7 +259,15 @@ export async function GET(req: NextRequest) {
       .limit(limit);
     if (category) query = query.eq("category", category);
     const { data } = await query;
-    return NextResponse.json(data ?? []);
+    if (isAdmin) return NextResponse.json(data ?? []);
+    // Masquer les emails dans le champ detail pour les non-admin
+    const masked = (data ?? []).map((log: Record<string, unknown>) => ({
+      ...log,
+      detail: typeof log.detail === "string" && log.detail.includes("@")
+        ? maskEmail(log.detail)
+        : log.detail,
+    }));
+    return NextResponse.json(masked);
   }
 
   if (type === "alerts") {
