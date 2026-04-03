@@ -274,10 +274,13 @@ body {
   .gov-bar-2 .nb-select { width: 100%; min-width: 0; }
   /* Chips visibles sur tout mobile */
   .nb-filter-chip { display: flex; }
-  /* Forcer texte blanc dans barre 2 (override shadcn/Tailwind) */
-  .gov-bar-2 .nb-input { color: #fff !important; }
-  .gov-bar-2 .nb-input::placeholder { color: rgba(255,255,255,0.5) !important; }
-  .gov-bar-2 .nb-select { color: #fff !important; }
+  /* Texte noir dans barre 2 (fond transparent) */
+  .gov-bar-2 .nb-input { color: var(--text) !important; border-color: rgba(0,0,0,0.2) !important; background: rgba(0,0,0,0.05) !important; }
+  .gov-bar-2 .nb-input::placeholder { color: var(--text-muted) !important; }
+  .gov-bar-2 .nb-select { color: var(--text) !important; border-color: rgba(0,0,0,0.2) !important; background: rgba(0,0,0,0.05) !important; }
+  .gov-bar-2 .nb-select-icon-left,
+  .gov-bar-2 .nb-select-icon-right,
+  .gov-bar-2 .nb-input-icon { color: var(--text-muted) !important; }
   .legend {
     top: auto;
     bottom: 4.5rem;
