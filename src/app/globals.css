@@ -309,8 +309,8 @@ body {
   .map-buttons-panel {
     width: 46px !important;
     bottom: auto !important;
-    top: 50%;
-    transform: translateY(-50%);
+    top: 5rem;
+    transform: none;
     max-height: calc(100dvh - 7.5rem);
     overflow: visible !important;
     gap: 4px;
@@ -419,8 +419,8 @@ body {
     width: 42px !important;
     left: 4px !important;
     bottom: auto !important;
-    top: 50%;
-    transform: translateY(-50%);
+    top: 4.5rem;
+    transform: none;
     gap: 3px;
     max-height: calc(100dvh - 6.5rem);
   }
