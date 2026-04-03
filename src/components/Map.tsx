@@ -1039,8 +1039,8 @@ export default function Map() {
             icon={L.divIcon({
               html: `<div class="cheapest-pulse"><div class="cheapest-label">${s.name}<br><small>~${s.dist.toFixed(1)} km</small></div></div>`,
               className: "",
-              iconSize: [140, 70],
-              iconAnchor: [70, 35],
+              iconSize: [20, 20],
+              iconAnchor: [10, 20],
             })}
           />
         ))}
