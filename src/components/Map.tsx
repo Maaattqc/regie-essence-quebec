@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import {
   X, Share2, BarChart3, Building2, Crosshair, Users, ChevronLeft, ChevronRight,
+  Trophy, Satellite, Moon,
 } from "lucide-react";
 import FilterBar from "@/components/FilterBar";
 import { createBrowserClient } from "@/lib/auth";
@@ -799,8 +800,8 @@ export default function Map() {
                     className={`map-panel-btn w-full shadow-md font-semibold text-[13px] ${!cheapestResults ? "!bg-[#2d9a2d] hover:!bg-[#2d9a2d]/90 !text-white" : "!bg-[var(--bg-panel)] !text-[var(--text)]"}`}
                     onClick={() => { if (cheapestResults) { setCheapestResults(null); setRadiusKm(0); } else findCheapestNearby(); }}
                   >
-                    <Crosshair className="size-3.5" />
-                    {cheapestResults ? "Masquer" : "Meilleur prix proche"}
+                    <Trophy className="size-3.5" />
+                    <span className="map-btn-label">{cheapestResults ? "Masquer" : "Meilleur prix proche"}</span>
                   </Button>
                   <AnimatePresence>
                     {cheapestResults?.message && (
@@ -817,27 +818,29 @@ export default function Map() {
                 </div>
                 <Button variant="outline" size="sm" className="map-panel-btn w-full shadow-md !bg-[var(--bg-panel)] !text-[var(--text)] !border-0 font-semibold text-[13px]" onClick={() => { setShowCityPanel(false); setShowRegionPanel((v) => !v); }}>
                   <BarChart3 className="size-3.5" />
-                  Prix par région
+                  <span className="map-btn-label">Prix par région</span>
                 </Button>
                 <Button variant="outline" size="sm" className="map-panel-btn w-full shadow-md !bg-[var(--bg-panel)] !text-[var(--text)] !border-0 font-semibold text-[13px]" onClick={() => { setShowRegionPanel(false); setShowCityPanel((v) => !v); }}>
                   <Building2 className="size-3.5" />
-                  Prix par ville
+                  <span className="map-btn-label">Prix par ville</span>
                 </Button>
                 <Button variant="outline" size="sm" className="map-panel-btn w-full shadow-md !bg-[var(--bg-panel)] !text-[var(--text)] !border-0 font-semibold text-[13px]" onClick={shareLink}>
                   <Share2 className="size-3.5" />
-                  Partager
+                  <span className="map-btn-label">Partager</span>
                 </Button>
                 <div className="flex gap-1.5">
                   <Button variant="outline" size="sm" className={`map-panel-btn flex-1 shadow-md !border-0 font-semibold text-[13px] ${mapStyle === "satellite" ? "!bg-[#457b9d] !text-white" : "!bg-[var(--bg-panel)] !text-[var(--text)]"}`} onClick={() => setMapStyle(mapStyle === "satellite" ? "carte" : "satellite")}>
-                    Satellite
+                    <Satellite className="size-3.5" />
+                    <span className="map-btn-label">Satellite</span>
                   </Button>
                   <Button variant="outline" size="sm" className={`map-panel-btn flex-1 shadow-md !border-0 font-semibold text-[13px] ${mapStyle === "dark" ? "!bg-[#1a1a2e] !text-white" : "!bg-[var(--bg-panel)] !text-[var(--text)]"}`} onClick={() => setMapStyle(mapStyle === "dark" ? "carte" : "dark")}>
-                    Carte Dark
+                    <Moon className="size-3.5" />
+                    <span className="map-btn-label">Dark</span>
                   </Button>
                 </div>
                 <Button variant="outline" size="sm" className={`map-panel-btn w-full shadow-md font-semibold text-[13px] ${showCursors ? "!bg-[#457b9d] !text-white" : "!bg-[var(--bg-panel)] !text-[var(--text)]"} !border-0`} onClick={() => setShowCursors((v) => !v)}>
                   <Users className="size-3.5" />
-                  {showCursors ? `En ligne (${onlineCount})` : "Visiteurs en ligne"}
+                  <span className="map-btn-label">{showCursors ? `En ligne (${onlineCount})` : "Visiteurs en ligne"}</span>
                 </Button>
                 {userPos && (
                   <div className="map-panel-widget bg-[var(--bg-panel)] rounded-md shadow-md px-3 py-2">

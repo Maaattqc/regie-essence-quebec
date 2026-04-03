@@ -309,6 +309,7 @@ body {
     scrollbar-width: none;
   }
   .map-buttons-panel::-webkit-scrollbar { display: none; }
+  .map-btn-label { display: none !important; }
   .map-panel-btn {
     background: transparent !important;
     box-shadow: none !important;
