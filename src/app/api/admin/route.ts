@@ -39,6 +39,11 @@ export async function GET(req: NextRequest) {
 
   const type = req.nextUrl.searchParams.get("type");
 
+  // ── Me : statut admin de l'utilisateur courant ──
+  if (type === "me") {
+    return NextResponse.json({ isAdmin });
+  }
+
   // ── Init : tout charger en une seule requête ──
   if (type === "init") {
     const now = new Date();
@@ -404,6 +409,9 @@ export async function PATCH(req: NextRequest) {
   if (body.action === "suggestion_status") {
     const { id, status, admin_comment } = body;
     if (!id || !status) return NextResponse.json({ error: "id et status requis" }, { status: 400 });
+    if (admin_comment !== undefined && (typeof admin_comment !== "string" || admin_comment.length > 1000)) {
+      return NextResponse.json({ error: "admin_comment invalide" }, { status: 400 });
+    }
     const update: Record<string, unknown> = { status };
     if (admin_comment !== undefined) update.admin_comment = admin_comment;
     await supabaseAdmin.from("suggestions").update(update).eq("id", id);
@@ -414,6 +422,9 @@ export async function PATCH(req: NextRequest) {
   if (body.action === "report_comment") {
     const { id, admin_comment } = body;
     if (!id) return NextResponse.json({ error: "id requis" }, { status: 400 });
+    if (admin_comment !== undefined && (typeof admin_comment !== "string" || admin_comment.length > 1000)) {
+      return NextResponse.json({ error: "admin_comment invalide" }, { status: 400 });
+    }
     await supabaseAdmin.from("reports").update({ admin_comment }).eq("id", id);
     await logActivity("admin", `Commentaire signalement #${id}`, admin_comment ?? undefined, { reportId: id, by: user.email });
     return NextResponse.json({ ok: true });

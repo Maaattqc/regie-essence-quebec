@@ -1,8 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { rateLimit, getIP } from "@/lib/rateLimit";
+import { z } from "zod";
 
 const MAPBOX_TOKEN = process.env.MAPBOX_TOKEN ?? "";
 const MAPBOX_BASE = "https://api.mapbox.com";
+
+const bodySchema = z.union([
+  z.object({ type: z.literal("matrix"), coords: z.string().max(2000) }),
+  z.object({
+    type: z.literal("directions"),
+    origin: z.tuple([z.number(), z.number()]),
+    destination: z.tuple([z.number(), z.number()]),
+  }),
+]);
 
 // Proxy Mapbox Matrix API (distances multi-destinations)
 export async function POST(request: NextRequest) {
@@ -10,7 +20,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Trop de requêtes" }, { status: 429 });
   }
 
-  const { type, coords, origin, destination } = await request.json();
+  const parsed = bodySchema.safeParse(await request.json());
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Paramètres invalides" }, { status: 400 });
+  }
+  const { type, ...rest } = parsed.data;
+  const coords = "coords" in rest ? rest.coords : undefined;
+  const origin = "origin" in rest ? rest.origin : undefined;
+  const destination = "destination" in rest ? rest.destination : undefined;
 
   try {
     if (type === "matrix") {

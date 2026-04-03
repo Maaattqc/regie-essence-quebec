@@ -836,9 +836,14 @@ export default function AdminPage() {
       const { data: { session } } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
       setToken(session?.access_token ?? null);
-      if (session?.user) {
-        const adminEmails = (process.env.ADMIN_EMAILS || "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
-        setIsAdmin(!!session.user.email && adminEmails.includes(session.user.email.toLowerCase()));
+      if (session?.access_token) {
+        const res = await fetch("/api/admin?type=me", {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        if (res.ok) {
+          const { isAdmin: adminStatus } = await res.json();
+          setIsAdmin(!!adminStatus);
+        }
       }
       setLoading(false);
     }

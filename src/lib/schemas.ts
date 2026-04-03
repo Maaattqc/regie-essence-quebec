@@ -3,19 +3,24 @@ import { z } from "zod";
 export const reportSchema = z.object({
   station_name: z
     .string()
-    .min(1, "Le nom de la station est requis"),
+    .min(1, "Le nom de la station est requis")
+    .max(200),
   address: z
     .string()
-    .min(1, "L'adresse est requise"),
+    .min(1, "L'adresse est requise")
+    .max(300),
   first_name: z
     .string()
-    .min(2, "Le prénom doit contenir au moins 2 caractères"),
+    .min(2, "Le prénom doit contenir au moins 2 caractères")
+    .max(100),
   last_name: z
     .string()
-    .min(2, "Le nom doit contenir au moins 2 caractères"),
+    .min(2, "Le nom doit contenir au moins 2 caractères")
+    .max(100),
   email: z
     .string()
-    .email("L'adresse courriel est invalide"),
+    .email("L'adresse courriel est invalide")
+    .max(254),
   message: z
     .string()
     .min(10, "Le message doit contenir au moins 10 caractères")
@@ -42,13 +47,16 @@ export const voteSchema = z.object({
 export const suggestionSchema = z.object({
   first_name: z
     .string()
-    .min(2, "Le prénom doit contenir au moins 2 caractères"),
+    .min(2, "Le prénom doit contenir au moins 2 caractères")
+    .max(100),
   last_name: z
     .string()
-    .min(2, "Le nom doit contenir au moins 2 caractères"),
+    .min(2, "Le nom doit contenir au moins 2 caractères")
+    .max(100),
   email: z
     .string()
-    .email("L'adresse courriel est invalide"),
+    .email("L'adresse courriel est invalide")
+    .max(254),
   message: z
     .string()
     .min(10, "La suggestion doit contenir au moins 10 caractères")

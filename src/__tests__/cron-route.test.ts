@@ -73,6 +73,7 @@ describe('GET /api/cron', () => {
   })
 
   it('met la synchronisation en file et retourne 202', async () => {
+    process.env.CRON_SECRET = 'top-secret'
     const response = await GET(
       new Request('http://localhost/api/cron', {
         headers: {
