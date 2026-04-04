@@ -472,7 +472,7 @@ async function claimStationSync(datasetId: string, reason: SyncReason) {
   return Boolean(data);
 }
 
-async function markStationSyncChecked(
+async function _markStationSyncChecked(
   changes: Partial<StationSyncStateRow> & { updated_at?: string }
 ) {
   const updatedAt = changes.updated_at ?? new Date().toISOString();

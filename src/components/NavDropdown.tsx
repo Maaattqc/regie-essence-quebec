@@ -7,7 +7,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import { Settings, Shield, FileText, Info, Lock, Lightbulb, Sun, Moon, BookOpen, Cpu } from "lucide-react";
+import { Settings, Shield, FileText, Lock, Lightbulb, Sun, Moon, BookOpen, Cpu } from "lucide-react";
 
 export default function NavDropdown({ onChangelogClick, onSuggestionClick }: { onChangelogClick: () => void; onSuggestionClick?: () => void }) {
   const { resolvedTheme, setTheme } = useTheme();
