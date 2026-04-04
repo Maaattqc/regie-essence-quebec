@@ -319,6 +319,7 @@ const PricePanel = memo(function PricePanel({
                       onChange={(e) => setQuery(e.target.value)}
                       placeholder={view === "region" ? "Rechercher une région..." : "Rechercher une ville..."}
                       className="h-8 text-[13px] pl-7"
+                      autoComplete="off"
                     />
                   </div>
                   <Button

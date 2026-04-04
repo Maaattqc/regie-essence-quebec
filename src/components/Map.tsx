@@ -943,9 +943,9 @@ export default function Map() {
                 <div className="flex flex-col gap-1 relative">
                   <div className="flex gap-0.5">
                     <Button
-                      variant={cheapestResults ? "outline" : "default"}
+                      variant={cheapestResults ? "default" : "outline"}
                       size="sm"
-                      className={`map-panel-btn flex-1 shadow-md font-semibold text-[13px] !rounded-r-none ${cheapestResults ? "!bg-[var(--bg-panel)] !text-[var(--text)]" : "!bg-[#2d9a2d] hover:!bg-[#2d9a2d]/90 !text-white"}`}
+                      className={`map-panel-btn flex-1 shadow-md font-semibold text-[13px] !rounded-r-none ${cheapestResults ? "!bg-[#2d9a2d] hover:!bg-[#2d9a2d]/90 !text-white" : "!bg-[var(--bg-panel)] !text-[var(--text)]"}`}
                       onClick={() => { if (cheapestResults) { setCheapestResults(null); setCheapestRoute(null); setRadiusKm(0); } else { findBestEffectivePrice(); } }}
                     >
                       <Trophy className="size-4" />

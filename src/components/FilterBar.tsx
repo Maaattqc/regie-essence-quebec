@@ -84,6 +84,7 @@ function SearchWithSuggestions({
           placeholder="Ville…"
           className="nb-input"
           style={{ paddingRight: input ? 28 : 10 }}
+          autoComplete="off"
         />
         {input && (
           <span className="nb-input-clear" onMouseDown={handleClear}>
