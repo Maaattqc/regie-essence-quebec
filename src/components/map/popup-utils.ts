@@ -30,39 +30,44 @@ export function formatPopup(props: StationProperties, lat: number, lng: number) 
   const btnBase = "border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;padding:7px 4px;display:flex;align-items:center;justify-content:center;gap:4px;flex:1;";
 
   return `
-    <div style="min-width:230px;font-family:system-ui,sans-serif;padding:2px 0">
+    <div style="min-width:230px;font-family:system-ui,sans-serif;padding:2px 0" role="region" aria-label="Station ${esc(props.Name)}">
       <div style="margin-bottom:10px">
-        <div style="font-size:15px;font-weight:700;color:#111;line-height:1.3;margin-bottom:3px">${esc(props.Name)}</div>
+        <h3 style="font-size:15px;font-weight:700;color:#111;line-height:1.3;margin:0 0 3px 0">${esc(props.Name)}</h3>
         <div style="font-size:12px;color:#666;margin-bottom:1px">${esc(props.brand ?? "")} &middot; ${esc(props.Region)}</div>
         <div style="font-size:11.5px;color:#999">${esc(props.Address)}</div>
       </div>
 
-      <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:10px">
+      <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:10px" aria-label="Prix disponibles">
         ${priceChips}
       </div>
 
       <div style="display:flex;gap:5px;margin-bottom:5px">
         <a href="${mapsUrl}" target="_blank" rel="noopener noreferrer"
-          style="${btnBase}background:#4285f4;color:#fff;text-decoration:none;flex:2">
+          style="${btnBase}background:#4285f4;color:#fff;text-decoration:none;flex:2"
+          aria-label="Itinéraire vers ${esc(props.Name)}">
           ${SVG.navigation} Itinéraire
         </a>
         <button onclick="window.__toggleFav('${esc(sid)}')"
-          style="${btnBase}background:${isFav ? "#ff9800" : "#f0f0f0"};color:${isFav ? "#fff" : "#555"}">
+          style="${btnBase}background:${isFav ? "#ff9800" : "#f0f0f0"};color:${isFav ? "#fff" : "#555"}"
+          aria-label="${isFav ? "Retirer des favoris" : "Ajouter aux favoris"}" aria-pressed="${isFav}">
           ${isFav ? SVG.star : SVG.starEmpty} Favori
         </button>
       </div>
 
       <div style="display:flex;gap:5px">
         <button onclick="window.__showHistory('${esc(props.Name)}','${esc(props.Address)}')"
-          style="${btnBase}background:#ede9fe;color:#6d28d9">
+          style="${btnBase}background:#ede9fe;color:#6d28d9"
+          aria-label="Historique des prix de ${esc(props.Name)}">
           ${SVG.barChart} Historique
         </button>
         <button onclick="window.__showReviews('${esc(props.Name)}','${esc(props.Address)}')"
-          style="${btnBase}background:#e0f2fe;color:#0369a1">
+          style="${btnBase}background:#e0f2fe;color:#0369a1"
+          aria-label="Commentaires sur ${esc(props.Name)}">
           ${SVG.messageCircle} Commentaires
         </button>
         <button onclick="window.__showReport('${esc(props.Name)}','${esc(props.Address)}')"
-          style="${btnBase}background:#fee2e2;color:#dc2626">
+          style="${btnBase}background:#fee2e2;color:#dc2626"
+          aria-label="Signaler une inexactitude pour ${esc(props.Name)}">
           ${SVG.flag} Signaler
         </button>
       </div>
