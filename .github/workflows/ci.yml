@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [dev]
   pull_request:
     branches: [main]
 
@@ -37,3 +37,49 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
           SUPABASE_SERVICE_ROLE_KEY: placeholder
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+
+  auto-merge:
+    name: Auto-merge vers main
+    needs: ci
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Créer PR et auto-merge
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Vérifier s'il y a des différences entre dev et main
+          if git diff --quiet origin/main..origin/dev; then
+            echo "Aucune différence, rien à merger"
+            exit 0
+          fi
+
+          # Chercher une PR existante dev → main
+          EXISTING_PR=$(gh pr list --base main --head dev --state open --json number --jq '.[0].number')
+
+          if [ -z "$EXISTING_PR" ]; then
+            # Créer la PR
+            PR_URL=$(gh pr create \
+              --base main \
+              --head dev \
+              --title "Auto-merge: $(git log -1 --format='%s')" \
+              --body "Merge automatique après CI réussi sur \`dev\`.")
+            echo "PR créée: $PR_URL"
+            PR_NUMBER=$(echo "$PR_URL" | grep -oP '\d+$')
+          else
+            echo "PR existante: #$EXISTING_PR"
+            PR_NUMBER=$EXISTING_PR
+          fi
+
+          # Auto-merge
+          gh pr merge "$PR_NUMBER" --merge --auto
