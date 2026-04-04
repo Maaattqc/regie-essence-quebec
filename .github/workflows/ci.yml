@@ -25,7 +25,7 @@ jobs:
         run: npx eslint . --max-warnings 0
 
       - name: TypeScript
-        run: npx tsc --noEmit
+        run: npx tsc --noEmit -p tsconfig.check.json
 
       - name: Tests unitaires
         run: npx vitest run
