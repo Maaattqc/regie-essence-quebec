@@ -919,7 +919,11 @@ export default function Map() {
           }
         />
         <ZoomControl position="bottomright" />
-        <div className="map-buttons-panel flex flex-col gap-1.5 leaflet-control" style={{ position: "absolute", bottom: 30, left: 12, zIndex: 1000, width: 170 }}>
+        <div
+          className="map-buttons-panel flex flex-col gap-1.5 leaflet-control"
+          style={{ position: "absolute", bottom: 30, left: 12, zIndex: 1000, width: 170 }}
+          ref={(el) => { if (el) L.DomEvent.disableClickPropagation(el); }}
+        >
           <button
             className="map-panel-toggle"
             onClick={() => setMapPanelOpen((v) => !v)}
