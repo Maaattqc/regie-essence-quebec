@@ -35,7 +35,7 @@ export default function Home() {
 
           <section aria-labelledby="how-heading">
             <h2 id="how-heading">
-              Comment utiliser la carte interactive des prix d&apos;essence ?
+              Comment utiliser la carte interactive de l&apos;essence ?
             </h2>
             <p>
               La <Link href="/">carte interactive des prix de l&apos;essence</Link> est
@@ -63,10 +63,10 @@ export default function Home() {
 
           <section aria-labelledby="features-heading">
             <h2 id="features-heading">
-              Fonctionnalités de la carte des prix d&apos;essence
+              Fonctionnalités de la carte du carburant au Québec
             </h2>
             <p>
-              Essence Québec offre plusieurs outils pour comparer les prix du
+              Essence Québec offre plusieurs outils pour comparer le coût du
               carburant en temps réel dans toute la province :
             </p>
             <ul>
@@ -99,8 +99,8 @@ export default function Home() {
 
           <section aria-labelledby="save-heading">
             <h2 id="save-heading">
-              Économiser sur l&apos;essence au Québec avec les prix en temps
-              réel
+              Économiser sur l&apos;essence au Québec grâce aux tarifs en
+              temps réel
             </h2>
             <p>
               Les prix du carburant augmentent constamment au Québec. Trouver
@@ -123,7 +123,7 @@ export default function Home() {
 
           <section aria-labelledby="regions-heading">
             <h2 id="regions-heading">
-              Régions couvertes par la carte des prix d&apos;essence au Québec
+              Régions couvertes par la carte de l&apos;essence au Québec
             </h2>
             <p>
               La carte couvre toutes les régions administratives du Québec.
@@ -146,7 +146,7 @@ export default function Home() {
 
           <section aria-labelledby="faq-heading">
             <h2 id="faq-heading">
-              Questions fréquentes sur les prix de l&apos;essence au Québec
+              Questions fréquentes sur l&apos;essence au Québec
             </h2>
 
             <h3>
@@ -204,9 +204,9 @@ export default function Home() {
           </section>
 
           <section aria-labelledby="share-heading">
-            <h2 id="share-heading">Partager la carte des prix d&apos;essence</h2>
+            <h2 id="share-heading">Partager la carte de l&apos;essence</h2>
             <p>
-              Partagez la carte des prix de l&apos;essence au Québec avec vos
+              Partagez notre carte de l&apos;essence au Québec avec vos
               proches :
             </p>
             <ul>
@@ -234,13 +234,16 @@ export default function Home() {
           <nav aria-label="Navigation du site">
             <ul>
               <li>
-                <Link href="/">Carte des prix d&apos;essence au Québec</Link>
+                <Link href="/">Carte interactive de l&apos;essence au Québec</Link>
               </li>
               <li>
                 <Link href="/faq">Questions fréquentes</Link>
               </li>
               <li>
                 <Link href="/a-propos">À propos d&apos;Essence Québec</Link>
+              </li>
+              <li>
+                <Link href="/confidentialite">Politique de confidentialité</Link>
               </li>
               <li>
                 <Link href="/changelog">Historique des mises à jour</Link>

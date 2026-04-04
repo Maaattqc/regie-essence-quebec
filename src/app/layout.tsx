@@ -16,11 +16,11 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Carte des prix d'Essence Québec",
+    default: "Essence Québec — Carte interactive du carburant en temps réel",
     template: "%s | Essence Québec",
   },
   description:
-    "Consultez les prix de l'essence au Québec en temps réel. Comparez les stations-service près de chez vous et économisez sur le carburant.",
+    "Comparez les prix de l'essence et du diesel dans plus de 2 500 stations-service au Québec. Carte interactive mise à jour plusieurs fois par jour avec les données officielles.",
   keywords: [
     "prix essence Québec",
     "carte essence Québec",
@@ -35,17 +35,26 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: "https://essence-quebec.ca",
-    title: "Carte des prix d'Essence Québec",
+    title: "Essence Québec — Carte interactive du carburant en temps réel",
     description:
-      "Consultez les prix de l'essence au Québec en temps réel. Comparez les stations-service près de chez vous et économisez sur le carburant.",
+      "Comparez les prix de l'essence et du diesel dans plus de 2 500 stations-service au Québec. Carte interactive mise à jour plusieurs fois par jour avec les données officielles.",
     locale: "fr_CA",
     siteName: "Essence Québec",
+    images: [
+      {
+        url: "/android-chrome-512x512.png",
+        width: 512,
+        height: 512,
+        alt: "Essence Québec — logo",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Carte des prix d'Essence Québec",
+    title: "Essence Québec — Carte interactive du carburant en temps réel",
     description:
-      "Consultez les prix de l'essence au Québec en temps réel. Comparez les stations-service près de chez vous et économisez.",
+      "Comparez les prix de l'essence et du diesel dans plus de 2 500 stations-service au Québec. Carte interactive avec données officielles.",
+    images: ["/android-chrome-512x512.png"],
   },
   other: {
     "geo.region": "CA-QC",
