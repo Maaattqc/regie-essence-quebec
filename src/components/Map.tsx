@@ -474,6 +474,8 @@ export default function Map() {
   const [devPinMode, setDevPinMode] = useState(false);
   const isDev = process.env.NODE_ENV === "development";
   const [showEffectiveSettings, setShowEffectiveSettings] = useState(false);
+  const settingsPanelRef = useRef<HTMLDivElement>(null);
+  const settingsBtnRef = useRef<HTMLButtonElement>(null);
   const [showRadiusCircle, setShowRadiusCircle] = useState(() => {
     if (typeof window === "undefined") return false;
     return localStorage.getItem("eff_showRadius") === "true";
@@ -486,6 +488,20 @@ export default function Map() {
     if (typeof window === "undefined") return 40;
     return Number(localStorage.getItem("eff_tank")) || 40;
   });
+
+  useEffect(() => {
+    if (!showEffectiveSettings) return;
+    function handlePointerDown(e: PointerEvent) {
+      if (
+        settingsPanelRef.current && !settingsPanelRef.current.contains(e.target as Node) &&
+        (!settingsBtnRef.current || !settingsBtnRef.current.contains(e.target as Node))
+      ) {
+        setShowEffectiveSettings(false);
+      }
+    }
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [showEffectiveSettings]);
 
   useEffect(() => {
     const sb = createBrowserClient();
@@ -932,6 +948,7 @@ export default function Map() {
                       <span className="map-btn-label">{cheapestResults ? "Masquer" : "Meilleur prix"}</span>
                     </Button>
                     <Button
+                      ref={settingsBtnRef}
                       variant="outline"
                       size="sm"
                       className={`map-panel-btn shadow-md !rounded-l-none !px-2 ${showEffectiveSettings ? "!bg-[#2d7a9a] !text-white" : "!bg-[var(--bg-panel)] !text-[var(--text)] !border-0"}`}
@@ -942,22 +959,14 @@ export default function Map() {
                   </div>
                   <AnimatePresence>
                     {showEffectiveSettings && (
-                      <>
-                      <motion.div
-                        className="fixed inset-0 z-[1999]"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={() => setShowEffectiveSettings(false)}
-                      />
                       <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.95 }}
                         transition={{ duration: 0.15 }}
                         className="map-settings-panel bg-[var(--bg-panel)] rounded-lg shadow-lg px-4 py-3 overflow-hidden"
-                        onClick={(e) => e.stopPropagation()}
                         ref={(el) => {
+                          (settingsPanelRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
                           if (el) {
                             L.DomEvent.disableClickPropagation(el);
                             L.DomEvent.disableScrollPropagation(el);
@@ -1015,7 +1024,6 @@ export default function Map() {
                           <span className="text-[11px] text-[var(--text-muted)]">Afficher le cercle du rayon</span>
                         </label>
                       </motion.div>
-                      </>
                     )}
                   </AnimatePresence>
                 </div>
