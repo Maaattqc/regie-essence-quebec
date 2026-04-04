@@ -956,6 +956,7 @@ export default function Map() {
                         exit={{ opacity: 0, scale: 0.95 }}
                         transition={{ duration: 0.15 }}
                         className="map-settings-panel bg-[var(--bg-panel)] rounded-lg shadow-lg px-4 py-3 overflow-hidden"
+                        onClick={(e) => e.stopPropagation()}
                         ref={(el) => {
                           if (el) {
                             L.DomEvent.disableClickPropagation(el);
