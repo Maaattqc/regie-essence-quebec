@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Lightbulb, Send } from "lucide-react";
+import { Lightbulb, Send, X } from "lucide-react";
 import { suggestionSchema } from "@/lib/schemas";
 
 export default function SuggestionModal({ onClose }: { onClose: () => void }) {
@@ -72,7 +72,7 @@ export default function SuggestionModal({ onClose }: { onClose: () => void }) {
             <Lightbulb className="size-4" style={{ color: "#f59e0b" }} />
             Suggestion
           </h2>
-          <span className="panel-close" onClick={onClose}>x</span>
+          <button type="button" className="panel-close" onClick={onClose} aria-label="Fermer"><X className="size-4" /></button>
         </div>
         <p style={{ fontSize: "0.8125rem", color: "var(--text-muted)", marginBottom: "0.75rem" }}>
           Une idée pour améliorer Essence Québec ? Partagez-la avec nous !

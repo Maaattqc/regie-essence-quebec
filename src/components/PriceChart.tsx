@@ -72,7 +72,15 @@ export default memo(function PriceChart({
           setHover(Math.max(0, Math.min(data.length - 1, idx)));
         }}
         onMouseLeave={() => setHover(null)}
-        style={{ cursor: "crosshair" }}
+        onTouchMove={(e) => {
+          const touch = e.touches[0];
+          const rect = e.currentTarget.getBoundingClientRect();
+          const x = touch.clientX - rect.left;
+          const idx = Math.round((x / rect.width) * (data.length - 1));
+          setHover(Math.max(0, Math.min(data.length - 1, idx)));
+        }}
+        onTouchEnd={() => setHover(null)}
+        style={{ cursor: "crosshair", touchAction: "none" }}
       >
         <polyline
           points={points}

@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { Input } from "@/components/ui/input";
-import { Mail, ArrowLeft, CheckCircle } from "lucide-react";
+import { Mail, ArrowLeft, CheckCircle, X } from "lucide-react";
 import { createBrowserClient } from "@/lib/auth";
 
 const ERROR_FR: Record<string, string> = {
@@ -82,7 +82,7 @@ export default function LoginModal({ onClose }: { onClose: () => void }) {
             <Mail className="size-4" />
             <h2 id="login-modal-title" className="text-base font-bold m-0">Connexion</h2>
           </div>
-          <span className="panel-close" onClick={onClose}>x</span>
+          <button type="button" className="panel-close" onClick={onClose} aria-label="Fermer"><X className="size-4" /></button>
         </div>
 
         {step === "email" && (

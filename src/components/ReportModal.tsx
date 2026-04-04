@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Flag, Send } from "lucide-react";
+import { Flag, Send, X } from "lucide-react";
 import { reportSchema } from "@/lib/schemas";
 
 export default function ReportModal({
@@ -81,7 +81,7 @@ export default function ReportModal({
             <Flag className="size-4" style={{ color: "#e63946" }} />
             Signaler une inexactitude
           </h2>
-          <span className="panel-close" onClick={onClose}>x</span>
+          <button type="button" className="panel-close" onClick={onClose} aria-label="Fermer"><X className="size-4" /></button>
         </div>
         <p style={{ fontSize: "0.8125rem", color: "var(--text-muted)", marginBottom: "0.75rem" }}>
           <strong>{stationName}</strong> — {address}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { History } from "lucide-react";
+import { History, X } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import type { ChangelogCommit } from "@/components/types";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
@@ -41,7 +41,7 @@ export default function ChangelogModal({ onClose }: { onClose: () => void }) {
           <h2 id="changelog-modal-title" className="text-base font-bold m-0 flex items-center gap-2">
             <History className="size-4" /> Changelog
           </h2>
-          <span className="panel-close" onClick={onClose}>x</span>
+          <button type="button" className="panel-close" onClick={onClose} aria-label="Fermer"><X className="size-4" /></button>
         </div>
         <div className="overflow-y-auto flex-1">
           {loading ? (

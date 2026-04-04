@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { motion, AnimatePresence } from "framer-motion";
 import { createBrowserClient } from "@/lib/auth";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
+import { X, ThumbsUp, ThumbsDown } from "lucide-react";
 
 export interface Comment {
   id: number;
@@ -67,14 +69,16 @@ function CommentItem({ c, replies, allComments, onVote, onSubmitReply, isAdmin, 
             <button
               onClick={() => onVote(c.id, 1)}
               className={`bg-transparent border-none cursor-pointer flex items-center gap-1 p-0 ${c.my_vote === 1 ? "text-[#0ea5e9]" : "text-muted-foreground"}`}
+              aria-label={`J'aime${c.likes > 0 ? ` (${c.likes})` : ""}`}
             >
-              &#128077; {c.likes > 0 && c.likes}
+              <ThumbsUp className="size-3.5" /> {c.likes > 0 && c.likes}
             </button>
             <button
               onClick={() => onVote(c.id, -1)}
               className={`bg-transparent border-none cursor-pointer flex items-center gap-1 p-0 ${c.my_vote === -1 ? "text-[#e63946]" : "text-muted-foreground"}`}
+              aria-label={`Je n'aime pas${c.dislikes > 0 ? ` (${c.dislikes})` : ""}`}
             >
-              &#128078; {c.dislikes > 0 && c.dislikes}
+              <ThumbsDown className="size-3.5" /> {c.dislikes > 0 && c.dislikes}
             </button>
             <button
               onClick={() => setShowReply(!showReply)}
@@ -159,12 +163,19 @@ export default function CommentsModal({ stationName, address, onClose, userEmail
   onClose: () => void;
   userEmail?: string;
 }) {
+  const trapRef = useFocusTrap();
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
   const [newComment, setNewComment] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    function handleEscape(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [onClose]);
   useEffect(() => {
     if (!userEmail) return;
     const sb = createBrowserClient();
@@ -291,14 +302,18 @@ export default function CommentsModal({ stationName, address, onClose, userEmail
   const getReplies = (id: number) => comments.filter((c) => c.parent_id === id);
 
   return (
-    <div className="report-overlay" onClick={onClose}>
+    <div className="report-overlay" onClick={onClose} role="presentation">
       <div
+        ref={trapRef}
         className="report-modal max-w-[30rem] max-h-[85vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="comments-modal-title"
       >
         <div className="flex justify-between items-center mb-3 shrink-0">
-          <h2 className="text-[1.0625rem] font-bold m-0">Commentaires — {stationName}</h2>
-          <span className="panel-close" onClick={onClose}>x</span>
+          <h2 id="comments-modal-title" className="text-[1.0625rem] font-bold m-0">Commentaires — {stationName}</h2>
+          <button type="button" className="panel-close" onClick={onClose} aria-label="Fermer"><X className="size-4" /></button>
         </div>
         <div className="text-xs text-muted-foreground mb-3">{comments.length} commentaire{comments.length !== 1 ? "s" : ""}</div>
 

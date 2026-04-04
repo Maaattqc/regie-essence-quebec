@@ -31,8 +31,8 @@ function priceIcon(
     icon = L.divIcon({
       html: `<div style="background:${bg};color:#fff;font-size:11px;font-weight:700;padding:2px 4px;border-radius:4px;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.4);text-align:center">${label}</div>`,
       className: "",
-      iconSize: [40, 20],
-      iconAnchor: [20, 10],
+      iconSize: [48, 26],
+      iconAnchor: [24, 13],
     });
     iconCache[cacheKey] = icon;
   }
