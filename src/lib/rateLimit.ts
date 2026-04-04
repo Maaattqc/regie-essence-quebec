@@ -13,47 +13,57 @@ const redis =
       })
     : null;
 
-const upstashLimiter = redis
-  ? new Ratelimit({
-      redis,
-      limiter: Ratelimit.slidingWindow(5, "1 s"),
-    })
+// Limiteurs par profil d'endpoint
+const upstashLimiters = redis
+  ? {
+      default: new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(5, "1 s") }),
+      strict: new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(2, "1 s") }),
+      relaxed: new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(10, "1 s") }),
+    }
   : null;
+
+export type RateLimitProfile = "default" | "strict" | "relaxed";
 
 // Fallback in-memory pour le dev local
 const memoryRequests = new Map<string, number[]>();
-const WINDOW_MS = 1000;
-const MAX_REQUESTS = 5;
 
-function memoryRateLimit(ip: string): boolean {
+const PROFILES: Record<RateLimitProfile, { windowMs: number; max: number }> = {
+  default: { windowMs: 1000, max: 5 },
+  strict: { windowMs: 1000, max: 2 },
+  relaxed: { windowMs: 1000, max: 10 },
+};
+
+function memoryRateLimit(ip: string, profile: RateLimitProfile = "default"): boolean {
+  const { windowMs, max } = PROFILES[profile];
+  const key = `${profile}:${ip}`;
   const now = Date.now();
-  const timestamps = memoryRequests.get(ip) || [];
-  const recent = timestamps.filter((t) => now - t < WINDOW_MS);
-  if (recent.length >= MAX_REQUESTS) return false;
+  const timestamps = memoryRequests.get(key) || [];
+  const recent = timestamps.filter((t) => now - t < windowMs);
+  if (recent.length >= max) return false;
   recent.push(now);
-  memoryRequests.set(ip, recent);
+  memoryRequests.set(key, recent);
   if (memoryRequests.size > 1000) {
-    for (const [key, vals] of memoryRequests) {
-      if (vals.every((t) => now - t > WINDOW_MS * 10)) memoryRequests.delete(key);
+    for (const [k, vals] of memoryRequests) {
+      if (vals.every((t) => now - t > windowMs * 10)) memoryRequests.delete(k);
     }
   }
   return true;
 }
 
-export async function rateLimit(ip: string): Promise<boolean> {
-  if (upstashLimiter) {
+export async function rateLimit(ip: string, profile: RateLimitProfile = "default"): Promise<boolean> {
+  if (upstashLimiters) {
     try {
       const result = await Promise.race([
-        upstashLimiter.limit(ip),
+        upstashLimiters[profile].limit(ip),
         new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000)),
       ]);
       if (result) return result.success;
-      return memoryRateLimit(ip);
+      return memoryRateLimit(ip, profile);
     } catch {
-      return memoryRateLimit(ip);
+      return memoryRateLimit(ip, profile);
     }
   }
-  return memoryRateLimit(ip);
+  return memoryRateLimit(ip, profile);
 }
 
 export function getIP(request: Request): string {

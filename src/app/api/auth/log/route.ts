@@ -4,7 +4,7 @@ import { rateLimit, getIP } from "@/lib/rateLimit";
 import { logActivity } from "@/lib/activity-log";
 
 export async function POST(request: NextRequest) {
-  if (!(await rateLimit(getIP(request)))) {
+  if (!(await rateLimit(getIP(request), "strict"))) {
     return NextResponse.json({ error: "Trop de requêtes" }, { status: 429 });
   }
 

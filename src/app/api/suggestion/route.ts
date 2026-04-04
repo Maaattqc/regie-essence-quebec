@@ -5,7 +5,7 @@ import { logActivity } from "@/lib/activity-log";
 import { suggestionSchema } from "@/lib/schemas";
 
 export async function POST(request: Request) {
-  if (!(await rateLimit(getIP(request)))) {
+  if (!(await rateLimit(getIP(request), "strict"))) {
     return NextResponse.json({ error: "Trop de requêtes" }, { status: 429 });
   }
 

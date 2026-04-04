@@ -9,7 +9,7 @@ import { rateLimit, getIP } from "@/lib/rateLimit";
 export const maxDuration = 120;
 
 export async function GET(request: Request) {
-  if (!(await rateLimit(getIP(request)))) {
+  if (!(await rateLimit(getIP(request), "relaxed"))) {
     return NextResponse.json({ error: "Trop de requêtes" }, { status: 429 });
   }
 

@@ -260,12 +260,13 @@ describe('/api/admin', () => {
         select: vi.fn(),
         order: vi.fn(),
         limit: vi.fn(),
+        range: vi.fn(),
         eq: vi.fn(),
         single: vi.fn(),
         data: fakeProfiles,
         count: null,
       }
-      for (const method of ['select', 'order', 'limit', 'eq']) {
+      for (const method of ['select', 'order', 'limit', 'range', 'eq']) {
         (chain as Record<string, ReturnType<typeof vi.fn>>)[method].mockReturnValue(chain)
       }
       // For verifyAdmin profile lookup, return a separate chain
@@ -317,9 +318,10 @@ describe('/api/admin', () => {
         select: vi.fn(),
         order: vi.fn(),
         limit: vi.fn(),
+        range: vi.fn(),
         data: fakeProfiles,
       }
-      for (const method of ['select', 'order', 'limit']) {
+      for (const method of ['select', 'order', 'limit', 'range']) {
         (chain as Record<string, ReturnType<typeof vi.fn>>)[method].mockReturnValue(chain)
       }
       mocks.from.mockReturnValue(chain as ReturnType<typeof vi.fn>)
@@ -363,9 +365,10 @@ describe('/api/admin', () => {
         select: vi.fn(),
         order: vi.fn(),
         limit: vi.fn(),
+        range: vi.fn(),
         data: fakeReports,
       }
-      for (const method of ['select', 'order', 'limit']) {
+      for (const method of ['select', 'order', 'limit', 'range']) {
         (chain as Record<string, ReturnType<typeof vi.fn>>)[method].mockReturnValue(chain)
       }
       mocks.from.mockReturnValue(chain as ReturnType<typeof vi.fn>)

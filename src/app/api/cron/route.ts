@@ -6,7 +6,7 @@ import { logActivity } from "@/lib/activity-log";
 export const maxDuration = 120;
 
 export async function GET(request: Request) {
-  if (!(await rateLimit(getIP(request)))) {
+  if (!(await rateLimit(getIP(request), "strict"))) {
     return NextResponse.json({ error: "Trop de requêtes" }, { status: 429 });
   }
 

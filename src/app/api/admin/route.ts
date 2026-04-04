@@ -199,11 +199,13 @@ export async function GET(req: NextRequest) {
   }
 
   if (type === "users") {
+    const limit = Math.min(Number(req.nextUrl.searchParams.get("limit")) || 50, 200);
+    const offset = Number(req.nextUrl.searchParams.get("offset")) || 0;
     const { data: profiles } = await supabaseAdmin
       .from("profiles")
       .select("*")
       .order("created_at", { ascending: false })
-      .limit(200);
+      .range(offset, offset + limit - 1);
 
     // Batch email lookup (limit concurrent calls)
     const list = profiles || [];
@@ -230,11 +232,13 @@ export async function GET(req: NextRequest) {
   }
 
   if (type === "reports") {
+    const limit = Math.min(Number(req.nextUrl.searchParams.get("limit")) || 50, 500);
+    const offset = Number(req.nextUrl.searchParams.get("offset")) || 0;
     const { data } = await supabaseAdmin
       .from("reports")
       .select("*")
       .order("created_at", { ascending: false })
-      .limit(500);
+      .range(offset, offset + limit - 1);
     const reports = (data ?? []).map((r: Record<string, unknown>) =>
       isAdmin ? r : {
         ...r,
@@ -430,11 +434,13 @@ export async function GET(req: NextRequest) {
   }
 
   if (type === "suggestions") {
+    const limit = Math.min(Number(req.nextUrl.searchParams.get("limit")) || 50, 500);
+    const offset = Number(req.nextUrl.searchParams.get("offset")) || 0;
     const { data } = await supabaseAdmin
       .from("suggestions")
       .select("*")
       .order("created_at", { ascending: false })
-      .limit(500);
+      .range(offset, offset + limit - 1);
     const suggestions = (data ?? []).map((s: Record<string, unknown>) =>
       isAdmin ? s : {
         ...s,

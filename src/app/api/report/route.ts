@@ -5,7 +5,7 @@ import { reportSchema } from "@/lib/schemas";
 import { logActivity } from "@/lib/activity-log";
 
 export async function POST(request: NextRequest) {
-  if (!(await rateLimit(getIP(request)))) {
+  if (!(await rateLimit(getIP(request), "strict"))) {
     return NextResponse.json(
       { error: "Trop de requêtes, réessayez plus tard" },
       { status: 429 },
