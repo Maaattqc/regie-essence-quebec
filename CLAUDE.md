@@ -9,6 +9,13 @@
 - **Jamais de `<Skeleton>` ou autre `<div>` à l'intérieur d'un `<p>`** — HTML invalide qui cause une erreur d'hydratation Next.js. Utiliser `<div>` au lieu de `<p>` quand le contenu peut contenir un composant block-level
 - **Jamais de séquences Unicode `\u00XX`** dans le code — toujours écrire les vrais caractères UTF-8 (é, è, ê, ¢, É, etc.)
 
+## Variables d'environnement
+- Après `vercel env add` via pipe (`echo "$val" | vercel env add`), les valeurs peuvent contenir des `\n` parasites. **Toujours nettoyer** `.env.local` après un `vercel env pull` :
+  ```bash
+  node -e 'const fs=require("fs");let c=fs.readFileSync(".env.local","utf8");c=c.split(String.raw`\n`).join("");fs.writeFileSync(".env.local",c)'
+  ```
+- Les variables Supabase, Mapbox, Sentry, etc. doivent exister dans l'environnement **development** de Vercel (pas seulement production) pour que `vercel env pull` les inclue dans `.env.local`
+
 ## Outils CLI disponibles
 - **Supabase CLI** (`npx supabase`) — projet lié : `dpjmmnkhlhwluytfaclz` (`regie-essence-quebec`). Utiliser `npx supabase db query --linked "SQL"` pour exécuter des migrations.
 - **Vercel CLI** — projet déployé sur Vercel
@@ -40,17 +47,26 @@
 ### Backend / BDD
 | Technologie | Rôle |
 |---|---|
-| Supabase (supabase-js) | PostgreSQL hébergé, Auth OTP par email |
-| API Routes Next.js | Endpoints serveur |
+| Supabase (supabase-js) | PostgreSQL hébergé, Auth OTP par email, Realtime |
+| API Routes Next.js | Endpoints serveur (serverless) |
+| Upstash Redis | Rate limiting distribué (via Vercel Marketplace) |
 | zod 4.3.6 | Validation de données (client + serveur) |
 
 ### Tests & Qualité
 | Technologie | Rôle |
 |---|---|
-| Vitest 4.1.2 | Tests unitaires |
+| Vitest 4.1.2 | 196 tests unitaires/intégration (28 fichiers, 90%+ couverture) |
+| Playwright | Tests E2E multi-navigateurs (Chrome, Firefox, Safari) |
 | @testing-library/react | Tests de composants React |
 | @testing-library/jest-dom | Matchers DOM pour Vitest |
 | ESLint + eslint-config-next | Linting |
+| GitHub Actions | CI/CD (lint, types, tests, build sur chaque push/PR) |
+
+### Monitoring & Analytics
+| Technologie | Rôle |
+|---|---|
+| Sentry | Crash reporting (client + serveur), source maps, tunnel anti-adblock |
+| Vercel Analytics | Page views, géo, top pages |
 
 ### Utilitaires (installés par shadcn)
 | Technologie | Rôle |
@@ -64,63 +80,71 @@
 
 ```
 src/
-├── __tests__/                    # Tests unitaires
-│   ├── stations.test.ts          # Tests des fonctions utilitaires (19 tests)
-│   └── report-schema.test.ts     # Tests du schéma zod de signalement (8 tests)
+├── __tests__/                    # 196 tests (28 fichiers)
 │
 ├── app/                          # Next.js App Router
-│   ├── layout.tsx                # Layout racine (fonts, ThemeProvider)
+│   ├── layout.tsx                # Layout racine (fonts, ThemeProvider, Analytics, skip link)
 │   ├── page.tsx                  # Page d'accueil (charge Map en dynamique)
+│   ├── error.tsx                 # Error boundary (Sentry)
 │   ├── globals.css               # Styles globaux + variables CSS dark/light
 │   │
-│   ├── admin/
-│   │   └── page.tsx              # Dashboard admin (stats, cron, users, signalements)
-│   ├── login/
-│   │   └── page.tsx              # Page de connexion standalone (OTP)
-│   ├── changelog/
-│   │   └── page.tsx              # Page changelog (commits Git)
+│   ├── admin/                    # Dashboard admin
+│   ├── login/                    # Page de connexion (OTP)
+│   ├── changelog/                # Changelog (commits Git)
+│   ├── faq/                      # FAQ
+│   ├── a-propos/                 # À propos
+│   ├── tech/                     # Fiche technique
+│   ├── confidentialite/          # Politique de confidentialité (Loi 25)
 │   │
-│   ├── auth/
-│   │   └── callback/
-│   │       └── route.ts          # Callback OAuth/OTP Supabase
+│   ├── auth/callback/route.ts    # Callback OAuth/OTP Supabase
 │   │
 │   └── api/                      # API Routes (serverless)
-│       ├── report/route.ts       # POST signalement (validation zod + rate limit)
-│       ├── history/route.ts      # GET historique prix d'une station
-│       ├── changelog/route.ts    # GET commits Git via GitHub API
-│       ├── cron/route.ts         # GET déclenche un snapshot des prix
-│       └── reviews/route.ts      # GET/POST avis sur les stations
+│       ├── stations/route.ts     # GET stations GeoJSON
+│       ├── report/route.ts       # POST signalement
+│       ├── reviews/route.ts      # GET/POST commentaires + votes
+│       ├── history/route.ts      # GET historique prix
+│       ├── admin/route.ts        # GET/PATCH admin (stats, users, signalements)
+│       ├── cron/route.ts         # GET sync prix (Vercel Cron)
+│       ├── changelog/route.ts    # GET commits GitHub
+│       ├── suggestion/route.ts   # POST suggestion
+│       ├── mapbox/route.ts       # POST proxy Mapbox (token serveur)
+│       ├── auth/log/route.ts     # POST log connexion/déconnexion
+│       └── health/route.ts       # GET liveness probe
 │
 ├── components/
-│   ├── Map.tsx                   # Composant principal (~1500 lignes)
-│   │                             #   - FilterBar (recherche, filtres, type essence)
-│   │                             #   - StationsLayer (marqueurs prix sur carte)
-│   │                             #   - RegionPricePanel (prix moyens par région)
-│   │                             #   - LoginModal, ReportModal, ChangelogModal
-│   │                             #   - RadiusSlider, SiteThemeToggle
-│   │                             #   - Recherche meilleur prix dans un rayon
+│   ├── Map.tsx                   # Composant principal carte (~550 lignes)
+│   ├── map/                      # Sous-composants carte
+│   │   ├── StationsLayer.tsx     # Marqueurs prix + clusters
+│   │   ├── MapButtonsPanel.tsx   # Panneau boutons gauche (meilleur prix, style, etc.)
+│   │   ├── LiveCursors.tsx       # Curseurs temps réel (Supabase Realtime)
+│   │   ├── MapControls.tsx       # FlyTo, DevClickHandler, DragController
+│   │   ├── popup-utils.ts        # HTML popups, SVG icons inline
+│   │   └── leaflet-patches.ts    # Patches Chrome/React-Leaflet
 │   │
-│   ├── PriceChart.tsx            # Graphique SVG d'historique des prix (30 jours)
-│   │
+│   ├── FilterBar.tsx             # Barre de recherche et filtres
+│   ├── PricePanel.tsx            # Prix moyens par région/ville
+│   ├── PriceChart.tsx            # Graphique SVG historique prix (30 jours)
+│   ├── LoginModal.tsx            # Modal connexion OTP
+│   ├── ReportModal.tsx           # Modal signalement
+│   ├── SuggestionModal.tsx       # Modal suggestion
+│   ├── CommentsModal.tsx         # Modal commentaires/avis
+│   ├── ChangelogModal.tsx        # Modal changelog
 │   └── ui/                       # Composants shadcn/ui (générés)
-│       ├── badge.tsx
-│       ├── button.tsx
-│       ├── card.tsx
-│       ├── dialog.tsx
-│       ├── input.tsx
-│       ├── select.tsx
-│       ├── separator.tsx
-│       ├── slider.tsx
-│       ├── table.tsx
-│       ├── tabs.tsx
-│       └── textarea.tsx
 │
-└── lib/                          # Modules partagés
+├── hooks/
+│   ├── useStationsData.ts        # Fetch stations + cache sessionStorage
+│   ├── useGeolocation.ts         # Géolocalisation + détection région/ville
+│   ├── useMapAuth.ts             # Auth state + log connexion
+│   └── useFocusTrap.ts           # Focus trap pour modals (accessibilité)
+│
+└── lib/
     ├── stations.ts               # Types, constantes, fonctions utilitaires stations
-    ├── schemas.ts                # Schémas zod partagés (client + serveur)
+    ├── schemas.ts                # Schémas Zod partagés (client + serveur)
+    ├── rateLimit.ts              # Rate limiting (Upstash Redis prod / mémoire dev)
+    ├── activity-log.ts           # Journal d'activité (Supabase)
     ├── auth.ts                   # Client Supabase navigateur
     ├── supabase.ts               # Client Supabase serveur
-    ├── rateLimit.ts              # Rate limiting pour les API routes
+    ├── station-sync.ts           # Synchronisation stations (REQ → Supabase)
     └── utils.ts                  # Utilitaire cn() (clsx + tailwind-merge)
 ```
 
