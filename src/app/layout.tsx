@@ -16,11 +16,11 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Essence Québec — Carte interactive du carburant en temps réel",
+    default: "Essence Québec — Prix de l'essence et du diesel en direct",
     template: "%s | Essence Québec",
   },
   description:
-    "Comparez les prix de l'essence et du diesel dans plus de 2 500 stations-service au Québec. Carte interactive mise à jour plusieurs fois par jour avec les données officielles.",
+    "Comparez l'essence et le diesel dans 2 500 stations-service au Québec. Carte interactive mise à jour plusieurs fois par jour avec données officielles.",
   keywords: [
     "prix essence Québec",
     "carte essence Québec",
@@ -35,9 +35,9 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: "https://essence-quebec.ca",
-    title: "Essence Québec — Carte interactive du carburant en temps réel",
+    title: "Essence Québec — Prix de l'essence et du diesel en direct",
     description:
-      "Comparez les prix de l'essence et du diesel dans plus de 2 500 stations-service au Québec. Carte interactive mise à jour plusieurs fois par jour avec les données officielles.",
+      "Comparez l'essence et le diesel dans 2 500 stations-service au Québec. Carte interactive mise à jour plusieurs fois par jour avec données officielles.",
     locale: "fr_CA",
     siteName: "Essence Québec",
     images: [
@@ -51,9 +51,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Essence Québec — Carte interactive du carburant en temps réel",
+    title: "Essence Québec — Prix de l'essence et du diesel en direct",
     description:
-      "Comparez les prix de l'essence et du diesel dans plus de 2 500 stations-service au Québec. Carte interactive avec données officielles.",
+      "Comparez l'essence et le diesel dans 2 500 stations-service au Québec. Carte interactive mise à jour plusieurs fois par jour avec données officielles.",
     images: ["/android-chrome-512x512.png"],
   },
   other: {
