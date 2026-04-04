@@ -229,7 +229,6 @@ const LOG_CATEGORIES: { key: string; label: string; icon: React.ReactNode }[] = 
   { key: "auth", label: "Auth", icon: <Shield className="size-3.5" /> },
   { key: "report", label: "Signalements", icon: <Flag className="size-3.5" /> },
   { key: "admin", label: "Admin", icon: <Database className="size-3.5" /> },
-  { key: "visite", label: "Visites", icon: <Eye className="size-3.5" /> },
   { key: "erreur", label: "Erreurs", icon: <AlertCircle className="size-3.5" /> },
 ];
 
@@ -267,7 +266,6 @@ function ActivityLogPanel() {
     auth: "bg-yellow-100 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-300",
     report: "bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300",
     admin: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
-    visite: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300",
     erreur: "bg-red-200 text-red-800 dark:bg-red-950 dark:text-red-300",
   };
 

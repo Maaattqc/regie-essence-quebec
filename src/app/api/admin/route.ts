@@ -29,7 +29,27 @@ function maskName(name: string) {
   return `${name[0]}${"*".repeat(name.length - 1)}`;
 }
 
-const VALID_LOG_CATEGORIES = ["sync", "cron", "auth", "report", "admin", "visite", "erreur", "suggestion"];
+const VALID_LOG_CATEGORIES = ["sync", "cron", "auth", "report", "admin", "erreur", "suggestion"];
+
+/** Retourne minuit Montréal (il y a `daysAgo` jours) en ISO UTC */
+function montrealMidnight(daysAgo = 0): string {
+  const nowReal = Date.now();
+  const nowMtlFake = new Date(new Date(nowReal).toLocaleString("en-US", { timeZone: "America/Montreal" }));
+  const mtlOffset = nowReal - nowMtlFake.getTime();
+  const midnight = new Date(nowMtlFake);
+  midnight.setHours(0, 0, 0, 0);
+  midnight.setDate(midnight.getDate() - daysAgo);
+  return new Date(midnight.getTime() + mtlOffset).toISOString();
+}
+
+/** Retourne le 1er du mois courant à Montréal en ISO UTC */
+function montrealMonthStart(): string {
+  const nowReal = Date.now();
+  const nowMtlFake = new Date(new Date(nowReal).toLocaleString("en-US", { timeZone: "America/Montreal" }));
+  const mtlOffset = nowReal - nowMtlFake.getTime();
+  const first = new Date(nowMtlFake.getFullYear(), nowMtlFake.getMonth(), 1);
+  return new Date(first.getTime() + mtlOffset).toISOString();
+}
 
 // GET /api/admin?type=stats|users|reports
 export async function GET(req: NextRequest) {
@@ -46,10 +66,9 @@ export async function GET(req: NextRequest) {
 
   // ── Init : tout charger en une seule requête ──
   if (type === "init") {
-    const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-    const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7).toISOString();
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const todayStart = montrealMidnight(0);
+    const weekStart = montrealMidnight(7);
+    const monthStart = montrealMonthStart();
 
     const [
       { count: totalSnapshots },
@@ -129,10 +148,9 @@ export async function GET(req: NextRequest) {
   }
 
   if (type === "stats") {
-    const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-    const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7).toISOString();
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const todayStart = montrealMidnight(0);
+    const weekStart = montrealMidnight(7);
+    const monthStart = montrealMonthStart();
 
     const [
       { count: totalSnapshots },
@@ -316,31 +334,71 @@ export async function GET(req: NextRequest) {
 
   if (type === "traffic") {
     const range = req.nextUrl.searchParams.get("range") || "day";
-    let days = 1;
-    if (range === "week") days = 7;
-    else if (range === "month") days = 30;
-    const since = new Date(Date.now() - days * 86400000).toISOString();
-    const { data } = await supabaseAdmin
-      .from("page_views")
-      .select("created_at, page")
-      .gte("created_at", since)
-      .order("created_at", { ascending: true });
-    // Grouper par heure (jour) ou par jour (semaine/mois)
+    const bucketMode = range === "day" ? "hour" : range === "month" ? "month" : "day";
+    const since = range === "day"
+      ? montrealMidnight(1) // depuis minuit hier
+      : montrealMidnight(range === "week" ? 7 : 365);
+
+    const [{ data: bucketData }, { data: pageData }] = await Promise.all([
+      supabaseAdmin.rpc("get_traffic_stats", { since, bucket_mode: bucketMode }),
+      supabaseAdmin.rpc("get_traffic_pages", { since }),
+    ]);
+
+    const midnightTodayUtc = new Date(montrealMidnight(0)).getTime();
     const buckets: Record<string, number> = {};
-    const pageBuckets: Record<string, number> = {};
-    (data ?? []).forEach((row: { created_at: string; page?: string }) => {
-      const d = new Date(row.created_at);
-      const key = range === "day"
-        ? `${parseInt(new Intl.DateTimeFormat("fr-CA", { timeZone: "America/Montreal", hour: "numeric", hour12: false }).format(d))}h`
-        : d.toLocaleDateString("fr-CA", { month: "short", day: "numeric", timeZone: "America/Montreal" });
-      buckets[key] = (buckets[key] ?? 0) + 1;
-      const pg = row.page || "/";
-      pageBuckets[pg] = (pageBuckets[pg] ?? 0) + 1;
+
+    (bucketData ?? []).forEach((row: { bucket: string; cnt: number }) => {
+      // bucket est en heure locale Montréal (retourné par AT TIME ZONE)
+      const bucketDate = new Date(row.bucket);
+      let key: string;
+      if (range === "day") {
+        const h = bucketDate.getUTCHours();
+        // Comparer le timestamp UTC réel : bucket Montréal 10h = UTC row.bucket "2026-04-04T10:00:00Z"
+        // midnightTodayUtc = minuit Montréal en vrai UTC (ex: 04:00 UTC)
+        // Les buckets Postgres sont en heure locale Montréal stockées comme UTC offset-naive
+        // Donc on compare les heures locales : bucket du jour >= minuit Montréal du jour
+        const bucketMtlDate = new Date(bucketDate.getUTCFullYear(), bucketDate.getUTCMonth(), bucketDate.getUTCDate());
+        const todayMtl = new Date(new Date(midnightTodayUtc).toLocaleString("en-US", { timeZone: "America/Montreal" }));
+        todayMtl.setHours(0, 0, 0, 0);
+        const isToday = bucketMtlDate.getTime() >= todayMtl.getTime();
+        key = isToday ? `${h}h` : `H ${h}h`;
+      } else if (range === "month") {
+        key = bucketDate.toLocaleDateString("fr-CA", { month: "short", year: "numeric", timeZone: "UTC" });
+      } else {
+        key = bucketDate.toLocaleDateString("fr-CA", { month: "short", day: "numeric", timeZone: "UTC" });
+      }
+      buckets[key] = (buckets[key] ?? 0) + Number(row.cnt);
     });
-    const chart = Object.entries(buckets).map(([label, count]) => ({ label, count }));
-    const pages = Object.entries(pageBuckets)
-      .map(([page, count]) => ({ page, count }))
-      .sort((a, b) => b.count - a.count);
+
+    // Remplir les heures vides pour le graphique
+    if (range === "day") {
+      const nowMtl = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Montreal" }));
+      const currentHour = nowMtl.getHours();
+      for (let h = 0; h < 24; h++) {
+        const key = `H ${h}h`;
+        if (!(key in buckets)) buckets[key] = 0;
+      }
+      for (let h = 0; h < currentHour; h++) {
+        const key = `${h}h`;
+        if (!(key in buckets)) buckets[key] = 0;
+      }
+    }
+
+    const chart = (range === "day"
+      ? Object.entries(buckets).sort((a, b) => {
+          const aYesterday = a[0].startsWith("H ");
+          const bYesterday = b[0].startsWith("H ");
+          if (aYesterday !== bYesterday) return aYesterday ? -1 : 1;
+          return parseInt(a[0].replace("H ", "")) - parseInt(b[0].replace("H ", ""));
+        })
+      : Object.entries(buckets)
+    ).map(([label, count]) => ({ label, count }));
+
+    const pages = (pageData ?? []).map((row: { page: string; cnt: number }) => ({
+      page: row.page,
+      count: Number(row.cnt),
+    }));
+
     return NextResponse.json({ chart, pages });
   }
 

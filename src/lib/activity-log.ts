@@ -1,6 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase";
 
-export type LogCategory = "sync" | "cron" | "auth" | "report" | "admin" | "visite" | "erreur" | "suggestion";
+export type LogCategory = "sync" | "cron" | "auth" | "report" | "admin" | "erreur" | "suggestion";
 
 export async function logActivity(
   category: LogCategory,

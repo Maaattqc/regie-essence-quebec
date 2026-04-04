@@ -28,13 +28,20 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   compress: true,
   experimental: {
-    optimizePackageImports: ["@supabase/supabase-js"],
+    optimizePackageImports: ["@supabase/supabase-js", "lucide-react", "framer-motion"],
   },
   async headers() {
     return [
       {
         source: "/(.*)",
         headers: securityHeaders,
+      },
+      {
+        // Charset uniquement sur les pages HTML (exclut _next, api, auth, fichiers avec extension)
+        source: "/((?!_next|api|auth|monitoring)[^.]*)",
+        headers: [
+          { key: "Content-Type", value: "text/html; charset=utf-8" },
+        ],
       },
     ];
   },

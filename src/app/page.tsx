@@ -20,16 +20,17 @@ export default function Home() {
               réel
             </h1>
             <p>
-              Essence Québec est une carte interactive gratuite. Elle affiche
-              les prix de l&apos;essence en temps réel. Toutes les régions du
-              Québec sont couvertes.
+              Essence Québec est une carte interactive entièrement gratuite qui
+              affiche les prix de l&apos;essence en temps réel dans toutes les
+              régions de la province.
             </p>
             <p>
-              Consultez le prix par litre à chaque station près de vous. Les
-              carburants disponibles : régulier, super, premium et diesel. Les
-              données proviennent de la Régie de l&apos;énergie du Québec.
-              Elles sont mises à jour régulièrement. Vous obtenez une
-              information fiable pour économiser sur le carburant.
+              Consultez le prix par litre à chaque station près de vous pour
+              tous les types de carburant disponibles, incluant le régulier, le
+              super, le premium et le diesel. Les données proviennent
+              directement de la Régie de l&apos;énergie du Québec et sont mises
+              à jour régulièrement, ce qui vous garantit une information fiable
+              pour économiser sur le carburant.
             </p>
           </header>
 
@@ -38,28 +39,30 @@ export default function Home() {
               Comment utiliser la carte interactive des prix d&apos;essence ?
             </h2>
             <p>
-              La <Link href="/">carte interactive des prix de l&apos;essence</Link> est simple
-              d&apos;utilisation. Entrez votre adresse dans la barre de
-              recherche. Vous pouvez aussi activer la géolocalisation de votre
-              appareil. La carte se centre sur votre position actuelle.
+              La <Link href="/">carte interactive des prix de l&apos;essence</Link> est
+              simple d&apos;utilisation : entrez votre adresse dans la barre de
+              recherche ou activez la géolocalisation de votre appareil pour que
+              la carte se centre automatiquement sur votre position actuelle.
             </p>
             <p>
-              Chaque marqueur coloré représente une station-service. Il affiche
-              le prix actuel de l&apos;essence en temps réel. Un marqueur vert
-              indique un prix bas. Un marqueur rouge indique un prix élevé.
+              Chaque marqueur coloré représente une station-service et affiche
+              le prix actuel de l&apos;essence en temps réel, avec un code
+              couleur allant du vert pour les prix les plus bas au rouge pour
+              les prix les plus élevés.
             </p>
             <p>
-              Cliquez sur un marqueur pour voir le détail des prix. Vous
-              consultez tous les types de carburant : régulier, super, premium,
-              diesel. L&apos;adresse complète est affichée. L&apos;historique
-              des prix sur 30 jours est disponible sous forme de graphique.
+              En cliquant sur un marqueur, vous accédez au détail complet de la
+              station, incluant les prix de tous les types de carburant
+              (régulier, super, premium et diesel), l&apos;adresse complète
+              ainsi qu&apos;un graphique d&apos;historique des prix couvrant les
+              30 derniers jours.
             </p>
             <p>
-              Utilisez la recherche par rayon pour trouver la station la moins
-              chère. Définissez une distance en kilomètres. La carte identifie
-              automatiquement les stations avec le prix le plus bas dans ce
-              rayon. Consultez notre <Link href="/faq">FAQ</Link> pour plus de
-              réponses.
+              La recherche par rayon vous permet de définir une distance en
+              kilomètres pour que la carte identifie automatiquement les
+              stations offrant le prix le plus bas dans cette zone. Consultez
+              notre <Link href="/faq">FAQ</Link> pour obtenir davantage de
+              réponses à vos questions.
             </p>
           </section>
 
@@ -68,8 +71,9 @@ export default function Home() {
               Fonctionnalités de la carte des prix d&apos;essence
             </h2>
             <p>
-              Essence Québec offre plusieurs outils pour comparer les prix du
-              carburant en temps réel :
+              Essence Québec offre plusieurs outils performants qui vous
+              permettent de comparer facilement les prix du carburant en temps
+              réel à travers toute la province :
             </p>
             <ul>
               <li>
@@ -105,23 +109,24 @@ export default function Home() {
               réel
             </h2>
             <p>
-              Les prix du carburant augmentent constamment. Trouver
-              l&apos;essence la moins chère est devenu essentiel. La carte
-              interactive d&apos;Essence Québec vous aide à repérer les
-              stations les moins chères. Elle fonctionne partout : Montréal,
-              Québec, Laval, Longueuil et toutes les régions de la province.
+              Dans un contexte où les prix du carburant augmentent
+              constamment, trouver l&apos;essence la moins chère est devenu
+              essentiel pour les automobilistes québécois. La carte interactive
+              d&apos;Essence Québec vous aide à repérer les stations les moins
+              chères, que vous soyez à Montréal, Québec, Laval, Longueuil ou
+              dans n&apos;importe quelle autre région de la province.
             </p>
             <p>
-              Consultez les prix en temps réel avant chaque plein. Vous pouvez
-              économiser plusieurs centimes par litre. Sur 60 litres, une
-              différence de 3 cents/litre = 1,80 $ économisés. Sur une année,
-              c&apos;est plus de 90 $ d&apos;économies. Il suffit de choisir
-              la bonne station grâce à la carte.
+              En consultant les prix en temps réel avant chaque plein, vous
+              pouvez économiser plusieurs centimes par litre, ce qui représente
+              environ 1,80 $ d&apos;économie sur un plein de 60 litres avec
+              une différence de seulement 3 cents par litre, et plus de 90 $
+              d&apos;économies cumulées sur une année complète.
             </p>
             <p>
-              La carte est mise à jour plusieurs fois par jour. Les prix
-              affichés sont toujours récents. Vous faites des choix éclairés
-              sur votre carburant.
+              La carte est mise à jour plusieurs fois par jour afin que les
+              prix affichés soient toujours récents, vous permettant ainsi de
+              faire des choix éclairés pour chaque plein de carburant.
             </p>
           </section>
 
@@ -130,24 +135,25 @@ export default function Home() {
               Régions couvertes par la carte des prix d&apos;essence au Québec
             </h2>
             <p>
-              La carte couvre toutes les régions administratives du Québec. Les
-              grandes villes sont bien représentées : Montréal, Québec, Laval,
-              Longueuil, Gatineau. Elles ont une forte densité de
-              stations-service.
+              La carte couvre l&apos;ensemble des régions administratives du
+              Québec, avec une représentation particulièrement dense dans les
+              grandes villes comme Montréal, Québec, Laval, Longueuil et
+              Gatineau où la concentration de stations-service est élevée.
             </p>
             <p>
-              Les régions éloignées sont aussi couvertes. Vous y trouverez les
-              prix de l&apos;essence en temps réel : Saguenay–Lac-Saint-Jean,
-              Bas-Saint-Laurent, Gaspésie–Îles-de-la-Madeleine, Côte-Nord,
-              Abitibi-Témiscamingue, Laurentides, Lanaudière, Montérégie,
-              Estrie, Mauricie, Outaouais, Chaudière-Appalaches,
-              Centre-du-Québec et Nord-du-Québec.
+              Les régions plus éloignées sont également couvertes avec les prix
+              de l&apos;essence en temps réel, incluant le
+              Saguenay–Lac-Saint-Jean, le Bas-Saint-Laurent, la
+              Gaspésie–Îles-de-la-Madeleine, la Côte-Nord,
+              l&apos;Abitibi-Témiscamingue, les Laurentides, Lanaudière, la
+              Montérégie, l&apos;Estrie, la Mauricie, l&apos;Outaouais,
+              Chaudière-Appalaches, le Centre-du-Québec et le Nord-du-Québec.
             </p>
             <p>
-              Planifiez un voyage en voiture au Québec. Faites votre trajet
-              habituel. Trouvez le plein le moins cher. La carte interactive
-              Essence Québec est votre référence pour les prix du carburant
-              dans toute la province.
+              Que vous planifiiez un voyage en voiture à travers le Québec ou
+              que vous fassiez simplement votre trajet habituel, la carte
+              interactive Essence Québec est votre référence pour trouver le
+              plein le moins cher dans toute la province.
             </p>
           </section>
 
@@ -160,40 +166,43 @@ export default function Home() {
               À quelle fréquence les prix sont-ils mis à jour sur la carte ?
             </h3>
             <p>
-              Les prix sont mis à jour plusieurs fois par jour. Les données
-              proviennent de la Régie de l&apos;énergie du Québec. Vous
-              consultez toujours des prix en temps réel ou très récents.
+              Les prix sont mis à jour plusieurs fois par jour à partir des
+              données officielles de la Régie de l&apos;énergie du Québec, ce
+              qui vous garantit de consulter des prix en temps réel ou très
+              récents à chaque visite.
             </p>
 
             <h3>La carte des prix d&apos;essence est-elle gratuite ?</h3>
             <p>
-              Oui, la carte interactive est entièrement gratuite. Aucun
-              abonnement ni publicité intrusive.
+              Oui, la carte interactive est entièrement gratuite et accessible
+              sans aucun abonnement ni publicité intrusive.
             </p>
 
             <h3>
               Puis-je signaler un prix d&apos;essence incorrect sur la carte ?
             </h3>
             <p>
-              Oui. Cliquez sur une station-service sur la carte. Utilisez le
-              bouton de signalement pour indiquer un prix erroné. Votre
-              contribution aide à maintenir l&apos;exactitude des prix.
+              Oui, il vous suffit de cliquer sur une station-service sur la
+              carte et d&apos;utiliser le bouton de signalement pour indiquer
+              un prix erroné, contribuant ainsi à maintenir l&apos;exactitude
+              des informations pour tous les utilisateurs.
             </p>
 
             <h3>
               Comment trouver la station la moins chère près de moi ?
             </h3>
             <p>
-              Activez la géolocalisation ou entrez votre adresse. Utilisez le
-              curseur de rayon pour définir une distance. La carte trouve
-              automatiquement les stations avec le prix le plus bas.
+              Activez la géolocalisation ou entrez votre adresse, puis utilisez
+              le curseur de rayon pour définir une distance en kilomètres afin
+              que la carte identifie automatiquement les stations offrant le
+              prix le plus bas dans cette zone.
             </p>
           </section>
 
           <section aria-labelledby="source-heading">
             <h2 id="source-heading">Source des données</h2>
             <p>
-              Les prix proviennent de la{" "}
+              Les prix affichés proviennent de la{" "}
               <a
                 href="https://www.regie-energie.qc.ca/"
                 target="_blank"
@@ -201,13 +210,14 @@ export default function Home() {
               >
                 Régie de l&apos;énergie du Québec
               </a>{" "}
-              (REQ). C&apos;est l&apos;organisme gouvernemental qui encadre les
-              prix des carburants. Ces données sont publiques et en format
-              ouvert. Elles garantissent la transparence des prix affichés.
-              Consultez la page{" "}
-              <Link href="/tech">informations techniques</Link> pour les
-              détails. En savoir plus sur{" "}
-              <Link href="/a-propos">Essence Québec</Link>.
+              (REQ), l&apos;organisme gouvernemental qui encadre les prix des
+              carburants dans la province. Ces données publiques en format
+              ouvert garantissent la transparence et la fiabilité des prix
+              affichés sur la carte. Consultez la page{" "}
+              <Link href="/tech">informations techniques</Link> pour en savoir
+              plus sur notre méthodologie, ou visitez la page{" "}
+              <Link href="/a-propos">à propos d&apos;Essence Québec</Link>{" "}
+              pour découvrir le projet.
             </p>
           </section>
 
