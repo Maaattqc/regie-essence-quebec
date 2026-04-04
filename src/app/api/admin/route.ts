@@ -401,10 +401,13 @@ export async function GET(req: NextRequest) {
       : Object.entries(buckets)
     ).map(([label, count]) => ({ label, count }));
 
-    const pages = (pageData ?? []).map((row: { page: string; cnt: number }) => ({
-      page: row.page,
-      count: Number(row.cnt),
-    }));
+    const VALID_PAGES = new Set(["/", "/admin", "/login", "/faq", "/a-propos", "/confidentialite", "/changelog", "/tech"]);
+    const pages = (pageData ?? [])
+      .filter((row: { page: string }) => VALID_PAGES.has(row.page))
+      .map((row: { page: string; cnt: number }) => ({
+        page: row.page,
+        count: Number(row.cnt),
+      }));
 
     return NextResponse.json({ chart, pages });
   }
