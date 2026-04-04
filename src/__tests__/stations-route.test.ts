@@ -105,7 +105,7 @@ describe('GET /api/stations', () => {
     const response = await GET(new Request('http://localhost/api/stations'))
 
     expect(response.status).toBe(200)
-    expect(response.headers.get('Cache-Control')).toBe('no-store')
+    expect(response.headers.get('Cache-Control')).toBe('public, s-maxage=60, stale-while-revalidate=240')
     await expect(response.json()).resolves.toEqual({
       ok: true,
       data,

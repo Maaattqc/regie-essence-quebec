@@ -62,7 +62,7 @@ describe('GET /api/stations — intégration Cache-Control, format et sync', () 
 
   // ── Cache-Control ───────────────────────────────────────────
 
-  it('inclut Cache-Control: no-store dans la reponse 200', async () => {
+  it('inclut Cache-Control avec cache CDN dans la reponse 200', async () => {
     mocks.getStationFeed.mockResolvedValue({
       data: { type: 'FeatureCollection', features: [] },
       meta: readyMeta,
@@ -71,7 +71,7 @@ describe('GET /api/stations — intégration Cache-Control, format et sync', () 
     const response = await GET(new Request('http://localhost/api/stations'))
 
     expect(response.status).toBe(200)
-    expect(response.headers.get('Cache-Control')).toBe('no-store')
+    expect(response.headers.get('Cache-Control')).toBe('public, s-maxage=60, stale-while-revalidate=240')
   })
 
   it('inclut Cache-Control: no-store dans la reponse 202', async () => {
