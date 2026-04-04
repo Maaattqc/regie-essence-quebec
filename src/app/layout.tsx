@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "next-themes";
+import { Analytics } from "@vercel/analytics/next";
 import PageTracker from "@/components/PageTracker";
 import "./globals.css";
 
@@ -155,9 +156,15 @@ export default function RootLayout({
             }),
           }}
         />
+        <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[10000] focus:bg-primary focus:text-primary-foreground focus:px-4 focus:py-2 focus:rounded-md focus:text-sm focus:font-medium">
+          Passer au contenu principal
+        </a>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+          <Analytics />
           <PageTracker />
-          {children}
+          <div id="main-content">
+            {children}
+          </div>
         </ThemeProvider>
       </body>
     </html>

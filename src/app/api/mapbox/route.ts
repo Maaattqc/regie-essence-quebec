@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { rateLimit, getIP } from "@/lib/rateLimit";
+import { logActivity } from "@/lib/activity-log";
 import { z } from "zod";
 
 const MAPBOX_TOKEN = process.env.MAPBOX_TOKEN ?? "";
@@ -16,7 +17,7 @@ const bodySchema = z.union([
 
 // Proxy Mapbox Matrix API (distances multi-destinations)
 export async function POST(request: NextRequest) {
-  if (!rateLimit(getIP(request))) {
+  if (!(await rateLimit(getIP(request)))) {
     return NextResponse.json({ error: "Trop de requêtes" }, { status: 429 });
   }
 
@@ -45,7 +46,9 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ error: "Type invalide" }, { status: 400 });
-  } catch {
+  } catch (error) {
+    console.error("[mapbox] Échec proxy Mapbox:", error);
+    await logActivity("erreur", "Échec proxy Mapbox", undefined, { error: String(error) });
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }

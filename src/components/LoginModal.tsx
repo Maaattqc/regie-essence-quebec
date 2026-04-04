@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { Input } from "@/components/ui/input";
 import { Mail, ArrowLeft, CheckCircle } from "lucide-react";
 import { createBrowserClient } from "@/lib/auth";
@@ -24,11 +25,18 @@ function toFrench(msg: string) {
 }
 
 export default function LoginModal({ onClose }: { onClose: () => void }) {
+  const trapRef = useFocusTrap();
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [step, setStep] = useState<"email" | "code" | "done">("email");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    function handleEscape(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [onClose]);
 
   async function handleSendCode(e: React.FormEvent) {
     e.preventDefault();
@@ -67,12 +75,12 @@ export default function LoginModal({ onClose }: { onClose: () => void }) {
   }, [step, onClose]);
 
   return (
-    <div className="report-overlay" onClick={onClose}>
-      <div className="report-modal max-w-[24rem]" style={{ overflow: "hidden" }} onClick={(e) => e.stopPropagation()}>
+    <div className="report-overlay" onClick={onClose} role="presentation">
+      <div ref={trapRef} className="report-modal max-w-[24rem]" style={{ overflow: "hidden" }} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="login-modal-title">
         <div className="flex justify-between items-center mb-3">
           <div className="flex items-center gap-2">
             <Mail className="size-4" />
-            <h2 className="text-base font-bold m-0">Connexion</h2>
+            <h2 id="login-modal-title" className="text-base font-bold m-0">Connexion</h2>
           </div>
           <span className="panel-close" onClick={onClose}>x</span>
         </div>

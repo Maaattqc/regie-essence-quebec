@@ -3,29 +3,29 @@ import { describe, expect, it, vi } from 'vitest'
 import { getIP, rateLimit } from '@/lib/rateLimit'
 
 describe('rateLimit', () => {
-  it('autorise les cinq premieres requetes dans la fenetre', () => {
+  it('autorise les cinq premieres requetes dans la fenetre', async () => {
     const ip = `ip-${Math.random()}`
 
     for (let index = 0; index < 5; index += 1) {
-      expect(rateLimit(ip)).toBe(true)
+      await expect(rateLimit(ip)).resolves.toBe(true)
     }
 
-    expect(rateLimit(ip)).toBe(false)
+    await expect(rateLimit(ip)).resolves.toBe(false)
   })
 
-  it('repart a zero apres expiration de la fenetre', () => {
+  it('repart a zero apres expiration de la fenetre', async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-04-02T12:00:00.000Z'))
 
     const ip = `ip-${Math.random()}`
 
     for (let index = 0; index < 5; index += 1) {
-      expect(rateLimit(ip)).toBe(true)
+      await expect(rateLimit(ip)).resolves.toBe(true)
     }
 
     vi.advanceTimersByTime(1001)
 
-    expect(rateLimit(ip)).toBe(true)
+    await expect(rateLimit(ip)).resolves.toBe(true)
 
     vi.useRealTimers()
   })

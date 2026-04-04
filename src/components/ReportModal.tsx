@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Flag, Send, X } from "lucide-react";
+import { Flag, Send } from "lucide-react";
 import { reportSchema } from "@/lib/schemas";
 
 export default function ReportModal({
@@ -16,11 +17,18 @@ export default function ReportModal({
   address: string;
   onClose: () => void;
 }) {
+  const trapRef = useFocusTrap();
   const [form, setForm] = useState({ first_name: "", last_name: "", email: "", message: "" });
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    function handleEscape(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [onClose]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -55,17 +63,21 @@ export default function ReportModal({
   }
 
   return (
-    <div className="report-overlay" onClick={onClose}>
+    <div className="report-overlay" onClick={onClose} role="presentation">
       <motion.div
+        ref={trapRef}
         className="report-modal"
         onClick={(e) => e.stopPropagation()}
         style={{ maxWidth: "28rem" }}
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="report-modal-title"
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
-          <h2 style={{ fontSize: "1.0625rem", fontWeight: 700, margin: 0, display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <h2 id="report-modal-title" style={{ fontSize: "1.0625rem", fontWeight: 700, margin: 0, display: "flex", alignItems: "center", gap: "0.5rem" }}>
             <Flag className="size-4" style={{ color: "#e63946" }} />
             Signaler une inexactitude
           </h2>

@@ -58,7 +58,7 @@ describe('GET /api/cron', () => {
     const response = await GET(new Request('http://localhost/api/cron'))
 
     expect(response.status).toBe(429)
-    await expect(response.json()).resolves.toEqual({ error: 'Trop de requetes' })
+    await expect(response.json()).resolves.toEqual({ error: 'Trop de requêtes' })
     expect(mocks.after).not.toHaveBeenCalled()
   })
 
@@ -68,7 +68,7 @@ describe('GET /api/cron', () => {
     const response = await GET(new Request('http://localhost/api/cron'))
 
     expect(response.status).toBe(401)
-    await expect(response.json()).resolves.toEqual({ error: 'Unauthorized' })
+    await expect(response.json()).resolves.toEqual({ error: 'Non autorisé' })
     expect(mocks.after).not.toHaveBeenCalled()
   })
 

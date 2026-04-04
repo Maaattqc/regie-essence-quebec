@@ -10,7 +10,6 @@ import {
   RefreshCw, Search, Star, MessageSquare, Flag, Clock,
   CheckCircle2, Layers, GitBranch, Mail, Code2, Eye,
   Sun, Moon, ShieldCheck, TestTube2, Activity, FileText,
-  Gauge, HeartPulse,
 } from "lucide-react";
 import ScrollToTop from "@/components/ScrollToTop";
 
@@ -52,7 +51,7 @@ const STACK = [
     items: [
       { name: "Next.js API Routes (Serverless)", desc: "Endpoints RESTful déployés sur l'Edge Network mondial" },
       { name: "Zod 4", desc: "Validation de données stricte côté serveur et client" },
-      { name: "Rate Limiting", desc: "Protection contre les abus par IP, sans dépendances externes" },
+      { name: "Rate Limiting (Upstash Redis)", desc: "Protection distribuée contre les abus par IP, partagée entre toutes les instances serverless" },
       { name: "Service Role Auth", desc: "Séparation stricte des privilèges client/serveur" },
     ],
   },
@@ -177,7 +176,7 @@ const SECURITY: [string, string][] = [
   ["X-Frame-Options / X-Content-Type-Options", "Protection contre le clickjacking (frame-ancestors: none) et le sniffing MIME (nosniff)"],
   ["Auth sans mot de passe (OTP)", "Connexion par code à usage unique envoyé par email — aucun stockage de mot de passe, aucune vulnérabilité liée"],
   ["Row Level Security (RLS)", "Chaque requête PostgreSQL est filtrée au niveau de la base de données selon l'identité de l'utilisateur"],
-  ["Rate limiting par IP", "Protection contre les abus sur tous les endpoints API, implémentée sans Redis ni infrastructure externe"],
+  ["Rate limiting distribué (Upstash Redis)", "Protection contre les abus sur tous les endpoints API via Redis distribué, partagé entre instances serverless"],
   ["Validation Zod sur tous les endpoints", "Toutes les données entrantes sont validées et typées côté serveur avant tout traitement ou écriture"],
   ["Séparation client / serveur stricte", "La clé service_role Supabase est confinée aux API Routes — jamais exposée dans le bundle JavaScript client"],
   ["Secrets hors bundle navigateur", "Variables d'environnement injectées au build Vercel, inaccessibles depuis le code exécuté dans le navigateur"],
@@ -187,10 +186,10 @@ const SECURITY: [string, string][] = [
 ];
 
 const TESTS: [string, string][] = [
-  ["145 tests — 23 fichiers", "Couverture complète en une seule passe : unitaires + intégration, exécutée en < 10 s"],
+  ["196 tests — 28 fichiers", "Couverture complète en une seule passe : unitaires + intégration, exécutée en < 13 s"],
   ["Tests unitaires (Vitest 4)", "Runner ultrarapide natif ESM — @testing-library/react pour composants, jest-dom pour assertions DOM"],
   ["Tests d'intégration API", "Flux multi-étapes testés : validation Zod, format de réponse HTTP, codes d'erreur cohérents, Content-Type"],
-  ["Tests E2E (Playwright)", "Carte interactive, navigation entre pages, formulaire de connexion, changelog — mock réseau intégré"],
+  ["Tests E2E (Playwright)", "Carte interactive, navigation entre pages, formulaire de connexion, changelog — multi-navigateurs (Chrome, Firefox, Safari)"],
   ["Seuils de couverture enforced", "80% lignes, 80% fonctions, 77% instructions, 65% branches — le build échoue si les seuils ne sont pas atteints"],
   ["GitHub Actions CI", "Pipeline automatisé sur chaque PR : lint ESLint, tests Vitest, build Next.js de production"],
   ["Pre-commit hooks (Husky)", "ESLint exécuté automatiquement avant chaque commit via lint-staged — code non conforme bloqué"],
@@ -201,7 +200,7 @@ const METRICS = [
   { value: "2 000+", label: "Stations cartographiées" },
   { value: "< 100 ms", label: "Temps de réponse API moyen" },
   { value: "99.9%", label: "Disponibilité (SLA Vercel + Supabase)" },
-  { value: "145", label: "Tests automatisés (unit + intégration + E2E)" },
+  { value: "196", label: "Tests automatisés (unit + intégration + E2E)" },
   { value: "12", label: "En-têtes de sécurité HTTP actifs" },
   { value: "17", label: "Régions administratives couvertes" },
 ];
@@ -383,7 +382,7 @@ export default function TechPage() {
             </div>
             <div className="grid sm:grid-cols-2 gap-3 text-[13px]">
               {[
-                ["GitHub Actions CI/CD", "Pipeline automatisé sur chaque PR : lint ESLint, 145 tests Vitest, build Next.js — aucun merge sans validation"],
+                ["GitHub Actions CI/CD", "Pipeline automatisé sur chaque PR : lint ESLint, 196 tests Vitest, build Next.js — aucun merge sans validation"],
                 ["Déploiement continu Vercel", "Push sur main → build Turbopack → déploiement production automatique en < 60 s avec rollback instantané"],
                 ["Preview par branche", "Chaque pull request génère un environnement de prévisualisation isolé avec URL unique"],
                 ["Pre-commit hooks (Husky)", "ESLint exécuté automatiquement sur chaque commit via lint-staged — code non conforme bloqué avant push"],

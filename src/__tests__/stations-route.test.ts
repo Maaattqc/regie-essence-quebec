@@ -68,7 +68,7 @@ describe('GET /api/stations', () => {
     const response = await GET(new Request('http://localhost/api/stations'))
 
     expect(response.status).toBe(429)
-    await expect(response.json()).resolves.toEqual({ error: 'Trop de requetes' })
+    await expect(response.json()).resolves.toEqual({ error: 'Trop de requêtes' })
   })
 
   it('retourne 202 et planifie un refresh quand aucun dataset nest pret', async () => {

@@ -22,7 +22,7 @@ const VALID_COLUMNS = ["likes", "dislikes"] as const;
 
 // GET comments for a station
 export async function GET(request: NextRequest) {
-  if (!rateLimit(getIP(request))) return NextResponse.json({ error: "Trop de requêtes" }, { status: 429 });
+  if (!(await rateLimit(getIP(request)))) return NextResponse.json({ error: "Trop de requêtes" }, { status: 429 });
 
   const { searchParams } = request.nextUrl;
   const station = searchParams.get("station");
@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
 
 // POST new comment or vote
 export async function POST(request: NextRequest) {
-  if (!rateLimit(getIP(request))) return NextResponse.json({ error: "Trop de requêtes" }, { status: 429 });
+  if (!(await rateLimit(getIP(request)))) return NextResponse.json({ error: "Trop de requêtes" }, { status: 429 });
 
   const token = getToken(request);
   const user = token ? await getUser(token) : null;
@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
 
 // DELETE comment (admin only)
 export async function DELETE(request: NextRequest) {
-  if (!rateLimit(getIP(request))) return NextResponse.json({ error: "Trop de requêtes" }, { status: 429 });
+  if (!(await rateLimit(getIP(request)))) return NextResponse.json({ error: "Trop de requêtes" }, { status: 429 });
 
   const token = getToken(request);
   if (!token) return NextResponse.json({ error: "Non connecté" }, { status: 401 });

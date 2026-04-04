@@ -6,11 +6,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
   getIP: vi.fn(),
   rateLimit: vi.fn(),
+  logActivity: vi.fn(),
 }))
 
 vi.mock('@/lib/rateLimit', () => ({
   getIP: mocks.getIP,
   rateLimit: mocks.rateLimit,
+}))
+
+vi.mock('@/lib/activity-log', () => ({
+  logActivity: mocks.logActivity,
 }))
 
 import { GET } from '@/app/api/changelog/route'

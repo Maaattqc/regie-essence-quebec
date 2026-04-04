@@ -9,8 +9,8 @@ import { rateLimit, getIP } from "@/lib/rateLimit";
 export const maxDuration = 120;
 
 export async function GET(request: Request) {
-  if (!rateLimit(getIP(request))) {
-    return NextResponse.json({ error: "Trop de requetes" }, { status: 429 });
+  if (!(await rateLimit(getIP(request)))) {
+    return NextResponse.json({ error: "Trop de requêtes" }, { status: 429 });
   }
 
   const feed = await getStationFeed();

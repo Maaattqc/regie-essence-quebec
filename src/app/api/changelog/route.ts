@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { rateLimit, getIP } from "@/lib/rateLimit";
+import { logActivity } from "@/lib/activity-log";
 
 export async function GET(request: NextRequest) {
-  if (!rateLimit(getIP(request))) {
+  if (!(await rateLimit(getIP(request)))) {
     return NextResponse.json({ error: "Trop de requêtes" }, { status: 429 });
   }
   const headers: Record<string, string> = {
@@ -35,7 +36,9 @@ export async function GET(request: NextRequest) {
       }));
 
     return NextResponse.json(commits);
-  } catch {
+  } catch (error) {
+    console.error("[changelog] Échec GitHub API:", error);
+    await logActivity("erreur", "Échec GitHub API (changelog)", undefined, { error: String(error) });
     return NextResponse.json([], { status: 200 });
   }
 }

@@ -53,7 +53,7 @@ function montrealMonthStart(): string {
 
 // GET /api/admin?type=stats|users|reports
 export async function GET(req: NextRequest) {
-  if (!rateLimit(getIP(req))) return NextResponse.json({ error: "Trop de requêtes" }, { status: 429 });
+  if (!(await rateLimit(getIP(req)))) return NextResponse.json({ error: "Trop de requêtes" }, { status: 429 });
   const user = await verifyAdmin(req);
   const isAdmin = !!user;
 
@@ -112,7 +112,9 @@ export async function GET(req: NextRequest) {
             const { data: { user: authUser } } = await supabaseAdmin.auth.admin.getUserById(p.id as string);
             const email = authUser?.email ?? (p.email as string) ?? "";
             return { ...p, email: isAdmin ? email : maskEmail(email) };
-          } catch {
+          } catch (error) {
+            console.error("[admin/init] Échec getUserById:", error);
+            await logActivity("erreur", "Échec getUserById (init)", undefined, { userId: p.id as string, error: String(error) });
             return { ...p, email: isAdmin ? ((p.email as string) ?? "") : "***@***" };
           }
         })
@@ -176,7 +178,10 @@ export async function GET(req: NextRequest) {
     try {
       const { data } = await supabaseAdmin.rpc("get_avg_prices");
       avgs = data;
-    } catch {}
+    } catch (error) {
+      console.error("[admin/stats] Échec get_avg_prices:", error);
+      await logActivity("erreur", "Échec get_avg_prices (stats)", undefined, { error: String(error) });
+    }
 
     return NextResponse.json({
       totalSnapshots: totalSnapshots ?? 0,
@@ -212,7 +217,9 @@ export async function GET(req: NextRequest) {
             const { data: { user: authUser } } = await supabaseAdmin.auth.admin.getUserById(p.id);
             const email = authUser?.email ?? p.email ?? "";
             return { ...p, email: isAdmin ? email : maskEmail(email) };
-          } catch {
+          } catch (error) {
+            console.error("[admin/users] Échec getUserById:", error);
+            await logActivity("erreur", "Échec getUserById (users)", undefined, { userId: p.id, error: String(error) });
             return { ...p, email: isAdmin ? (p.email ?? "") : "***@***" };
           }
         })
@@ -441,15 +448,19 @@ export async function GET(req: NextRequest) {
 
 // PATCH /api/admin  body: { action: "report_status", id, status } | { action: "toggle_role", id } | { action: "suggestion_status", id, status }
 export async function PATCH(req: NextRequest) {
-  if (!rateLimit(getIP(req))) return NextResponse.json({ error: "Trop de requêtes" }, { status: 429 });
+  if (!(await rateLimit(getIP(req)))) return NextResponse.json({ error: "Trop de requêtes" }, { status: 429 });
   const user = await verifyAdmin(req);
   if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
 
   const body = await req.json();
 
+  const VALID_REPORT_STATUSES = ["pending", "resolved", "rejected", "in_progress"];
+  const VALID_SUGGESTION_STATUSES = ["pending", "approved", "rejected", "in_progress"];
+
   if (body.action === "report_status") {
     const { id, status } = body;
     if (!id || !status) return NextResponse.json({ error: "id et status requis" }, { status: 400 });
+    if (!VALID_REPORT_STATUSES.includes(status)) return NextResponse.json({ error: `Status invalide. Valeurs permises : ${VALID_REPORT_STATUSES.join(", ")}` }, { status: 400 });
     await supabaseAdmin.from("reports").update({ status }).eq("id", id);
     await logActivity("admin", `Signalement #${id} → ${status}`, undefined, { reportId: id, status, by: user.email });
     return NextResponse.json({ ok: true });
@@ -467,6 +478,7 @@ export async function PATCH(req: NextRequest) {
   if (body.action === "suggestion_status") {
     const { id, status, admin_comment } = body;
     if (!id || !status) return NextResponse.json({ error: "id et status requis" }, { status: 400 });
+    if (!VALID_SUGGESTION_STATUSES.includes(status)) return NextResponse.json({ error: `Status invalide. Valeurs permises : ${VALID_SUGGESTION_STATUSES.join(", ")}` }, { status: 400 });
     if (admin_comment !== undefined && (typeof admin_comment !== "string" || admin_comment.length > 1000)) {
       return NextResponse.json({ error: "admin_comment invalide" }, { status: 400 });
     }

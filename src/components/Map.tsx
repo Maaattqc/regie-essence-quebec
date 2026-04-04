@@ -1,438 +1,53 @@
 "use client";
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { MapContainer, TileLayer, ZoomControl, AttributionControl, useMap, useMapEvents } from "react-leaflet";
-import MarkerClusterGroup from "react-leaflet-cluster";
-import { Marker, Popup, Circle, Polyline } from "react-leaflet";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useMapAuth } from "@/hooks/useMapAuth";
+import { useStationsData } from "@/hooks/useStationsData";
+import { useGeolocation } from "@/hooks/useGeolocation";
+import { MapContainer, TileLayer, ZoomControl, AttributionControl } from "react-leaflet";
+import { Marker, Circle, Polyline } from "react-leaflet";
 import L from "leaflet";
 import type { Feature, Point } from "geojson";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
-import {
-  X, Share2, BarChart3, Building2, Crosshair, Users, ChevronLeft, ChevronRight,
-  Trophy, Satellite, Moon, Locate, Route, MapPin, Settings, Map as MapIcon,
-} from "lucide-react";
+import { X, Share2 } from "lucide-react";
 import FilterBar from "@/components/FilterBar";
 import { createBrowserClient } from "@/lib/auth";
+
 import LoginModal from "@/components/LoginModal";
 import ChangelogModal from "@/components/ChangelogModal";
 import ReportModal from "@/components/ReportModal";
 import SuggestionModal from "@/components/SuggestionModal";
 import CommentsModal from "@/components/CommentsModal";
 import PricePanel from "@/components/PricePanel";
+import StationsLayer from "@/components/map/StationsLayer";
+import LiveCursors from "@/components/map/LiveCursors";
+import { FlyTo, DevClickHandler, DragController } from "@/components/map/MapControls";
+import MapButtonsPanel from "@/components/map/MapButtonsPanel";
+import "@/components/map/leaflet-patches";
 import {
   type StationProperties,
-  type StationPrice,
   type GasTypeKey,
   REGION_CENTERS,
   QUEBEC_CENTER,
   QUEBEC_ZOOM,
   stationId,
   parsePrice,
-  getPriceColor,
   distanceKm,
   effectivePrice,
   roadDistances,
   roadRoute,
   normalize,
-  extractCity,
   deduplicateCities,
-  getFavorites,
-  toggleFavorite,
-  reverseGeocode,
 } from "@/lib/stations";
 import "leaflet/dist/leaflet.css";
 
 const PriceChart = dynamic(() => import("./PriceChart"), { ssr: false });
-const STATIONS_CACHE_KEY = "stations-api-cache";
-
-// Fix Chrome subpixel rendering gaps between tiles (desktop only)
-// Sur mobile, les transforms 3D sont nécessaires pour synchroniser
-// les marqueurs avec le pan tactile du GPU
-if (typeof window !== "undefined" && !("ontouchstart" in window)) {
-  (L.Browser as Record<string, unknown>).any3d = false;
-}
-
-// Patch removeChild pour éviter le crash React/Leaflet quand les deux
-// manipulent le DOM en même temps (race condition sur changement de région)
-if (typeof window !== "undefined") {
-  const origRemoveChild = Node.prototype.removeChild;
-   
-  Node.prototype.removeChild = function <T extends Node>(child: T): T {
-    if (child.parentNode !== this) return child;
-    return origRemoveChild.call(this, child) as T;
-  };
-}
-
-interface StationsApiPayload {
-  ok: boolean;
-  data: GeoJSON.FeatureCollection | null;
-}
-
-function decorateStationGeoJson(geojson: GeoJSON.FeatureCollection) {
-  geojson.features.forEach((feature) => {
-    const station = feature as Feature<Point, StationProperties>;
-    const city = extractCity(station.properties.Address);
-
-    if (!city) {
-      return;
-    }
-
-    station.properties._city = city;
-    station.properties._cityNorm = normalize(city);
-  });
-
-  return geojson;
-}
 
 function readSearchParam(name: string) {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
+  if (typeof window === "undefined") return null;
   return new URLSearchParams(window.location.search).get(name);
-}
-
-// Lucide SVG paths inlined for use in Leaflet HTML popups (no JSX available)
-const SVG = {
-  navigation: `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>`,
-  star: `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
-  starEmpty: `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
-  barChart: `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>`,
-  messageCircle: `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>`,
-  flag: `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>`,
-};
-
-function escHtml(s: string) {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-}
-
-function formatPopup(props: StationProperties, lat: number, lng: number) {
-  const priceChips = props.Prices.filter((p) => p.IsAvailable)
-    .map((p) => `
-      <div style="display:flex;justify-content:space-between;align-items:center;background:#f5f5f5;border-radius:6px;padding:5px 9px;font-size:12.5px">
-        <span style="color:#555;font-weight:500">${escHtml(p.GasType)}</span>
-        <strong style="color:#111;font-size:14px;margin-left:10px">${escHtml(p.Price)} <span style="font-size:10px;font-weight:400;color:#888">¢/L</span></strong>
-      </div>`)
-    .join("");
-
-  const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
-  const sid = stationId(props);
-  const isFav = getFavorites().has(sid);
-  const esc = escHtml;
-
-  const btnBase = "border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;padding:7px 4px;display:flex;align-items:center;justify-content:center;gap:4px;flex:1;";
-
-  return `
-    <div style="min-width:230px;font-family:system-ui,sans-serif;padding:2px 0">
-      <div style="margin-bottom:10px">
-        <div style="font-size:15px;font-weight:700;color:#111;line-height:1.3;margin-bottom:3px">${esc(props.Name)}</div>
-        <div style="font-size:12px;color:#666;margin-bottom:1px">${esc(props.brand ?? "")} &middot; ${esc(props.Region)}</div>
-        <div style="font-size:11.5px;color:#999">${esc(props.Address)}</div>
-      </div>
-
-      <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:10px">
-        ${priceChips}
-      </div>
-
-      <div style="display:flex;gap:5px;margin-bottom:5px">
-        <a href="${mapsUrl}" target="_blank" rel="noopener noreferrer"
-          style="${btnBase}background:#4285f4;color:#fff;text-decoration:none;flex:2">
-          ${SVG.navigation} Itinéraire
-        </a>
-        <button onclick="window.__toggleFav('${esc(sid)}')"
-          style="${btnBase}background:${isFav ? "#ff9800" : "#f0f0f0"};color:${isFav ? "#fff" : "#555"}">
-          ${isFav ? SVG.star : SVG.starEmpty} Favori
-        </button>
-      </div>
-
-      <div style="display:flex;gap:5px">
-        <button onclick="window.__showHistory('${esc(props.Name)}','${esc(props.Address)}')"
-          style="${btnBase}background:#ede9fe;color:#6d28d9">
-          ${SVG.barChart} Historique
-        </button>
-        <button onclick="window.__showReviews('${esc(props.Name)}','${esc(props.Address)}')"
-          style="${btnBase}background:#e0f2fe;color:#0369a1">
-          ${SVG.messageCircle} Commentaires
-        </button>
-        <button onclick="window.__showReport('${esc(props.Name)}','${esc(props.Address)}')"
-          style="${btnBase}background:#fee2e2;color:#dc2626">
-          ${SVG.flag} Signaler
-        </button>
-      </div>
-    </div>
-  `;
-}
-
-function FlyTo({ center, zoom }: { center: [number, number]; zoom: number }) {
-  const map = useMap();
-  useEffect(() => {
-    map.flyTo(center, zoom, { duration: 0.5 });
-  }, [map, center, zoom]);
-  return null;
-}
-
-function DevClickHandler({ onPin }: { onPin: (lat: number, lng: number) => void }) {
-  useMapEvents({
-    click(e) {
-      onPin(e.latlng.lat, e.latlng.lng);
-    },
-  });
-  return null;
-}
-
-const iconCache: Record<string, L.DivIcon> = {};
-
-function priceIcon(
-  props: StationProperties,
-  gasType: GasTypeKey,
-  min: number,
-  max: number
-) {
-  const priceObj = props.Prices.find((p) => p.GasType === gasType && p.IsAvailable);
-  const label = priceObj ? priceObj.Price.replace("\u00A2", "") : "—";
-  const bg = priceObj ? getPriceColor(parsePrice(priceObj.Price), min, max) : "#999";
-
-  const cacheKey = `${label}-${bg}`;
-  let icon = iconCache[cacheKey];
-  if (!icon) {
-    icon = L.divIcon({
-      html: `<div style="background:${bg};color:#fff;font-size:11px;font-weight:700;padding:2px 4px;border-radius:4px;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.4);text-align:center">${label}</div>`,
-      className: "",
-      iconSize: [40, 20],
-      iconAnchor: [20, 10],
-    });
-    iconCache[cacheKey] = icon;
-  }
-  return icon;
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function createClusterIcon(cluster: any, gasType: GasTypeKey, min: number, max: number) {
-  const markers = cluster.getAllChildMarkers();
-  const count = markers.length;
-  let total = 0;
-  let priceCount = 0;
-  markers.forEach((m: L.Marker) => {
-    const props = (m.options as unknown as Record<string, StationProperties>).__props;
-    if (props) {
-      const p = props.Prices.find((pr: StationPrice) => pr.GasType === gasType && pr.IsAvailable);
-      if (p) { total += parsePrice(p.Price); priceCount++; }
-    }
-  });
-  const avg = priceCount > 0 ? total / priceCount : 0;
-  const avgLabel = avg > 0 ? avg.toFixed(1) : "—";
-  const bg = avg > 0 ? getPriceColor(avg, min, max) : "#999";
-
-  const size = count > 50 ? 52 : count > 20 ? 46 : 40;
-
-  return L.divIcon({
-    html: `<div style="background:${bg};color:#fff;width:${size}px;height:${size}px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:700;box-shadow:0 2px 6px rgba(0,0,0,.3);border:2px solid #fff;line-height:1.1"><span style="font-size:12px">${avgLabel}</span><span style="font-size:9px;opacity:.85">(${count})</span></div>`,
-    className: "",
-    iconSize: [size, size],
-    iconAnchor: [size / 2, size / 2],
-  });
-}
-
-const StationsLayer = memo(function StationsLayer({
-  gasType,
-  data,
-  priceMin,
-  priceMax,
-  hasFilter,
-}: {
-  gasType: GasTypeKey;
-  data: GeoJSON.FeatureCollection;
-  priceMin: number;
-  priceMax: number;
-  hasFilter: boolean;
-}) {
-  const { min, max } = useMemo(() => {
-    let lo = Infinity;
-    let hi = -Infinity;
-    data.features.forEach((f) => {
-      const props = (f as Feature<Point, StationProperties>).properties;
-      const p = props.Prices.find((pr) => pr.GasType === gasType && pr.IsAvailable);
-      if (p) {
-        const v = parsePrice(p.Price);
-        if (v < lo) lo = v;
-        if (v > hi) hi = v;
-      }
-    });
-    return { min: lo === Infinity ? 0 : lo, max: hi === -Infinity ? 0 : hi };
-  }, [data, gasType]);
-
-  const seen = new Set<string>();
-  const markers = data.features.flatMap((f) => {
-    const feature = f as Feature<Point, StationProperties>;
-    const [lng, lat] = feature.geometry.coordinates;
-    const props = feature.properties;
-    const id = stationId(props);
-    if (seen.has(id)) return [];
-    seen.add(id);
-    return [
-      <Marker
-        key={id}
-        position={[lat, lng]}
-        icon={priceIcon(props, gasType, min, max)}
-        {...{ __props: props } as unknown as Record<string, unknown>}
-        eventHandlers={{
-          popupopen: (e) => {
-            const popup = e.target.getPopup();
-            if (popup) popup.setContent(formatPopup(props, lat, lng));
-          },
-        }}
-      >
-        <Popup><span /></Popup>
-      </Marker>
-    ];
-  });
-
-  if (hasFilter) {
-    return <>{markers}</>;
-  }
-
-  return (
-    <MarkerClusterGroup
-      key={gasType + priceMin + priceMax}
-      chunkedLoading
-      maxClusterRadius={60}
-      iconCreateFunction={(cluster: unknown) => createClusterIcon(cluster, gasType, min, max)}
-    >
-      {markers}
-    </MarkerClusterGroup>
-  );
-});
-
-const CURSOR_COLORS = ["#e63946","#457b9d","#2a9d8f","#e9c46a","#f4a261","#264653","#6a4c93","#1982c4","#8ac926","#ff595e"];
-
-function hashColor(id: string) {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = ((h << 5) - h + id.charCodeAt(i)) | 0;
-  return CURSOR_COLORS[Math.abs(h) % CURSOR_COLORS.length];
-}
-
-function getCursorUserId() {
-  let id = localStorage.getItem("cursor_user_id");
-  if (!id) { id = crypto.randomUUID(); localStorage.setItem("cursor_user_id", id); }
-  return id;
-}
-
-function LiveCursors({ showCursors, onOnlineCount }: { showCursors: boolean; onOnlineCount: (n: number) => void }) {
-  const map = useMap();
-  const markersRef = useRef<Record<string, L.Marker>>({});
-  const channelRef = useRef<ReturnType<ReturnType<typeof createBrowserClient>["channel"]> | null>(null);
-  const lastSendRef = useRef(0);
-  const userIdRef = useRef("");
-  const showRef = useRef(showCursors);
-  const cursorsRef = useRef<Record<string, { lat: number; lng: number; color: string; uid: string }>>({});
-
-  useEffect(() => {
-    showRef.current = showCursors;
-  }, [showCursors]);
-
-  // Show/hide markers when toggle changes
-  useEffect(() => {
-    if (showCursors) {
-      for (const [uid, data] of Object.entries(cursorsRef.current)) {
-        if (!markersRef.current[uid]) {
-          const icon = L.divIcon({
-            html: `<div style="width:12px;height:12px;background:${data.color};border:2px solid #fff;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.3);"></div>`,
-            className: "",
-            iconSize: [50, 30],
-            iconAnchor: [25, 6],
-          });
-          markersRef.current[uid] = L.marker([data.lat, data.lng], { icon, interactive: false, zIndexOffset: 9999 }).addTo(map);
-        }
-      }
-    } else {
-      Object.values(markersRef.current).forEach((m) => m.remove());
-      markersRef.current = {};
-    }
-  }, [showCursors, map]);
-
-  // Always connect: broadcast own cursor + receive others
-  useEffect(() => {
-    const userId = getCursorUserId();
-    userIdRef.current = userId;
-    const color = hashColor(userId);
-    const supabase = createBrowserClient();
-    const channel = supabase.channel("live-cursors", { config: { broadcast: { self: false } } });
-    channelRef.current = channel;
-
-    channel.on("broadcast", { event: "cursor" }, ({ payload }) => {
-      const { user_id, lat, lng, color: c } = payload as { user_id: string; lat: number; lng: number; color: string };
-      if (user_id === userId) return;
-      cursorsRef.current[user_id] = { lat, lng, color: c, uid: user_id };
-      if (!showRef.current) return;
-      const existing = markersRef.current[user_id];
-      if (existing) {
-        existing.setLatLng([lat, lng]);
-      } else {
-        const icon = L.divIcon({
-          html: `<div style="width:12px;height:12px;background:${c};border:2px solid #fff;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.3);"></div>`,
-          className: "",
-          iconSize: [50, 30],
-          iconAnchor: [25, 6],
-        });
-        markersRef.current[user_id] = L.marker([lat, lng], { icon, interactive: false, zIndexOffset: 9999 }).addTo(map);
-      }
-    });
-
-    channel.on("broadcast", { event: "leave" }, ({ payload }) => {
-      const { user_id } = payload as { user_id: string };
-      delete cursorsRef.current[user_id];
-      markersRef.current[user_id]?.remove();
-      delete markersRef.current[user_id];
-    });
-
-    channel.on("presence", { event: "sync" }, () => {
-      const state = channel.presenceState();
-      onOnlineCount(Object.keys(state).length);
-    });
-
-    channel.subscribe(async (status) => {
-      if (status === "SUBSCRIBED") {
-        await channel.track({ user_id: userId, color });
-      }
-    });
-
-    const onMouseMove = (e: L.LeafletMouseEvent) => {
-      if (!showRef.current) return;
-      const now = Date.now();
-      if (now - lastSendRef.current < 60) return;
-      lastSendRef.current = now;
-      channel.send({ type: "broadcast", event: "cursor", payload: { user_id: userId, lat: e.latlng.lat, lng: e.latlng.lng, color } });
-    };
-
-    map.on("mousemove", onMouseMove);
-
-    return () => {
-      map.off("mousemove", onMouseMove);
-      channel.send({ type: "broadcast", event: "leave", payload: { user_id: userId } });
-      Object.values(markersRef.current).forEach((m) => m.remove());
-      markersRef.current = {};
-      cursorsRef.current = {};
-      supabase.removeChannel(channel);
-      channelRef.current = null;
-    };
-  }, [map, onOnlineCount]);
-
-  return null;
-}
-
-function DragController({ disabled }: { disabled: boolean }) {
-  const map = useMap();
-  useEffect(() => {
-    if (disabled) {
-      map.dragging.disable();
-    } else {
-      map.dragging.enable();
-    }
-  }, [map, disabled]);
-  return null;
 }
 
 export default function Map() {
@@ -456,19 +71,16 @@ export default function Map() {
   const [showChangelog, setShowChangelog] = useState(false);
   const [showSuggestion, setShowSuggestion] = useState(false);
   const [commentStation, setCommentStation] = useState<{ name: string; address: string } | null>(null);
-  const [currentUser, setCurrentUser] = useState<{ email: string } | null>(null);
+  const { currentUser, setCurrentUser } = useMapAuth();
   const [cheapestResults, setCheapestResults] = useState<{ stations: { lat: number; lng: number; price: number; name: string; dist: number; durationMin?: number; effectivePrice?: number }[]; message: string } | null>(null);
   const [cheapestRoute, setCheapestRoute] = useState<[number, number][] | null>(null);
   const [radiusKm, setRadiusKm] = useState(0);
-  const [userPos, setUserPos] = useState<[number, number] | null>(null);
   const [showFavorites, setShowFavorites] = useState(false);
-  const [favs, setFavs] = useState<Set<string>>(() => getFavorites());
-  const [data, setData] = useState<GeoJSON.FeatureCollection | null>(null);
-  const [geoReady, setGeoReady] = useState(false);
   const [flyTarget, setFlyTarget] = useState<{ center: [number, number]; zoom: number } | null>(null);
+  const { data, favs } = useStationsData({ setHistoryStation, setReportStation, setCommentStation });
+  const { userPos, setUserPos, geoReady } = useGeolocation({ data, setRegion, setSearch, setFlyTarget });
   const [showCursors, setShowCursors] = useState(false);
   const [mapPanelOpen, setMapPanelOpen] = useState(true);
-  const [showRadiusMenu, setShowRadiusMenu] = useState(false);
   const [onlineCount, setOnlineCount] = useState(0);
   const handleOnlineCount = useCallback((n: number) => setOnlineCount(n), []);
   const [devPinMode, setDevPinMode] = useState(false);
@@ -503,117 +115,6 @@ export default function Map() {
     return () => document.removeEventListener("pointerdown", handlePointerDown);
   }, [showEffectiveSettings]);
 
-  useEffect(() => {
-    const sb = createBrowserClient();
-    sb.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user?.email) setCurrentUser({ email: session.user.email });
-    });
-    let lastEmail: string | null = null;
-    let lastToken: string | null = null;
-    const { data: { subscription } } = sb.auth.onAuthStateChange((event, session) => {
-      const email = session?.user?.email ?? null;
-      const token = session?.access_token ?? null;
-      setCurrentUser(email ? { email } : null);
-      if (event === "SIGNED_IN" && email && token) {
-        lastEmail = email;
-        lastToken = token;
-        fetch("/api/auth/log", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, event, token }),
-        }).catch(() => {});
-      }
-      if (event === "SIGNED_OUT" && lastEmail && lastToken) {
-        fetch("/api/auth/log", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: lastEmail, event, token: lastToken }),
-        }).catch(() => {});
-        lastEmail = null;
-        lastToken = null;
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, []);
-
-
-  useEffect(() => {
-    let cancelled = false;
-    let retryTimer: number | null = null;
-
-    const applyStations = (geojson: GeoJSON.FeatureCollection) => {
-      if (cancelled) {
-        return;
-      }
-
-      setData(decorateStationGeoJson(geojson));
-    };
-
-    const cached = sessionStorage.getItem(STATIONS_CACHE_KEY);
-    if (cached) {
-      try {
-        applyStations(JSON.parse(cached) as GeoJSON.FeatureCollection);
-      } catch {}
-    }
-
-    const loadStations = async () => {
-      try {
-        const response = await fetch("/api/stations", { cache: "no-store" });
-        if (!response.ok && response.status !== 202) {
-          if (response.status === 429) { retryTimer = window.setTimeout(loadStations, 3000); return; }
-          throw new Error(`HTTP ${response.status}`);
-        }
-        const payload = (await response.json()) as StationsApiPayload;
-
-        if (payload.data) {
-          try {
-            sessionStorage.setItem(
-              STATIONS_CACHE_KEY,
-              JSON.stringify(payload.data)
-            );
-          } catch {}
-
-          applyStations(payload.data);
-          return;
-        }
-      } catch (error) {
-        console.error(error);
-      }
-
-      if (!cancelled) {
-        retryTimer = window.setTimeout(loadStations, 5000);
-      }
-    };
-
-    void loadStations();
-
-    // Re-fetch toutes les 5 minutes pour détecter les changements de prix
-    const pollInterval = window.setInterval(loadStations, 5 * 60 * 1000);
-
-    (window as unknown as Record<string, unknown>).__toggleFav = (id: string) => {
-      const updated = toggleFavorite(id);
-      setFavs(new Set(updated));
-    };
-    (window as unknown as Record<string, unknown>).__showHistory = (name: string, address: string) => {
-      setHistoryStation({ name, address });
-    };
-    (window as unknown as Record<string, unknown>).__showReport = (name: string, address: string) => {
-      setReportStation({ name, address });
-    };
-    (window as unknown as Record<string, unknown>).__showReviews = (name: string, address: string) => {
-      setCommentStation({ name, address });
-    };
-    const onFavChange = () => setFavs(getFavorites());
-    window.addEventListener("favorites-changed", onFavChange);
-    return () => {
-      cancelled = true;
-      if (retryTimer !== null) {
-        window.clearTimeout(retryTimer);
-      }
-      window.clearInterval(pollInterval);
-      window.removeEventListener("favorites-changed", onFavChange);
-    };
-  }, []);
 
   function shareLink() {
     const params = new URLSearchParams();
@@ -627,46 +128,6 @@ export default function Map() {
     setShareToast(true);
     setTimeout(() => setShareToast(false), 2000);
   }
-
-  useEffect(() => {
-    if (!navigator.geolocation) {
-      queueMicrotask(() => setGeoReady(true));
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const { latitude, longitude } = pos.coords;
-        setUserPos([latitude, longitude]);
-        let geoZoom = 12;
-        if (data) {
-          let nearestRegion = "";
-          let nearestDist = Infinity;
-          data.features.forEach((f) => {
-            const feature = f as Feature<Point, StationProperties>;
-            const [lng, lat] = feature.geometry.coordinates;
-            const d = distanceKm(latitude, longitude, lat, lng);
-            if (d < nearestDist) {
-              nearestDist = d;
-              nearestRegion = feature.properties.Region;
-            }
-          });
-          if (nearestRegion) {
-            setRegion(nearestRegion);
-            const regionZooms: Record<string, number> = { "Montréal": 11, "Laval": 12 };
-            if (regionZooms[nearestRegion]) geoZoom = regionZooms[nearestRegion];
-          }
-        }
-        const city = await reverseGeocode(latitude, longitude);
-        if (city) {
-          setSearch(city);
-          if (normalize(city) === normalize("Saint-Georges")) geoZoom = 13;
-        }
-        setFlyTarget({ center: [latitude, longitude], zoom: geoZoom });
-        setGeoReady(true);
-      },
-      () => setGeoReady(true)
-    );
-  }, [data]);
 
   const autoSearchDone = useRef(false);
   useEffect(() => {
@@ -919,182 +380,41 @@ export default function Map() {
           }
         />
         <ZoomControl position="bottomright" />
-        <div
-          className="map-buttons-panel flex flex-col gap-1.5 leaflet-control"
-          style={{ position: "absolute", bottom: 30, left: 12, zIndex: 1000, width: 170 }}
-          ref={(el) => { if (el) L.DomEvent.disableClickPropagation(el); }}
-        >
-          <button
-            className="map-panel-toggle"
-            onClick={() => setMapPanelOpen((v) => !v)}
-            aria-label={mapPanelOpen ? "Masquer les boutons" : "Afficher les boutons"}
-          >
-            {mapPanelOpen ? <ChevronLeft className="size-4" /> : <ChevronRight className="size-4" />}
-          </button>
-          <AnimatePresence>
-            {mapPanelOpen && (
-              <motion.div
-                className="flex flex-col gap-1.5"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.2 }}
-              >
-                <div className="flex flex-col gap-1 relative">
-                  <div className="flex gap-0.5">
-                    <Button
-                      variant={cheapestResults ? "default" : "outline"}
-                      size="sm"
-                      className={`map-panel-btn flex-1 shadow-md font-semibold text-[13px] !rounded-r-none ${cheapestResults ? "!bg-[#2d9a2d] hover:!bg-[#2d9a2d]/90 !text-white" : "!bg-[var(--bg-panel)] !text-[var(--text)]"}`}
-                      onClick={() => { if (cheapestResults) { setCheapestResults(null); setCheapestRoute(null); setRadiusKm(0); } else { findBestEffectivePrice(); } }}
-                    >
-                      <Trophy className="size-4" />
-                      <span className="map-btn-label">{cheapestResults ? "Masquer" : "Meilleur prix"}</span>
-                    </Button>
-                    <Button
-                      ref={settingsBtnRef}
-                      variant="outline"
-                      size="sm"
-                      className={`map-panel-btn shadow-md !rounded-l-none !px-2 ${showEffectiveSettings ? "!bg-[#2d7a9a] !text-white" : "!bg-[var(--bg-panel)] !text-[var(--text)] !border-0"}`}
-                      onClick={() => setShowEffectiveSettings((v) => !v)}
-                    >
-                      <Settings className="size-4" />
-                    </Button>
-                  </div>
-                  <AnimatePresence>
-                    {showEffectiveSettings && (
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                        transition={{ duration: 0.15 }}
-                        className="map-settings-panel bg-[var(--bg-panel)] rounded-lg shadow-lg px-4 py-3 overflow-hidden"
-                        ref={(el) => {
-                          (settingsPanelRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
-                          if (el) {
-                            L.DomEvent.disableClickPropagation(el);
-                            L.DomEvent.disableScrollPropagation(el);
-                            el.addEventListener("touchstart", (e) => e.stopPropagation(), { passive: false });
-                            el.addEventListener("touchmove", (e) => { e.stopPropagation(); e.preventDefault(); }, { passive: false });
-                          }
-                        }}
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="text-xs font-semibold">Réglages</div>
-                          <button onClick={() => setShowEffectiveSettings(false)} className="text-red-500 hover:text-red-700">
-                            <X className="size-3.5" />
-                          </button>
-                        </div>
-                        <div className="mb-2">
-                          <div className="text-[11px] text-[var(--text-muted)] mb-1">Rayon : {radiusKm === 0 ? "Tout" : `${radiusKm} km`}</div>
-                          <Slider
-                            min={0}
-                            max={50}
-                            step={5}
-                            value={[radiusKm]}
-                            onValueChange={(v) => setRadiusKm(Array.isArray(v) ? v[0] : v)}
-                            className="w-full"
-                          />
-                        </div>
-                        <div className="mb-2">
-                          <div className="text-[11px] text-[var(--text-muted)] mb-1">Consommation : {consoLper100} L/100km</div>
-                          <Slider
-                            min={4}
-                            max={20}
-                            step={0.5}
-                            value={[consoLper100]}
-                            onValueChange={(v) => { const val = Array.isArray(v) ? v[0] : v; setConsoLper100(val); localStorage.setItem("eff_conso", String(val)); }}
-                            className="w-full"
-                          />
-                        </div>
-                        <div className="mb-2">
-                          <div className="text-[11px] text-[var(--text-muted)] mb-1">Réservoir : {tankVolume} L</div>
-                          <Slider
-                            min={15}
-                            max={100}
-                            step={5}
-                            value={[tankVolume]}
-                            onValueChange={(v) => { const val = Array.isArray(v) ? v[0] : v; setTankVolume(val); localStorage.setItem("eff_tank", String(val)); }}
-                            className="w-full"
-                          />
-                        </div>
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={showRadiusCircle}
-                            onChange={(e) => { setShowRadiusCircle(e.target.checked); localStorage.setItem("eff_showRadius", String(e.target.checked)); }}
-                            className="accent-[#4285f4] w-3.5 h-3.5"
-                          />
-                          <span className="text-[11px] text-[var(--text-muted)]">Afficher le cercle du rayon</span>
-                        </label>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className={`map-panel-btn w-full shadow-md !border-0 font-semibold text-[13px] ${showPricePanel ? "!bg-[#457b9d] !text-white" : "!bg-[var(--bg-panel)] !text-[var(--text)]"}`}
-                  onClick={() => setShowPricePanel((v) => !v)}
-                >
-                  <BarChart3 className="size-3.5" />
-                  <span className="map-btn-label">Prix moyens</span>
-                </Button>
-                <Button variant="outline" size="sm" className="map-panel-btn w-full shadow-md !bg-[var(--bg-panel)] !text-[var(--text)] !border-0 font-semibold text-[13px]" onClick={shareLink}>
-                  <Share2 className="size-3.5" />
-                  <span className="map-btn-label">Partager</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className={`map-panel-btn w-full shadow-md !border-0 font-semibold text-[13px] ${mapStyle !== "carte" ? "!bg-[#457b9d] !text-white" : "!bg-[var(--bg-panel)] !text-[var(--text)]"}`}
-                  onClick={() => {
-                    const styles = ["carte", "satellite", "dark"] as const;
-                    const idx = styles.indexOf(mapStyle as typeof styles[number]);
-                    setMapStyle(styles[(idx + 1) % styles.length]);
-                  }}
-                >
-                  {mapStyle === "satellite" ? <Satellite className="size-3.5" /> : mapStyle === "dark" ? <Moon className="size-3.5" /> : <MapIcon className="size-3.5" />}
-                  <span className="map-btn-label">{mapStyle === "carte" ? "Carte" : mapStyle === "satellite" ? "Satellite" : "Dark"}</span>
-                </Button>
-                <Button variant="outline" size="sm" className={`map-panel-btn map-panel-btn-wide w-full shadow-md font-semibold text-[13px] ${showCursors ? "!bg-[#457b9d] !text-white" : "!bg-[var(--bg-panel)] !text-[var(--text)]"} !border-0`} onClick={() => setShowCursors((v) => !v)}>
-                  <Users className="size-3.5" />
-                  <span className="map-btn-count">{onlineCount}</span>
-                  <span className="map-btn-label">{showCursors ? `En ligne (${onlineCount})` : `Visiteurs en ligne (${onlineCount})`}</span>
-                </Button>
-                {isDev && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className={`map-panel-btn w-full shadow-md !border-0 font-semibold text-[13px] ${devPinMode ? "!bg-[#e63946] !text-white" : "!bg-[var(--bg-panel)] !text-[var(--text)]"}`}
-                    onClick={() => setDevPinMode((v) => !v)}
-                  >
-                    <MapPin className="size-3.5" />
-                    <span className="map-btn-label">{devPinMode ? "Cliquer sur la carte..." : "DEV: Simuler position"}</span>
-                  </Button>
-                )}
-                {/* Jauge prix : desktop horizontal inline */}
-                <div className="map-panel-widget map-legend-desktop bg-[var(--bg-panel)] rounded-md shadow-md px-3 py-2">
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, fontWeight: 700, marginBottom: 3 }}>
-                    <span style={{ color: "#2d9a2d" }}>{priceMin.toFixed(1)}¢</span>
-                    <span style={{ color: "#e63946" }}>{priceMax.toFixed(1)}¢</span>
-                  </div>
-                  <div style={{ height: 6, borderRadius: 3, background: "linear-gradient(to right, #2d9a2d, #6fbf3b, #f0c808, #ef8a17, #e63946)" }} />
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-          {/* Jauge prix verticale — mobile seulement, masquée quand panneau fermé */}
-          {mapPanelOpen && (
-            <div className="map-legend-mobile">
-              <div className="map-legend-mobile-inner">
-                <span style={{ color: "#e63946", fontSize: 10, fontWeight: 700 }}>{priceMax.toFixed(1)}¢</span>
-                <div className="map-legend-mobile-bar" />
-                <span style={{ color: "#2d9a2d", fontSize: 10, fontWeight: 700 }}>{priceMin.toFixed(1)}¢</span>
-              </div>
-            </div>
-          )}
-        </div>
+        <MapButtonsPanel
+          mapPanelOpen={mapPanelOpen}
+          setMapPanelOpen={setMapPanelOpen}
+          cheapestResults={cheapestResults}
+          onToggleCheapest={() => { if (cheapestResults) { setCheapestResults(null); setCheapestRoute(null); setRadiusKm(0); } else { findBestEffectivePrice(); } }}
+          showEffectiveSettings={showEffectiveSettings}
+          setShowEffectiveSettings={setShowEffectiveSettings}
+          settingsBtnRef={settingsBtnRef}
+          settingsPanelRef={settingsPanelRef}
+          radiusKm={radiusKm}
+          setRadiusKm={setRadiusKm}
+          consoLper100={consoLper100}
+          setConsoLper100={setConsoLper100}
+          tankVolume={tankVolume}
+          setTankVolume={setTankVolume}
+          showRadiusCircle={showRadiusCircle}
+          setShowRadiusCircle={setShowRadiusCircle}
+          showPricePanel={showPricePanel}
+          setShowPricePanel={setShowPricePanel}
+          onShareLink={shareLink}
+          mapStyle={mapStyle}
+          onCycleMapStyle={() => {
+            const styles = ["carte", "satellite", "dark"] as const;
+            const idx = styles.indexOf(mapStyle as typeof styles[number]);
+            setMapStyle(styles[(idx + 1) % styles.length]);
+          }}
+          showCursors={showCursors}
+          setShowCursors={setShowCursors}
+          onlineCount={onlineCount}
+          devPinMode={devPinMode}
+          setDevPinMode={setDevPinMode}
+          isDev={isDev}
+          priceMin={priceMin}
+          priceMax={priceMax}
+        />
         <AttributionControl position="bottomleft" />
         {userPos && (
           <>

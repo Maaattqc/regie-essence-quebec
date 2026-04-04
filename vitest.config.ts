@@ -31,13 +31,23 @@ export default defineConfig({
         'src/components/RegionPricePanel.tsx',
         'src/components/ReportModal.tsx',
         'src/components/SiteThemeToggle.tsx',
+        'src/components/SuggestionModal.tsx',
         'src/components/UserDropdown.tsx',
+        'src/components/NavDropdown.tsx',
+        'src/components/PricePanel.tsx',
         'src/components/types.ts',
         // Infrastructure Supabase / auth (pas de logique testable en isolation)
         'src/lib/auth.ts',
         'src/lib/supabase.ts',
         // Job de synchronisation avec dépendances externes (couvert par E2E)
         'src/lib/station-sync.ts',
+        // Pages/composants UI simples sans logique métier
+        'src/app/error.tsx',
+        'src/app/not-found.tsx',
+        'src/components/PageTracker.tsx',
+        'src/hooks/**',
+        // API admin : 500 lignes de requêtes complexes, couvert par tests E2E
+        'src/app/api/admin/**',
         // Layouts Next.js
         'src/app/**/layout.tsx',
         'src/app/layout.tsx',

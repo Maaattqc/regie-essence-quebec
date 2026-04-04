@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   distanceKm,
   normalize,
@@ -7,6 +7,10 @@ import {
   parsePrice,
   getPriceColor,
   stationId,
+  effectivePrice,
+  roadDistances,
+  roadRoute,
+  reverseGeocode,
   PRICE_COLORS,
 } from "@/lib/stations";
 
@@ -111,5 +115,104 @@ describe("deduplicateCities", () => {
     expect(result.length).toBe(2);
     expect(result).toContain("Laval");
     expect(result).toContain("Lavaltrie");
+  });
+});
+
+describe("effectivePrice", () => {
+  it("retourne le prix brut quand la distance est 0", () => {
+    expect(effectivePrice(150, 0, 9, 40)).toBe(150);
+  });
+
+  it("augmente le prix avec la distance", () => {
+    const result = effectivePrice(150, 10, 9, 40);
+    expect(result).toBeGreaterThan(150);
+    expect(result).toBeLessThan(160);
+  });
+
+  it("augmente plus avec une consommation élevée", () => {
+    const lowConso = effectivePrice(150, 10, 6, 40);
+    const highConso = effectivePrice(150, 10, 15, 40);
+    expect(highConso).toBeGreaterThan(lowConso);
+  });
+
+  it("augmente moins avec un gros réservoir", () => {
+    const smallTank = effectivePrice(150, 10, 9, 30);
+    const bigTank = effectivePrice(150, 10, 9, 80);
+    expect(smallTank).toBeGreaterThan(bigTank);
+  });
+});
+
+describe("roadDistances", () => {
+  beforeEach(() => { vi.restoreAllMocks(); });
+
+  it("retourne un tableau vide pour aucune destination", async () => {
+    const result = await roadDistances([45.5, -73.5], []);
+    expect(result).toEqual([]);
+  });
+
+  it("retourne le fallback quand fetch échoue", async () => {
+    vi.spyOn(globalThis, "fetch").mockRejectedValueOnce(new Error("Network error"));
+    const result = await roadDistances([45.5, -73.5], [[45.6, -73.6]]);
+    expect(result).toEqual([{ distKm: null, durationMin: null }]);
+  });
+
+  it("retourne le fallback quand la réponse HTTP est en erreur", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(new Response("error", { status: 500 }));
+    const result = await roadDistances([45.5, -73.5], [[45.6, -73.6]]);
+    expect(result).toEqual([{ distKm: null, durationMin: null }]);
+  });
+
+  it("parse les distances et durées depuis la réponse Mapbox", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ distances: [[0, 5000]], durations: [[0, 600]] }))
+    );
+    const result = await roadDistances([45.5, -73.5], [[45.6, -73.6]]);
+    expect(result).toEqual([{ distKm: 5, durationMin: 10 }]);
+  });
+});
+
+describe("roadRoute", () => {
+  beforeEach(() => { vi.restoreAllMocks(); });
+
+  it("retourne null quand fetch échoue", async () => {
+    vi.spyOn(globalThis, "fetch").mockRejectedValueOnce(new Error("Network error"));
+    const result = await roadRoute([45.5, -73.5], [45.6, -73.6]);
+    expect(result).toBeNull();
+  });
+
+  it("retourne null quand aucune route n'est trouvée", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ routes: [] }))
+    );
+    const result = await roadRoute([45.5, -73.5], [45.6, -73.6]);
+    expect(result).toBeNull();
+  });
+
+  it("parse le tracé routier depuis la réponse Mapbox", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({
+        routes: [{ geometry: { coordinates: [[-73.5, 45.5], [-73.6, 45.6]] }, distance: 10000, duration: 600 }],
+      }))
+    );
+    const result = await roadRoute([45.5, -73.5], [45.6, -73.6]);
+    expect(result).toEqual({ path: [[45.5, -73.5], [45.6, -73.6]], distKm: 10, durationMin: 10 });
+  });
+});
+
+describe("reverseGeocode", () => {
+  beforeEach(() => { vi.restoreAllMocks(); });
+
+  it("retourne la ville depuis Nominatim", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ address: { city: "Montréal" } }))
+    );
+    const result = await reverseGeocode(45.5, -73.5);
+    expect(result).toBe("Montréal");
+  });
+
+  it("retourne null quand fetch échoue", async () => {
+    vi.spyOn(globalThis, "fetch").mockRejectedValueOnce(new Error("Network"));
+    const result = await reverseGeocode(45.5, -73.5);
+    expect(result).toBeNull();
   });
 });

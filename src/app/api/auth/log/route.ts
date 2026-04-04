@@ -4,7 +4,7 @@ import { rateLimit, getIP } from "@/lib/rateLimit";
 import { logActivity } from "@/lib/activity-log";
 
 export async function POST(request: NextRequest) {
-  if (!rateLimit(getIP(request))) {
+  if (!(await rateLimit(getIP(request)))) {
     return NextResponse.json({ error: "Trop de requêtes" }, { status: 429 });
   }
 
@@ -27,7 +27,9 @@ export async function POST(request: NextRequest) {
     const action = event === "SIGNED_OUT" ? "Déconnexion" : "Connexion";
     await logActivity("auth", action, email, { event: event ?? "SIGNED_IN" });
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (error) {
+    console.error("[auth/log] Échec:", error);
+    await logActivity("erreur", "Échec auth/log", undefined, { error: String(error) });
     return NextResponse.json({ error: "Erreur" }, { status: 500 });
   }
 }

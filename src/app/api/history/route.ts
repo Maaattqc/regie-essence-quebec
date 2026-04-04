@@ -3,7 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { rateLimit, getIP } from "@/lib/rateLimit";
 
 export async function GET(request: NextRequest) {
-  if (!rateLimit(getIP(request))) {
+  if (!(await rateLimit(getIP(request)))) {
     return NextResponse.json({ error: "Trop de requêtes" }, { status: 429 });
   }
   const { searchParams } = request.nextUrl;
