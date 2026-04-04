@@ -472,19 +472,6 @@ async function claimStationSync(datasetId: string, reason: SyncReason) {
   return Boolean(data);
 }
 
-async function _markStationSyncChecked(
-  changes: Partial<StationSyncStateRow> & { updated_at?: string }
-) {
-  const updatedAt = changes.updated_at ?? new Date().toISOString();
-  const { error } = await supabaseAdmin
-    .from("station_sync_state")
-    .update({ ...changes, updated_at: updatedAt })
-    .eq("singleton", true);
-
-  if (error) {
-    throw new Error(error.message);
-  }
-}
 
 export function shouldQueueStationRefresh(meta: StationFeedMeta) {
   if (!meta.datasetId) {
