@@ -1265,14 +1265,21 @@ export default function AdminPage() {
                 Source : Seobility <ExternalLink className="size-3" />
               </a>
             </h3>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {[
-                { tag: "Mon site", label: "essence-quebec.ca", score: 92, color: "#22c55e", url: "https://www.seobility.net/en/seocheck/check/?url=https%3A%2F%2Fessence-quebec.ca%2F&mode=standard" },
-                { tag: "Site gouvernemental", label: "regieessencequebec.ca", score: 42, color: "#ef4444", url: "https://www.seobility.net/en/seocheck/check/?url=https%3A%2F%2Fregieessencequebec.ca%2F&mode=standard" },
-              ].map(({ tag, label, score, color, url }) => (
-                <Card key={label}>
+                { tag: "Mon site", label: "essence-quebec.ca", score: 92, color: "#22c55e", url: "https://www.seobility.net/en/seocheck/check/?url=https%3A%2F%2Fessence-quebec.ca%2F&mode=standard", source: "Seobility" },
+                { tag: "Mon site", label: "essence-quebec.ca", score: 97, color: "#22c55e", url: "https://tools.backlinko.com/seo-checker?q=essence-quebec.ca", source: "Backlinko" },
+                { tag: "Mon site", label: "essence-quebec.ca", score: 88, color: "#22c55e", url: "https://socialtraffic.ca/free-seo-audit?scan=7defee94-0f54-4180-ad39-4ae400032ac5", source: "SocialTraffic" },
+                { tag: "Site gouvernemental", label: "regieessencequebec.ca", score: 42, color: "#ef4444", url: "https://www.seobility.net/en/seocheck/check/?url=https%3A%2F%2Fregieessencequebec.ca%2F&mode=standard", source: "Seobility" },
+                { tag: "Site gouvernemental", label: "regieessencequebec.ca", score: 75, color: "#f59e0b", url: "https://tools.backlinko.com/seo-checker?q=https%3A%2F%2Fregieessencequebec.ca%2F", source: "Backlinko" },
+                { tag: "Site gouvernemental", label: "regieessencequebec.ca", score: 67, color: "#f59e0b", url: "https://socialtraffic.ca/free-seo-audit?scan=8b643fa7-8d22-4599-b832-751959a95764", source: "SocialTraffic" },
+              ].map(({ tag, label, score, color, url, source }) => (
+                <Card key={`${source}-${label}`}>
                   <CardContent className="pt-5">
-                    <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">{tag}</div>
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{tag}</div>
+                      <div className="text-[10px] text-muted-foreground">{source}</div>
+                    </div>
                     <div className="flex items-center justify-between mb-3">
                       <a href={url} target="_blank" rel="noopener noreferrer" className="text-[13px] font-semibold hover:underline flex items-center gap-1">
                         {label} <ExternalLink className="size-3 opacity-50" />
