@@ -251,6 +251,15 @@ export default function Home() {
               <li>
                 <Link href="/login">Se connecter</Link>
               </li>
+              <li>
+                <a
+                  href="https://www.linkedin.com/in/mathieu-fournier-4977591bb"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Mathieu Fournier sur LinkedIn
+                </a>
+              </li>
             </ul>
           </nav>
         </article>

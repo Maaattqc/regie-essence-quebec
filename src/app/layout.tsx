@@ -80,10 +80,33 @@ export default function RootLayout({
               "@context": "https://schema.org",
               "@graph": [
                 {
+                  "@type": "Organization",
+                  "@id": "https://essence-quebec.ca/#organization",
+                  name: "Essence Québec",
+                  url: "https://essence-quebec.ca",
+                  logo: "https://essence-quebec.ca/android-chrome-512x512.png",
+                  description:
+                    "Carte interactive des prix de l'essence au Québec en temps réel.",
+                  founder: {
+                    "@type": "Person",
+                    name: "Mathieu Fournier",
+                    sameAs: "https://www.linkedin.com/in/mathieu-fournier-4977591bb",
+                  },
+                  sameAs: [
+                    "https://www.linkedin.com/in/mathieu-fournier-4977591bb",
+                  ],
+                  areaServed: {
+                    "@type": "AdministrativeArea",
+                    name: "Québec",
+                    containedInPlace: { "@type": "Country", name: "Canada" },
+                  },
+                },
+                {
                   "@type": "WebSite",
                   "@id": "https://essence-quebec.ca/#website",
                   url: "https://essence-quebec.ca",
                   name: "Essence Québec",
+                  publisher: { "@id": "https://essence-quebec.ca/#organization" },
                   description:
                     "Carte interactive des prix de l'essence au Québec en temps réel.",
                   inLanguage: "fr-CA",

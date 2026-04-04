@@ -1,0 +1,34 @@
+# Essence Québec
+
+> Carte interactive des prix de l'essence au Québec en temps réel.
+
+Essence Québec est une application web gratuite qui affiche les prix de l'essence et du diesel dans plus de 2 500 stations-service à travers le Québec. Les données proviennent de la Régie de l'énergie du Québec et sont mises à jour plusieurs fois par jour.
+
+## Fonctionnalités principales
+
+- Carte interactive avec prix en temps réel pour chaque station-service
+- Filtrage par type de carburant : régulier (87), super (91), super (94), premium et diesel
+- Recherche du meilleur prix dans un rayon de 1 à 50 km
+- Prix moyens par région administrative du Québec
+- Historique des prix sur 30 jours par station (graphique)
+- Signalement de prix incorrects par les utilisateurs
+- Mode clair et mode sombre
+
+## Source des données
+
+Les prix proviennent de la Régie de l'énergie du Québec (REQ), l'organisme gouvernemental qui encadre les prix des carburants dans la province.
+
+## Pages
+
+- [Accueil — Carte des prix](https://essence-quebec.ca/)
+- [FAQ](https://essence-quebec.ca/faq)
+- [À propos](https://essence-quebec.ca/a-propos)
+- [Informations techniques](https://essence-quebec.ca/tech)
+- [Politique de confidentialité](https://essence-quebec.ca/confidentialite)
+- [Historique des mises à jour](https://essence-quebec.ca/changelog)
+
+## Contact
+
+- Site web : https://essence-quebec.ca
+- Créateur : Mathieu Fournier
+- LinkedIn : https://www.linkedin.com/in/mathieu-fournier-4977591bb
