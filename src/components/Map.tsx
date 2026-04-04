@@ -423,6 +423,18 @@ function LiveCursors({ showCursors, onOnlineCount }: { showCursors: boolean; onO
   return null;
 }
 
+function DragController({ disabled }: { disabled: boolean }) {
+  const map = useMap();
+  useEffect(() => {
+    if (disabled) {
+      map.dragging.disable();
+    } else {
+      map.dragging.enable();
+    }
+  }, [map, disabled]);
+  return null;
+}
+
 export default function Map() {
   const [gasType, setGasType] = useState<GasTypeKey>(
     () => (readSearchParam("type") as GasTypeKey) || "Régulier"
@@ -1092,6 +1104,7 @@ export default function Map() {
           </>
         )}
         <LiveCursors showCursors={showCursors} onOnlineCount={handleOnlineCount} />
+        <DragController disabled={showEffectiveSettings} />
         {flyTarget && <FlyTo center={flyTarget.center} zoom={flyTarget.zoom} />}
         {devPinMode && (
           <DevClickHandler onPin={(lat, lng) => {
