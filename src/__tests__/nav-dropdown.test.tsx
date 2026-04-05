@@ -19,6 +19,17 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 
+vi.mock("@/contexts/LanguageContext", () => ({
+  useLanguage: () => ({
+    locale: "fr",
+    toggle: vi.fn(),
+    t: {
+      filterBar: { suggestion: "Suggestion", lightMode: "Mode clair", darkMode: "Mode sombre" },
+      nav: { changelog: "Historique des mises à jour", about: "À propos", tech: "Informations techniques", privacy: "Confidentialité" },
+    },
+  }),
+}));
+
 vi.mock("@/components/ui/dropdown-menu", () => {
   return {
     DropdownMenu: ({ children }: React.PropsWithChildren) => (
@@ -53,10 +64,10 @@ describe("NavDropdown", () => {
     expect(svg).not.toBeNull();
   });
 
-  it("contient l'item Changelogs Code", () => {
+  it("contient l'item Historique des mises à jour", () => {
     render(<NavDropdown onChangelogClick={vi.fn()} />);
 
-    expect(screen.getByText("Changelogs Code")).toBeInTheDocument();
+    expect(screen.getByText("Historique des mises à jour")).toBeInTheDocument();
   });
 
   it("affiche l'item Suggestion quand onSuggestionClick est fourni", () => {

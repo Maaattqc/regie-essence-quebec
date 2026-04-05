@@ -1,13 +1,41 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+
+vi.mock("@/contexts/LanguageContext", () => ({
+  useLanguage: () => ({
+    locale: "fr",
+    toggle: vi.fn(),
+    t: {
+      about: {
+        title: "À propos d'Essence Québec",
+        project: "Le projet",
+        dataSource: "Source des données",
+        howItWorks: "Fonctionnement",
+        contribution: "Contribution",
+      },
+      nav: {
+        map: "Carte des prix",
+        about: "À propos",
+        changelog: "Historique des mises à jour",
+        tech: "Informations techniques",
+        privacy: "Confidentialité",
+        terms: "Conditions d'utilisation",
+        accessibility: "Accessibilité",
+        login: "Se connecter",
+        faq: "FAQ",
+      },
+    },
+  }),
+}));
+
 import AProposPage from "@/app/a-propos/page";
 
 describe("AProposPage", () => {
   it("affiche le titre À propos d'Essence Québec", () => {
     render(<AProposPage />);
     expect(
-      screen.getByText("À propos d'Essence Québec")
-    ).toBeInTheDocument();
+      screen.getAllByText("À propos d'Essence Québec").length
+    ).toBeGreaterThanOrEqual(1);
   });
 
   it("affiche la section Le projet", () => {

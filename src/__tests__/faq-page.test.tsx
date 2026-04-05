@@ -1,11 +1,43 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+
+vi.mock("@/contexts/LanguageContext", () => ({
+  useLanguage: () => ({
+    locale: "fr",
+    toggle: vi.fn(),
+    t: {
+      faq: {
+        title: "Questions fréquentes",
+        q1: "À quelle fréquence les prix de l'essence sont-ils mis à jour ?",
+        q2: "La carte des prix d'essence est-elle gratuite ?",
+        q3: "Comment trouver la station-service la moins chère près de moi ?",
+        q4: "Quels types de carburant sont affichés ?",
+        q5: "Puis-je signaler un prix incorrect ?",
+        q6: "D'où proviennent les données de prix ?",
+        q7: "La carte fonctionne-t-elle sur mobile ?",
+        q8: "Puis-je voir l'historique des prix d'une station ?",
+      },
+      nav: {
+        map: "Carte des prix",
+        about: "À propos",
+        changelog: "Historique des mises à jour",
+        tech: "Informations techniques",
+        privacy: "Confidentialité",
+        terms: "Conditions d'utilisation",
+        accessibility: "Accessibilité",
+        login: "Se connecter",
+        faq: "FAQ",
+      },
+    },
+  }),
+}));
+
 import FaqPage from "@/app/faq/page";
 
 describe("FaqPage", () => {
   it("affiche le titre Questions fréquentes", () => {
     render(<FaqPage />);
-    expect(screen.getByText("Questions fréquentes")).toBeInTheDocument();
+    expect(screen.getAllByText("Questions fréquentes").length).toBeGreaterThanOrEqual(1);
   });
 
   it("affiche la question sur la fréquence de mise à jour", () => {

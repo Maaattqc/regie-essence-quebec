@@ -27,6 +27,11 @@ vi.mock("@/contexts/LanguageContext", () => ({
         logout: "Déconnexion",
         loggedInAs: "Connecté en tant que",
       },
+      gasTypes: {
+        Régulier: "Régulier",
+        Super: "Super",
+        Diesel: "Diesel",
+      },
     },
   }),
 }));

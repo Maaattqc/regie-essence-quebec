@@ -49,6 +49,34 @@ vi.mock("@/hooks/useComments", () => ({
   useComments: () => mocks.useCommentsReturn,
 }));
 
+vi.mock("@/contexts/LanguageContext", () => ({
+  useLanguage: () => ({
+    locale: "fr",
+    toggle: vi.fn(),
+    t: {
+      comments: {
+        title: (name: string) => `Commentaires — ${name}`,
+        count: (n: number) => n === 1 ? "1 commentaire" : `${n} commentaires`,
+        placeholder: "Ajouter un commentaire...",
+        publish: "Publier",
+        empty: "Aucun commentaire. Soyez le premier !",
+        minutesAgo: (n: number) => `il y a ${n}m`,
+        hoursAgo: (n: number) => `il y a ${n}h`,
+        daysAgo: (n: number) => `il y a ${n}j`,
+        likes: (n: number) => n === 0 ? "J'aime" : `J'aime (${n})`,
+        dislikes: (n: number) => n === 0 ? "Je n'aime pas" : `Je n'aime pas (${n})`,
+        reply: "Répondre",
+        delete: "Supprimer",
+        confirmDelete: "Supprimer ce commentaire ?",
+        yes: "Oui",
+        no: "Non",
+        replyTo: (author: string) => `Répondre à ${author}...`,
+        cancel: "Annuler",
+      },
+    },
+  }),
+}));
+
 vi.mock("@/components/ui/button", () => ({
   Button: ({ children, onClick, disabled, ...props }: React.PropsWithChildren<React.ButtonHTMLAttributes<HTMLButtonElement>>) => (
     <button onClick={onClick} disabled={disabled} {...props}>{children}</button>
