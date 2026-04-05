@@ -122,4 +122,66 @@ describe("SuggestionModal", () => {
       ).toBeInTheDocument();
     });
   });
+
+  it("affiche l'erreur du serveur quand fetch retourne ok: false", async () => {
+    mocks.fetch.mockResolvedValueOnce({
+      ok: false,
+      json: async () => ({ error: "Trop de suggestions" }),
+    });
+
+    render(<SuggestionModal onClose={mocks.onClose} />);
+
+    fireEvent.change(screen.getByPlaceholderText("Prénom"), {
+      target: { value: "Marie" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Nom"), {
+      target: { value: "Gagnon" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Courriel"), {
+      target: { value: "marie@example.com" },
+    });
+    fireEvent.change(
+      screen.getByPlaceholderText("Décrivez votre suggestion..."),
+      { target: { value: "Ajouter un filtre par marque de station" } }
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /Envoyer la suggestion/i })
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Trop de suggestions")).toBeInTheDocument();
+    });
+  });
+
+  it("affiche 'Erreur' par défaut quand la réponse n'a pas de champ error", async () => {
+    mocks.fetch.mockResolvedValueOnce({
+      ok: false,
+      json: async () => ({}),
+    });
+
+    render(<SuggestionModal onClose={mocks.onClose} />);
+
+    fireEvent.change(screen.getByPlaceholderText("Prénom"), {
+      target: { value: "Marie" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Nom"), {
+      target: { value: "Gagnon" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Courriel"), {
+      target: { value: "marie@example.com" },
+    });
+    fireEvent.change(
+      screen.getByPlaceholderText("Décrivez votre suggestion..."),
+      { target: { value: "Ajouter un filtre par marque de station" } }
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /Envoyer la suggestion/i })
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Erreur")).toBeInTheDocument();
+    });
+  });
 });

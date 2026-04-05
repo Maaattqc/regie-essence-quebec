@@ -90,4 +90,66 @@ describe('GET /api/changelog', () => {
       },
     )
   })
+
+  it('filtre les commits contenant des mots sensibles', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify([
+          {
+            sha: 'aaa111',
+            commit: {
+              author: { date: '2026-04-02T12:00:00.000Z' },
+              message: 'feat: ajout token Mapbox dans .env',
+            },
+          },
+          {
+            sha: 'bbb222',
+            commit: {
+              author: { date: '2026-04-02T11:00:00.000Z' },
+              message: 'fix: corriger affichage prix',
+            },
+          },
+          {
+            sha: 'ccc333',
+            commit: {
+              author: { date: '2026-04-02T10:00:00.000Z' },
+              message: 'update API_KEY for production',
+            },
+          },
+          {
+            sha: 'ddd444',
+            commit: {
+              author: { date: '2026-04-02T09:00:00.000Z' },
+              message: 'chore: rotate secret keys',
+            },
+          },
+        ]),
+        { status: 200 },
+      ),
+    ))
+
+    const response = await GET(new NextRequest('http://localhost/api/changelog'))
+
+    expect(response.status).toBe(200)
+    const data = await response.json()
+    // Seul le commit "fix: corriger affichage prix" doit passer le filtre
+    expect(data).toHaveLength(1)
+    expect(data[0].sha).toBe('bbb222')
+    expect(data[0].message).toBe('fix: corriger affichage prix')
+  })
+
+  it('retourne un tableau vide et log quand fetch throw', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network failure')))
+
+    const response = await GET(new NextRequest('http://localhost/api/changelog'))
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual([])
+    expect(mocks.logActivity).toHaveBeenCalledWith(
+      'erreur',
+      'Échec GitHub API (changelog)',
+      undefined,
+      expect.objectContaining({ error: expect.stringContaining('Network failure') }),
+    )
+  })
 })

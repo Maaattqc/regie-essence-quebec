@@ -9,6 +9,9 @@ export default function Home() {
         aria-label="Carte interactive des prix d'essence au Québec"
       >
         <MapClient />
+        <div className="absolute bottom-1 right-1 z-[1000] text-[10px] text-gray-500 dark:text-gray-400 bg-white/80 dark:bg-black/60 rounded px-1.5 py-0.5 pointer-events-none select-none">
+          Données : Régie de l&apos;énergie du Québec
+        </div>
       </section>
 
       {/* Contenu SEO — visible pour les lecteurs d'écran et les moteurs de recherche */}
@@ -244,6 +247,12 @@ export default function Home() {
               </li>
               <li>
                 <Link href="/confidentialite">Politique de confidentialité</Link>
+              </li>
+              <li>
+                <Link href="/conditions-utilisation">Conditions d&apos;utilisation</Link>
+              </li>
+              <li>
+                <Link href="/accessibilite">Accessibilité</Link>
               </li>
               <li>
                 <Link href="/changelog">Historique des mises à jour</Link>

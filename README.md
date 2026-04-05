@@ -16,7 +16,7 @@ Les données proviennent de la **Régie de l'énergie du Québec** et sont mises
 | Base de données | Supabase (PostgreSQL + Auth OTP + Realtime) |
 | Rate limiting | Upstash Redis (distribué en prod, mémoire en dev) |
 | Monitoring | Sentry (erreurs), Vercel Analytics (trafic) |
-| Tests | Vitest (196 tests, 90%+ couverture), Playwright (E2E multi-navigateurs) |
+| Tests | Vitest (610 tests, 62 fichiers, 93%+ couverture), Playwright (E2E multi-navigateurs) |
 | CI/CD | GitHub Actions (lint, types, tests, build), Vercel (deploy) |
 | Sécurité | CSP, HSTS, X-Frame-Options, rate limiting, validation Zod, Auth OTP |
 

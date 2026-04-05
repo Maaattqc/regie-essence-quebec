@@ -149,4 +149,71 @@ describe('useMapAuth', () => {
 
     expect(mocks.unsubscribe).toHaveBeenCalledTimes(1)
   })
+
+  it('permet de mettre currentUser via setCurrentUser', async () => {
+    mocks.getSession.mockResolvedValue({ data: { session: null } })
+
+    const { result } = renderHook(() => useMapAuth())
+
+    expect(result.current.currentUser).toBeNull()
+
+    act(() => {
+      result.current.setCurrentUser({ email: 'manual@test.com' })
+    })
+
+    expect(result.current.currentUser).toEqual({ email: 'manual@test.com' })
+  })
+
+  it('ne fait pas de fetch pour SIGNED_OUT sans SIGNED_IN préalable', async () => {
+    mocks.getSession.mockResolvedValue({ data: { session: null } })
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true })
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderHook(() => useMapAuth())
+
+    const callback = mocks.getAuthCallback()!
+
+    // SIGNED_OUT sans SIGNED_IN préalable : lastEmail et lastToken sont null
+    act(() => {
+      callback('SIGNED_OUT', null)
+    })
+
+    // Aucun fetch ne doit avoir été appelé
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('ne fait pas de fetch pour un événement non SIGNED_IN/SIGNED_OUT', async () => {
+    mocks.getSession.mockResolvedValue({ data: { session: null } })
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true })
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderHook(() => useMapAuth())
+
+    const callback = mocks.getAuthCallback()!
+
+    // TOKEN_REFRESHED n'est ni SIGNED_IN ni SIGNED_OUT
+    act(() => {
+      callback('TOKEN_REFRESHED', {
+        user: { email: 'alice@example.com' },
+        access_token: 'refreshed-token',
+      })
+    })
+
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('met currentUser à null quand SIGNED_IN sans email', async () => {
+    mocks.getSession.mockResolvedValue({ data: { session: null } })
+
+    const { result } = renderHook(() => useMapAuth())
+
+    const callback = mocks.getAuthCallback()!
+
+    act(() => {
+      callback('SIGNED_IN', { user: {}, access_token: 'tok' })
+    })
+
+    // email est undefined, donc currentUser est null
+    expect(result.current.currentUser).toBeNull()
+  })
 })

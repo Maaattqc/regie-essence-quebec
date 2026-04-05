@@ -536,6 +536,663 @@ describe('/api/admin', () => {
   })
 
   /* ---------------------------------------------------------------- */
+  /*  GET type=me                                                     */
+  /* ---------------------------------------------------------------- */
+
+  describe('GET type=me', () => {
+    it('retourne isAdmin=false pour un non-admin', async () => {
+      setupNonAdmin()
+      const response = await GET(makeGetRequest({ type: 'me' }))
+      expect(response.status).toBe(200)
+      const json = await response.json()
+      expect(json).toEqual({ isAdmin: false })
+    })
+
+    it('retourne isAdmin=true pour un admin', async () => {
+      setupAdmin()
+
+      const adminProfileChain: Record<string, unknown> = {
+        select: vi.fn(),
+        eq: vi.fn(),
+        single: vi.fn().mockResolvedValue({ data: { role: 'admin' } }),
+      }
+      for (const method of ['select', 'eq']) {
+        (adminProfileChain as Record<string, ReturnType<typeof vi.fn>>)[method].mockReturnValue(adminProfileChain)
+      }
+      mocks.from.mockReturnValue(adminProfileChain as ReturnType<typeof vi.fn>)
+
+      const response = await GET(makeGetRequest({ type: 'me' }, 'valid-token'))
+      expect(response.status).toBe(200)
+      const json = await response.json()
+      expect(json).toEqual({ isAdmin: true })
+    })
+  })
+
+  /* ---------------------------------------------------------------- */
+  /*  GET type=suggestions                                            */
+  /* ---------------------------------------------------------------- */
+
+  describe('GET type=suggestions', () => {
+    it('retourne les suggestions masquees pour un non-admin', async () => {
+      setupNonAdmin()
+
+      const fakeSuggestions = [
+        { id: 1, email: 'user@example.com', first_name: 'Alice', last_name: 'Tremblay', message: 'Ajouter filtre' },
+      ]
+      const chain: Record<string, unknown> = {
+        select: vi.fn(),
+        order: vi.fn(),
+        range: vi.fn(),
+        data: fakeSuggestions,
+      }
+      for (const method of ['select', 'order', 'range']) {
+        (chain as Record<string, ReturnType<typeof vi.fn>>)[method].mockReturnValue(chain)
+      }
+      mocks.from.mockReturnValue(chain as ReturnType<typeof vi.fn>)
+
+      const response = await GET(makeGetRequest({ type: 'suggestions' }))
+      expect(response.status).toBe(200)
+      const json = await response.json()
+      expect(json[0].email).toContain('***')
+      expect(json[0].first_name).toContain('***')
+    })
+  })
+
+  /* ---------------------------------------------------------------- */
+  /*  GET type=init                                                   */
+  /* ---------------------------------------------------------------- */
+
+  describe('GET type=init', () => {
+    function makeChain(overrides: Record<string, unknown> = {}) {
+      const chain: Record<string, unknown> = {
+        select: vi.fn(),
+        order: vi.fn(),
+        limit: vi.fn(),
+        range: vi.fn(),
+        eq: vi.fn(),
+        gt: vi.fn(),
+        lt: vi.fn(),
+        gte: vi.fn(),
+        single: vi.fn().mockResolvedValue({ data: null }),
+        count: overrides.count ?? 0,
+        data: overrides.data ?? null,
+      }
+      for (const method of ['select', 'order', 'limit', 'range', 'eq', 'gt', 'lt', 'gte']) {
+        (chain as Record<string, ReturnType<typeof vi.fn>>)[method].mockReturnValue(chain)
+      }
+      return chain
+    }
+
+    it('retourne toutes les données init pour un non-admin (masquées)', async () => {
+      setupNonAdmin()
+
+      const snapshotsCount = makeChain({ count: 100 })
+      const snapshotsLatest = makeChain({ data: [{ snapshot_at: '2026-04-01T10:00:00Z' }] })
+      const reportsCount = makeChain({ count: 3 })
+      const profilesCount = makeChain({ count: 8 })
+      const pvTotal = makeChain({ count: 500 })
+      const pvToday = makeChain({ count: 20 })
+      const pvWeek = makeChain({ count: 150 })
+      const pvMonth = makeChain({ count: 400 })
+      const profilesList = makeChain({
+        data: [{ id: 'u1', email: 'alice@example.com', created_at: '2026-01-01' }],
+      })
+      const reportsList = makeChain({
+        data: [{ id: 1, email: 'rep@test.com', first_name: 'Jean', last_name: 'Dupont', message: 'test' }],
+      })
+      const suggestionsList = makeChain({
+        data: [{ id: 1, email: 'sug@test.com', first_name: 'Marie', last_name: 'Lavoie', message: 'idée' }],
+      })
+
+      let callIndex = 0
+      const fromResults = [
+        snapshotsCount,    // price_snapshots count
+        snapshotsLatest,   // price_snapshots latest
+        reportsCount,      // reports count
+        profilesCount,     // profiles count
+        pvTotal,           // page_views total
+        pvToday,           // page_views today
+        pvWeek,            // page_views week
+        pvMonth,           // page_views month
+        profilesList,      // profiles list
+        reportsList,       // reports data
+        suggestionsList,   // suggestions data
+      ]
+
+      mocks.from.mockImplementation(() => {
+        const result = fromResults[callIndex] ?? makeChain()
+        callIndex++
+        return result as ReturnType<typeof makeChain>
+      })
+
+      mocks.rpc.mockResolvedValue({ data: { regulier: 170, super: 190, diesel: 180 } })
+      mocks.getUserById.mockResolvedValue({
+        data: { user: { email: 'alice@example.com' } },
+      })
+
+      const response = await GET(makeGetRequest({ type: 'init' }))
+      expect(response.status).toBe(200)
+
+      const json = await response.json()
+      expect(json.stats).toBeDefined()
+      expect(json.stats.totalSnapshots).toBe(100)
+      expect(json.stats.lastSnapshot).toBe('2026-04-01T10:00:00Z')
+      expect(json.stats.totalReports).toBe(3)
+      expect(json.stats.totalUsers).toBe(8)
+      expect(json.stats.avgRegulier).toBe(170)
+      expect(json.stats.avgSuper).toBe(190)
+      expect(json.stats.avgDiesel).toBe(180)
+      expect(json.stats.totalPageViews).toBe(500)
+      expect(json.stats.todayPageViews).toBe(20)
+      expect(json.stats.weekPageViews).toBe(150)
+      expect(json.stats.monthPageViews).toBe(400)
+
+      // Utilisateurs masqués (non-admin)
+      expect(json.users).toHaveLength(1)
+      expect(json.users[0].email).toContain('***')
+
+      // Signalements masqués
+      expect(json.reports).toHaveLength(1)
+      expect(json.reports[0].email).toContain('***')
+      expect(json.reports[0].first_name).toContain('***')
+      expect(json.reports[0].last_name).toContain('***')
+      expect(json.reports[0].message).toBe('test')
+
+      // Suggestions masquées
+      expect(json.suggestions).toHaveLength(1)
+      expect(json.suggestions[0].email).toContain('***')
+    })
+
+    it('retourne les données non masquées pour un admin', async () => {
+      setupAdmin()
+
+      const adminProfileChain: Record<string, unknown> = {
+        select: vi.fn(),
+        eq: vi.fn(),
+        single: vi.fn().mockResolvedValue({ data: { role: 'admin' } }),
+      }
+      for (const method of ['select', 'eq']) {
+        (adminProfileChain as Record<string, ReturnType<typeof vi.fn>>)[method].mockReturnValue(adminProfileChain)
+      }
+
+      const snapshotsCount = makeChain({ count: 50 })
+      const snapshotsLatest = makeChain({ data: [{ snapshot_at: '2026-04-01' }] })
+      const reportsCount = makeChain({ count: 2 })
+      const profilesCount = makeChain({ count: 5 })
+      const pvTotal = makeChain({ count: 100 })
+      const pvToday = makeChain({ count: 10 })
+      const pvWeek = makeChain({ count: 60 })
+      const pvMonth = makeChain({ count: 90 })
+      const profilesList = makeChain({
+        data: [{ id: 'u1', email: 'admin@test.com', created_at: '2026-01-01' }],
+      })
+      const reportsList = makeChain({
+        data: [{ id: 1, email: 'rep@test.com', first_name: 'Jean', last_name: 'Dupont', message: 'test' }],
+      })
+      const suggestionsList = makeChain({
+        data: [{ id: 1, email: 'sug@test.com', first_name: 'Marie', last_name: 'Lavoie', message: 'idée' }],
+      })
+
+      let callIndex = 0
+      const fromResults = [
+        adminProfileChain, // verifyAdmin profile lookup
+        snapshotsCount,
+        snapshotsLatest,
+        reportsCount,
+        profilesCount,
+        pvTotal,
+        pvToday,
+        pvWeek,
+        pvMonth,
+        profilesList,
+        reportsList,
+        suggestionsList,
+      ]
+
+      mocks.from.mockImplementation(() => {
+        const result = fromResults[callIndex] ?? makeChain()
+        callIndex++
+        return result as ReturnType<typeof makeChain>
+      })
+
+      mocks.rpc.mockResolvedValue({ data: { regulier: 170, super: 190, diesel: 180 } })
+      mocks.getUserById.mockResolvedValue({
+        data: { user: { email: 'admin@test.com' } },
+      })
+
+      const response = await GET(makeGetRequest({ type: 'init' }, 'valid-token'))
+      expect(response.status).toBe(200)
+
+      const json = await response.json()
+      // Admin voit les emails complets
+      expect(json.users[0].email).toBe('admin@test.com')
+      expect(json.reports[0].email).toBe('rep@test.com')
+      expect(json.reports[0].first_name).toBe('Jean')
+      expect(json.suggestions[0].email).toBe('sug@test.com')
+    })
+  })
+
+  /* ---------------------------------------------------------------- */
+  /*  GET type=snapshots                                              */
+  /* ---------------------------------------------------------------- */
+
+  describe('GET type=snapshots', () => {
+    it('retourne le résumé des snapshots via RPC', async () => {
+      const fakeSnapshots = [
+        { snapshot_at: '2026-04-01', station_count: 100 },
+        { snapshot_at: '2026-03-31', station_count: 98 },
+      ]
+      mocks.rpc.mockResolvedValue({ data: fakeSnapshots, error: null })
+
+      const response = await GET(makeGetRequest({ type: 'snapshots' }))
+      expect(response.status).toBe(200)
+
+      const json = await response.json()
+      expect(json).toEqual(fakeSnapshots)
+      expect(mocks.rpc).toHaveBeenCalledWith('get_snapshot_summary')
+    })
+
+    it('retourne un tableau vide si RPC échoue', async () => {
+      mocks.rpc.mockResolvedValue({ data: null, error: { message: 'RPC failed' } })
+
+      const response = await GET(makeGetRequest({ type: 'snapshots' }))
+      expect(response.status).toBe(200)
+
+      const json = await response.json()
+      expect(json).toEqual([])
+    })
+  })
+
+  /* ---------------------------------------------------------------- */
+  /*  GET type=snapshot_detail                                        */
+  /* ---------------------------------------------------------------- */
+
+  describe('GET type=snapshot_detail', () => {
+    function makeDetailChain(data: unknown[] | null = null) {
+      const chain: Record<string, unknown> = {
+        select: vi.fn(),
+        order: vi.fn(),
+        range: vi.fn(),
+        eq: vi.fn(),
+        data,
+      }
+      for (const method of ['select', 'order', 'range', 'eq']) {
+        (chain as Record<string, ReturnType<typeof vi.fn>>)[method].mockReturnValue(chain)
+      }
+      return chain
+    }
+
+    it('retourne les détails pour un snapshotAt donné', async () => {
+      const fakeRows = [
+        { station_name: 'Shell', address: '123 Rue', gas_type: 'Régulier', price: 165 },
+        { station_name: 'Petro', address: '456 Ave', gas_type: 'Régulier', price: 170 },
+      ]
+
+      const chain = makeDetailChain(fakeRows)
+      mocks.from.mockReturnValue(chain as ReturnType<typeof vi.fn>)
+
+      const response = await GET(makeGetRequest({
+        type: 'snapshot_detail',
+        snapshotAt: '2026-04-01T10:00:00Z',
+      }))
+      expect(response.status).toBe(200)
+
+      const json = await response.json()
+      expect(json).toEqual(fakeRows)
+    })
+
+    it('retourne 400 sans snapshotAt ni date', async () => {
+      const response = await GET(makeGetRequest({ type: 'snapshot_detail' }))
+      expect(response.status).toBe(400)
+
+      const json = await response.json()
+      expect(json.error).toContain('snapshotAt ou date requis')
+    })
+
+    it('retourne 400 avec un snapshotAt invalide', async () => {
+      const response = await GET(makeGetRequest({
+        type: 'snapshot_detail',
+        snapshotAt: 'pas-une-date',
+      }))
+      expect(response.status).toBe(400)
+
+      const json = await response.json()
+      expect(json.error).toContain('Format snapshotAt invalide')
+    })
+
+    it('retourne 400 avec un format date invalide', async () => {
+      const response = await GET(makeGetRequest({
+        type: 'snapshot_detail',
+        date: '04-01-2026',
+      }))
+      expect(response.status).toBe(400)
+
+      const json = await response.json()
+      expect(json.error).toContain('Format date invalide')
+    })
+
+    it('utilise latest=1 pour trouver le dernier snapshot', async () => {
+      // Premier appel : chercher le dernier snapshot_at
+      const latestChain: Record<string, unknown> = {
+        select: vi.fn(),
+        order: vi.fn(),
+        limit: vi.fn(),
+        data: [{ snapshot_at: '2026-04-01T10:00:00Z' }],
+      }
+      for (const method of ['select', 'order', 'limit']) {
+        (latestChain as Record<string, ReturnType<typeof vi.fn>>)[method].mockReturnValue(latestChain)
+      }
+
+      const fakeRows = [
+        { station_name: 'Shell', address: '123 Rue', gas_type: 'Régulier', price: 165 },
+      ]
+      const detailChain = makeDetailChain(fakeRows)
+
+      let callIndex = 0
+      mocks.from.mockImplementation(() => {
+        callIndex++
+        if (callIndex === 1) return latestChain
+        return detailChain
+      })
+
+      const response = await GET(makeGetRequest({
+        type: 'snapshot_detail',
+        latest: '1',
+      }))
+      expect(response.status).toBe(200)
+
+      const json = await response.json()
+      expect(json).toEqual(fakeRows)
+    })
+
+    it('retourne tableau vide quand latest=1 mais aucun snapshot', async () => {
+      const latestChain: Record<string, unknown> = {
+        select: vi.fn(),
+        order: vi.fn(),
+        limit: vi.fn(),
+        data: [],
+      }
+      for (const method of ['select', 'order', 'limit']) {
+        (latestChain as Record<string, ReturnType<typeof vi.fn>>)[method].mockReturnValue(latestChain)
+      }
+
+      mocks.from.mockReturnValue(latestChain as ReturnType<typeof vi.fn>)
+
+      const response = await GET(makeGetRequest({
+        type: 'snapshot_detail',
+        latest: '1',
+      }))
+      expect(response.status).toBe(200)
+
+      const json = await response.json()
+      expect(json).toEqual([])
+    })
+  })
+
+  /* ---------------------------------------------------------------- */
+  /*  GET type=auth_logs                                              */
+  /* ---------------------------------------------------------------- */
+
+  describe('GET type=auth_logs', () => {
+    it('retourne les logs auth complets pour un admin', async () => {
+      setupAdmin()
+
+      const adminProfileChain: Record<string, unknown> = {
+        select: vi.fn(),
+        eq: vi.fn(),
+        single: vi.fn().mockResolvedValue({ data: { role: 'admin' } }),
+      }
+      for (const method of ['select', 'eq']) {
+        (adminProfileChain as Record<string, ReturnType<typeof vi.fn>>)[method].mockReturnValue(adminProfileChain)
+      }
+
+      const fakeLogs = [
+        { id: 1, action: 'login', detail: 'admin@test.com', metadata: {}, created_at: '2026-04-01' },
+        { id: 2, action: 'logout', detail: 'user@test.com', metadata: {}, created_at: '2026-04-01' },
+      ]
+      const logsChain: Record<string, unknown> = {
+        select: vi.fn(),
+        order: vi.fn(),
+        limit: vi.fn(),
+        eq: vi.fn(),
+        data: fakeLogs,
+      }
+      for (const method of ['select', 'order', 'limit', 'eq']) {
+        (logsChain as Record<string, ReturnType<typeof vi.fn>>)[method].mockReturnValue(logsChain)
+      }
+
+      let callIndex = 0
+      mocks.from.mockImplementation(() => {
+        callIndex++
+        if (callIndex === 1) return adminProfileChain
+        return logsChain
+      })
+
+      const response = await GET(makeGetRequest({ type: 'auth_logs' }, 'valid-token'))
+      expect(response.status).toBe(200)
+
+      const json = await response.json()
+      expect(json).toEqual(fakeLogs)
+      // Admin voit les emails complets
+      expect(json[0].detail).toBe('admin@test.com')
+      expect(json[1].detail).toBe('user@test.com')
+    })
+
+    it('retourne les logs auth masqués pour un non-admin', async () => {
+      setupNonAdmin()
+
+      const fakeLogs = [
+        { id: 1, action: 'login', detail: 'admin@test.com', metadata: {}, created_at: '2026-04-01' },
+        { id: 2, action: 'logout', detail: 'action sans email', metadata: {}, created_at: '2026-04-01' },
+      ]
+      const logsChain: Record<string, unknown> = {
+        select: vi.fn(),
+        order: vi.fn(),
+        limit: vi.fn(),
+        eq: vi.fn(),
+        data: fakeLogs,
+      }
+      for (const method of ['select', 'order', 'limit', 'eq']) {
+        (logsChain as Record<string, ReturnType<typeof vi.fn>>)[method].mockReturnValue(logsChain)
+      }
+
+      mocks.from.mockReturnValue(logsChain as ReturnType<typeof vi.fn>)
+
+      const response = await GET(makeGetRequest({ type: 'auth_logs' }))
+      expect(response.status).toBe(200)
+
+      const json = await response.json()
+      expect(json).toHaveLength(2)
+      // Email masqué
+      expect(json[0].detail).not.toBe('admin@test.com')
+      expect(json[0].detail).toContain('***')
+      // Detail sans email reste intact
+      expect(json[1].detail).toBe('action sans email')
+    })
+  })
+
+  /* ---------------------------------------------------------------- */
+  /*  GET type=invalid                                                */
+  /* ---------------------------------------------------------------- */
+
+  describe('GET type=invalid', () => {
+    it('retourne 400 sans type', async () => {
+      const response = await GET(makeGetRequest({}))
+      expect(response.status).toBe(400)
+    })
+  })
+
+  /* ---------------------------------------------------------------- */
+  /*  GET rate limit                                                  */
+  /* ---------------------------------------------------------------- */
+
+  describe('GET rate limit', () => {
+    it('retourne 429 quand le rate limit est depasse', async () => {
+      mocks.rateLimit.mockReturnValue(false)
+      const response = await GET(makeGetRequest({ type: 'stats' }))
+      expect(response.status).toBe(429)
+    })
+  })
+
+  /* ---------------------------------------------------------------- */
+  /*  PATCH action=suggestion_status                                  */
+  /* ---------------------------------------------------------------- */
+
+  describe('PATCH action=suggestion_status', () => {
+    it('met a jour le statut de la suggestion', async () => {
+      setupAdmin()
+
+      const adminProfileChain: Record<string, unknown> = {
+        select: vi.fn(),
+        eq: vi.fn(),
+        single: vi.fn().mockResolvedValue({ data: { role: 'admin' } }),
+      }
+      for (const method of ['select', 'eq']) {
+        (adminProfileChain as Record<string, ReturnType<typeof vi.fn>>)[method].mockReturnValue(adminProfileChain)
+      }
+
+      const updateEq = vi.fn().mockResolvedValue({ error: null })
+      const suggestionsChain = {
+        select: vi.fn(),
+        update: vi.fn().mockReturnValue({ eq: updateEq }),
+        insert: vi.fn(),
+      }
+
+      let fromCallIndex = 0
+      mocks.from.mockImplementation(() => {
+        fromCallIndex++
+        if (fromCallIndex === 1) return adminProfileChain
+        return suggestionsChain
+      })
+
+      mocks.logActivity.mockResolvedValue(undefined)
+
+      const response = await PATCH(
+        makePatchRequest(
+          { action: 'suggestion_status', id: 7, status: 'approved' },
+          'valid-token',
+        ),
+      )
+
+      expect(response.status).toBe(200)
+      const json = await response.json()
+      expect(json).toEqual({ ok: true })
+      expect(suggestionsChain.update).toHaveBeenCalledWith({ status: 'approved' })
+    })
+
+    it('retourne 400 avec un statut invalide', async () => {
+      setupAdmin()
+
+      const adminProfileChain: Record<string, unknown> = {
+        select: vi.fn(),
+        eq: vi.fn(),
+        single: vi.fn().mockResolvedValue({ data: { role: 'admin' } }),
+      }
+      for (const method of ['select', 'eq']) {
+        (adminProfileChain as Record<string, ReturnType<typeof vi.fn>>)[method].mockReturnValue(adminProfileChain)
+      }
+      mocks.from.mockReturnValue(adminProfileChain as ReturnType<typeof vi.fn>)
+
+      const response = await PATCH(
+        makePatchRequest(
+          { action: 'suggestion_status', id: 7, status: 'invalid_status' },
+          'valid-token',
+        ),
+      )
+
+      expect(response.status).toBe(400)
+    })
+  })
+
+  /* ---------------------------------------------------------------- */
+  /*  PATCH action=report_comment                                     */
+  /* ---------------------------------------------------------------- */
+
+  describe('PATCH action=report_comment', () => {
+    it('ajoute un commentaire admin au signalement', async () => {
+      setupAdmin()
+
+      const adminProfileChain: Record<string, unknown> = {
+        select: vi.fn(),
+        eq: vi.fn(),
+        single: vi.fn().mockResolvedValue({ data: { role: 'admin' } }),
+      }
+      for (const method of ['select', 'eq']) {
+        (adminProfileChain as Record<string, ReturnType<typeof vi.fn>>)[method].mockReturnValue(adminProfileChain)
+      }
+
+      const updateEq = vi.fn().mockResolvedValue({ error: null })
+      const reportsChain = {
+        select: vi.fn(),
+        update: vi.fn().mockReturnValue({ eq: updateEq }),
+        insert: vi.fn(),
+      }
+
+      let fromCallIndex = 0
+      mocks.from.mockImplementation(() => {
+        fromCallIndex++
+        if (fromCallIndex === 1) return adminProfileChain
+        return reportsChain
+      })
+
+      mocks.logActivity.mockResolvedValue(undefined)
+
+      const response = await PATCH(
+        makePatchRequest(
+          { action: 'report_comment', id: 5, admin_comment: 'Vérifié et correct' },
+          'valid-token',
+        ),
+      )
+
+      expect(response.status).toBe(200)
+      const json = await response.json()
+      expect(json).toEqual({ ok: true })
+    })
+  })
+
+  /* ---------------------------------------------------------------- */
+  /*  PATCH action=unknown                                            */
+  /* ---------------------------------------------------------------- */
+
+  describe('PATCH action inconnue', () => {
+    it('retourne 400 pour une action inconnue', async () => {
+      setupAdmin()
+
+      const adminProfileChain: Record<string, unknown> = {
+        select: vi.fn(),
+        eq: vi.fn(),
+        single: vi.fn().mockResolvedValue({ data: { role: 'admin' } }),
+      }
+      for (const method of ['select', 'eq']) {
+        (adminProfileChain as Record<string, ReturnType<typeof vi.fn>>)[method].mockReturnValue(adminProfileChain)
+      }
+      mocks.from.mockReturnValue(adminProfileChain as ReturnType<typeof vi.fn>)
+
+      const response = await PATCH(
+        makePatchRequest({ action: 'nonexistent' }, 'valid-token'),
+      )
+
+      expect(response.status).toBe(400)
+      const json = await response.json()
+      expect(json.error).toContain('action inconnue')
+    })
+  })
+
+  /* ---------------------------------------------------------------- */
+  /*  PATCH rate limit                                                */
+  /* ---------------------------------------------------------------- */
+
+  describe('PATCH rate limit', () => {
+    it('retourne 429 quand le rate limit est depasse', async () => {
+      mocks.rateLimit.mockReturnValue(false)
+      const response = await PATCH(
+        makePatchRequest({ action: 'report_status', id: 1, status: 'resolved' }, 'valid-token'),
+      )
+      expect(response.status).toBe(429)
+    })
+  })
+
+  /* ---------------------------------------------------------------- */
   /*  PATCH action=toggle_role                                        */
   /* ---------------------------------------------------------------- */
 

@@ -215,4 +215,84 @@ describe("reverseGeocode", () => {
     const result = await reverseGeocode(45.5, -73.5);
     expect(result).toBeNull();
   });
+
+  it("retourne null quand la réponse HTTP est en erreur", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(null, { status: 500 })
+    );
+    const result = await reverseGeocode(45.5, -73.5);
+    expect(result).toBeNull();
+  });
+
+  it("retourne town quand city est absent", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ address: { town: "Gaspé" } }))
+    );
+    const result = await reverseGeocode(48.8, -64.5);
+    expect(result).toBe("Gaspé");
+  });
+
+  it("retourne village quand city et town sont absents", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ address: { village: "Piopolis" } }))
+    );
+    const result = await reverseGeocode(45.5, -71.5);
+    expect(result).toBe("Piopolis");
+  });
+
+  it("retourne municipality quand city, town et village sont absents", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ address: { municipality: "Eeyou Istchee" } }))
+    );
+    const result = await reverseGeocode(51.0, -76.0);
+    expect(result).toBe("Eeyou Istchee");
+  });
+
+  it("retourne null quand aucun champ d'adresse n'est présent", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ address: {} }))
+    );
+    const result = await reverseGeocode(45.5, -73.5);
+    expect(result).toBeNull();
+  });
+});
+
+describe("roadDistances edge cases", () => {
+  beforeEach(() => { vi.restoreAllMocks(); });
+
+  it("retourne le fallback quand distRow est absent", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ distances: null, durations: null }))
+    );
+    const result = await roadDistances([45.5, -73.5], [[45.6, -73.6]]);
+    expect(result).toEqual([{ distKm: null, durationMin: null }]);
+  });
+
+  it("retourne null pour les distances et durées négatives ou nulles", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ distances: [[0, 0]], durations: [[0, -1]] }))
+    );
+    const result = await roadDistances([45.5, -73.5], [[45.6, -73.6]]);
+    expect(result).toEqual([{ distKm: null, durationMin: null }]);
+  });
+});
+
+describe("roadRoute edge cases", () => {
+  beforeEach(() => { vi.restoreAllMocks(); });
+
+  it("retourne null quand la réponse HTTP est en erreur", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response("error", { status: 500 })
+    );
+    const result = await roadRoute([45.5, -73.5], [45.6, -73.6]);
+    expect(result).toBeNull();
+  });
+
+  it("retourne null quand route.geometry.coordinates est absent", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ routes: [{ geometry: {} }] }))
+    );
+    const result = await roadRoute([45.5, -73.5], [45.6, -73.6]);
+    expect(result).toBeNull();
+  });
 });

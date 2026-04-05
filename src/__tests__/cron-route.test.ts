@@ -94,4 +94,14 @@ describe('GET /api/cron', () => {
       reason: 'cron',
     })
   })
+
+  it('retourne 500 quand CRON_SECRET est absent', async () => {
+    // CRON_SECRET n'est pas défini (supprimé dans beforeEach)
+
+    const response = await GET(new Request('http://localhost/api/cron'))
+
+    expect(response.status).toBe(500)
+    await expect(response.json()).resolves.toEqual({ error: 'CRON_SECRET non configuré' })
+    expect(mocks.after).not.toHaveBeenCalled()
+  })
 })

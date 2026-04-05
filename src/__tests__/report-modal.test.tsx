@@ -175,4 +175,66 @@ describe("ReportModal", () => {
       ).toBeInTheDocument();
     });
   });
+
+  it("affiche l'erreur du serveur quand fetch retourne ok: false", async () => {
+    mocks.fetch.mockResolvedValueOnce({
+      ok: false,
+      json: async () => ({ error: "Station introuvable" }),
+    });
+
+    render(<ReportModal {...defaultProps} />);
+
+    fireEvent.change(screen.getByPlaceholderText("Prénom"), {
+      target: { value: "Jean" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Nom"), {
+      target: { value: "Tremblay" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Courriel"), {
+      target: { value: "jean@example.com" },
+    });
+    fireEvent.change(
+      screen.getByPlaceholderText("Décrivez l'inexactitude..."),
+      { target: { value: "Le prix affiché est incorrect depuis 2 jours" } }
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /Envoyer le signalement/i })
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Station introuvable")).toBeInTheDocument();
+    });
+  });
+
+  it("affiche 'Erreur' par défaut quand la réponse n'a pas de champ error", async () => {
+    mocks.fetch.mockResolvedValueOnce({
+      ok: false,
+      json: async () => ({}),
+    });
+
+    render(<ReportModal {...defaultProps} />);
+
+    fireEvent.change(screen.getByPlaceholderText("Prénom"), {
+      target: { value: "Jean" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Nom"), {
+      target: { value: "Tremblay" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Courriel"), {
+      target: { value: "jean@example.com" },
+    });
+    fireEvent.change(
+      screen.getByPlaceholderText("Décrivez l'inexactitude..."),
+      { target: { value: "Le prix affiché est incorrect depuis 2 jours" } }
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /Envoyer le signalement/i })
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Erreur")).toBeInTheDocument();
+    });
+  });
 });

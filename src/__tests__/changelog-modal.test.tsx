@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 
 const mocks = vi.hoisted(() => ({
   fetch: vi.fn(),
@@ -91,6 +91,16 @@ describe("ChangelogModal", () => {
 
     const closeButton = screen.getByRole("button", { name: "Fermer" });
     closeButton.click();
+
+    expect(mocks.onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("appelle onClose quand on appuie sur Escape", () => {
+    mocks.fetch.mockReturnValueOnce(new Promise(() => {}));
+
+    render(<ChangelogModal onClose={mocks.onClose} />);
+
+    fireEvent.keyDown(document, { key: "Escape" });
 
     expect(mocks.onClose).toHaveBeenCalledTimes(1);
   });

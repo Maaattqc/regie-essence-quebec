@@ -230,4 +230,68 @@ describe('useGeolocation', () => {
 
     expect(result.current.userPos).toBeNull()
   })
+
+  it('appelle setSearch quand reverseGeocode retourne une ville', async () => {
+    const mockGetCurrentPosition = vi.fn(
+      (success: PositionCallback) => {
+        success({
+          coords: { latitude: 45.5, longitude: -73.6 },
+        } as GeolocationPosition)
+      },
+    )
+
+    Object.defineProperty(navigator, 'geolocation', {
+      value: { getCurrentPosition: mockGetCurrentPosition },
+      configurable: true,
+      writable: true,
+    })
+
+    mocks.reverseGeocode.mockResolvedValue('Laval')
+    mocks.distanceKm.mockReturnValue(5)
+
+    const data = makeData([
+      { lat: 45.51, lng: -73.61, region: 'Laval' },
+    ])
+
+    const { result } = renderHook(() =>
+      useGeolocation({ data, setRegion, setSearch, setFlyTarget }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.geoReady).toBe(true)
+    })
+
+    expect(setSearch).toHaveBeenCalledWith('Laval')
+  })
+
+  it('utilise un zoom de 13 pour Saint-Georges', async () => {
+    const mockGetCurrentPosition = vi.fn(
+      (success: PositionCallback) => {
+        success({
+          coords: { latitude: 46.12, longitude: -70.67 },
+        } as GeolocationPosition)
+      },
+    )
+
+    Object.defineProperty(navigator, 'geolocation', {
+      value: { getCurrentPosition: mockGetCurrentPosition },
+      configurable: true,
+      writable: true,
+    })
+
+    mocks.reverseGeocode.mockResolvedValue('Saint-Georges')
+    mocks.normalize.mockImplementation((s: string) => s.toLowerCase())
+
+    const { result } = renderHook(() =>
+      useGeolocation({ data: null, setRegion, setSearch, setFlyTarget }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.geoReady).toBe(true)
+    })
+
+    expect(setFlyTarget).toHaveBeenCalledWith(
+      expect.objectContaining({ zoom: 13 }),
+    )
+  })
 })

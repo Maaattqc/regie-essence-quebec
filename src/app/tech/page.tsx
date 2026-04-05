@@ -186,21 +186,21 @@ const SECURITY: [string, string][] = [
 ];
 
 const TESTS: [string, string][] = [
-  ["196 tests — 28 fichiers", "Couverture complète en une seule passe : unitaires + intégration, exécutée en < 13 s"],
+  ["610 tests — 62 fichiers", "Couverture complète en une seule passe : unitaires + intégration, exécutée en < 30 s"],
   ["Tests unitaires (Vitest 4)", "Runner ultrarapide natif ESM — @testing-library/react pour composants, jest-dom pour assertions DOM"],
   ["Tests d'intégration API", "Flux multi-étapes testés : validation Zod, format de réponse HTTP, codes d'erreur cohérents, Content-Type"],
   ["Tests E2E (Playwright)", "Carte interactive, navigation entre pages, formulaire de connexion, changelog — multi-navigateurs (Chrome, Firefox, Safari)"],
-  ["Seuils de couverture enforced", "80% lignes, 80% fonctions, 77% instructions, 65% branches — le build échoue si les seuils ne sont pas atteints"],
-  ["GitHub Actions CI", "Pipeline automatisé sur chaque PR : lint ESLint, tests Vitest, build Next.js de production"],
+  ["Seuils de couverture enforced", "95% lignes, 97% fonctions, 93% instructions, 79% branches — le build échoue si les seuils ne sont pas atteints"],
+  ["GitHub Actions CI + E2E", "Pipeline automatisé sur chaque PR : lint ESLint, tests Vitest, tests Playwright, build Next.js de production"],
   ["Pre-commit hooks (Husky)", "ESLint exécuté automatiquement avant chaque commit via lint-staged — code non conforme bloqué"],
   ["Dependabot", "Mises à jour hebdomadaires des dépendances npm avec groupement intelligent (Next.js, Supabase, testing, UI)"],
 ];
 
 const METRICS = [
-  { value: "2 000+", label: "Stations cartographiées" },
+  { value: "2 500+", label: "Stations cartographiées" },
   { value: "< 100 ms", label: "Temps de réponse API moyen" },
   { value: "99.9%", label: "Disponibilité (SLA Vercel + Supabase)" },
-  { value: "196", label: "Tests automatisés (unit + intégration + E2E)" },
+  { value: "610", label: "Tests automatisés (unit + intégration + E2E)" },
   { value: "12", label: "En-têtes de sécurité HTTP actifs" },
   { value: "17", label: "Régions administratives couvertes" },
 ];
@@ -382,13 +382,13 @@ export default function TechPage() {
             </div>
             <div className="grid sm:grid-cols-2 gap-3 text-[13px]">
               {[
-                ["GitHub Actions CI/CD", "Pipeline automatisé sur chaque PR : lint ESLint, 196 tests Vitest, build Next.js — aucun merge sans validation"],
+                ["GitHub Actions CI/CD", "Pipeline automatisé sur chaque PR : lint ESLint, 610 tests Vitest, tests E2E Playwright, build Next.js — aucun merge sans validation"],
                 ["Déploiement continu Vercel", "Push sur main → build Turbopack → déploiement production automatique en < 60 s avec rollback instantané"],
                 ["Preview par branche", "Chaque pull request génère un environnement de prévisualisation isolé avec URL unique"],
                 ["Pre-commit hooks (Husky)", "ESLint exécuté automatiquement sur chaque commit via lint-staged — code non conforme bloqué avant push"],
                 ["Dependabot", "Mises à jour hebdomadaires automatiques des dépendances npm, groupées par catégorie (framework, DB, tests, UI)"],
                 ["Typage statique intégral", "TypeScript 5 strict sur tout le codebase — erreurs détectées à la compilation, pas en production"],
-                ["Seuils de couverture enforced", "80% lignes, 80% fonctions minimum — le build CI échoue si la couverture baisse"],
+                ["Seuils de couverture enforced", "95% lignes, 97% fonctions minimum — le build CI échoue si la couverture baisse"],
                 ["Versioning sémantique", "Tags git versionnés (v1.0.0+) avec historique traçable et changelog automatique"],
               ].map(([title, desc]) => (
                 <div key={title} className="flex gap-2.5">
@@ -413,7 +413,7 @@ export default function TechPage() {
             <div className="grid sm:grid-cols-2 gap-3 text-[13px]">
               {[
                 ["Sentry (crash reporting)", "Capture automatique des erreurs client et serveur avec stack traces, source maps et contexte de navigation"],
-                ["Endpoint /api/health", "Point de contrôle HTTP pour monitoring d'uptime externe (UptimeRobot, BetterUptime, Pingdom)"],
+                ["Endpoint /api/health", "Point de contrôle HTTP vérifiant Supabase et Upstash Redis — retourne 503 si un service est indisponible"],
                 ["Source maps en production", "Stack traces déobfusquées dans Sentry — debug précis même sur le code minifié déployé"],
                 ["Instrumentation Next.js", "Hook onRequestError capture automatiquement les erreurs serveur sans code additionnel dans chaque route"],
                 ["Tunnel Sentry (/monitoring)", "Contourne les bloqueurs de publicités — les erreurs sont toujours rapportées via proxy serveur"],
@@ -441,10 +441,10 @@ export default function TechPage() {
             <div className="grid sm:grid-cols-2 gap-3 text-[13px]">
               {[
                 ["Politique de confidentialité (Loi 25)", "Page dédiée listant les données collectées, les sous-traitants, les droits des utilisateurs et le responsable"],
+                ["Conditions d'utilisation", "Conditions générales d'utilisation couvrant la responsabilité, la propriété intellectuelle et le droit applicable (Québec)"],
+                ["Déclaration d'accessibilité (SGQRI 008)", "Conformité visée WCAG 2.1 AA — lien d'évitement, navigation clavier, ARIA, focus trap, contenu alternatif"],
                 ["OpenAPI 3.1 (/openapi.json)", "Spécification complète de l'API REST avec schémas de requête/réponse, codes d'erreur et exemples"],
                 ["security.txt (RFC 9116)", "Point de contact standardisé pour la divulgation responsable de vulnérabilités"],
-                ["README technique", "Documentation complète : stack, installation, variables d'environnement, scripts, architecture du projet"],
-                ["Politique de confidentialité (Loi 25)", "Conformité à la loi québécoise sur la protection des renseignements personnels — aucune collecte de PII"],
                 ["Données open data REQ", "Source officielle gouvernementale — aucune donnée personnelle de tiers collectée ou stockée"],
               ].map(([title, desc], i) => (
                 <div key={`${title}-${i}`} className="flex gap-2.5">

@@ -1175,6 +1175,17 @@ export default function AdminPage() {
                   <div className="text-3xl font-bold">{stats ? stats.totalReports : <Skeleton className="h-9 w-16" />}</div>
                 </CardContent>
               </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-muted-foreground">
+                    <Lightbulb className="size-4" />
+                    Suggestions
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold">{suggestions.length}</div>
+                </CardContent>
+              </Card>
             </div>
 
             {/* Trafic — stats compactes + graphique */}

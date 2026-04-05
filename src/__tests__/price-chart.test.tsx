@@ -69,4 +69,94 @@ describe('PriceChart', () => {
     expect(container.querySelector('circle')).not.toBeNull()
     expect(await screen.findByText(/2026-04-02/)).toBeInTheDocument()
   })
+
+  it('affiche un état vide quand fetch échoue', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockRejectedValue(new Error('Network error')),
+    )
+
+    render(
+      <PriceChart
+        stationName="Station Test"
+        address="123 Rue Test"
+        gasType="Regulier"
+      />,
+    )
+
+    expect(screen.getByText(/Chargement/i)).toBeInTheDocument()
+    expect(await screen.findByText(/Pas assez de donn/i)).toBeInTheDocument()
+  })
+
+  it('masque le point au mouseLeave', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        json: async () => [
+          { price: 150.1, snapshot_date: '2026-04-01' },
+          { price: 151.4, snapshot_date: '2026-04-02' },
+          { price: 149.8, snapshot_date: '2026-04-03' },
+        ],
+      }),
+    )
+
+    const { container } = render(
+      <PriceChart
+        stationName="Station Test"
+        address="123 Rue Test"
+        gasType="Regulier"
+      />,
+    )
+
+    await screen.findByText(/Min:/i)
+
+    const svg = container.querySelector('svg')!
+    vi.spyOn(svg, 'getBoundingClientRect').mockReturnValue({
+      x: 0, y: 0, width: 280, height: 50,
+      top: 0, right: 280, bottom: 50, left: 0,
+      toJSON: () => ({}),
+    } as DOMRect)
+
+    fireEvent.mouseMove(svg, { clientX: 140 })
+    expect(container.querySelector('circle')).not.toBeNull()
+
+    fireEvent.mouseLeave(svg)
+    expect(container.querySelector('circle')).toBeNull()
+  })
+
+  it('gère le touchMove et touchEnd', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        json: async () => [
+          { price: 150.1, snapshot_date: '2026-04-01' },
+          { price: 151.4, snapshot_date: '2026-04-02' },
+          { price: 149.8, snapshot_date: '2026-04-03' },
+        ],
+      }),
+    )
+
+    const { container } = render(
+      <PriceChart
+        stationName="Station Test"
+        address="123 Rue Test"
+        gasType="Regulier"
+      />,
+    )
+
+    await screen.findByText(/Min:/i)
+
+    const svg = container.querySelector('svg')!
+    vi.spyOn(svg, 'getBoundingClientRect').mockReturnValue({
+      x: 0, y: 0, width: 280, height: 50,
+      top: 0, right: 280, bottom: 50, left: 0,
+      toJSON: () => ({}),
+    } as DOMRect)
+
+    fireEvent.touchMove(svg, { touches: [{ clientX: 140 }] })
+    expect(container.querySelector('circle')).not.toBeNull()
+
+    fireEvent.touchEnd(svg)
+    expect(container.querySelector('circle')).toBeNull()
+  })
 })

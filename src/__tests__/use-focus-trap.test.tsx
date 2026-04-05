@@ -88,4 +88,33 @@ describe('useFocusTrap', () => {
 
     document.body.removeChild(outer)
   })
+
+  it('ignore les touches non-Tab', () => {
+    render(<TestTrap />)
+
+    const btn1 = screen.getByTestId('btn1')
+    expect(document.activeElement).toBe(btn1)
+
+    // Presser Escape ne doit rien changer
+    fireEvent.keyDown(btn1, { key: 'Escape' })
+    expect(document.activeElement).toBe(btn1)
+
+    // Presser Enter ne doit rien changer
+    fireEvent.keyDown(btn1, { key: 'Enter' })
+    expect(document.activeElement).toBe(btn1)
+  })
+
+  it('ne boucle pas quand le focus est au milieu', () => {
+    render(<TestTrap />)
+
+    const btn2 = screen.getByTestId('btn2')
+    btn2.focus()
+    expect(document.activeElement).toBe(btn2)
+
+    // Tab depuis le milieu ne doit pas déclencher de wrap-around
+    fireEvent.keyDown(btn2, { key: 'Tab', shiftKey: false })
+    // Le focus reste sur btn2 (le navigateur natif gère le mouvement, pas le hook)
+    // Le hook ne preventDefault que sur first/last
+    expect(document.activeElement).toBe(btn2)
+  })
 })

@@ -102,6 +102,12 @@ export default function AProposPage() {
         <Link href="/tech" className="hover:text-blue-600 dark:hover:text-blue-400 hover:underline">
           Informations techniques
         </Link>
+        <Link href="/conditions-utilisation" className="hover:text-blue-600 dark:hover:text-blue-400 hover:underline">
+          Conditions d&apos;utilisation
+        </Link>
+        <Link href="/accessibilite" className="hover:text-blue-600 dark:hover:text-blue-400 hover:underline">
+          Accessibilité
+        </Link>
         <Link href="/login" className="hover:text-blue-600 dark:hover:text-blue-400 hover:underline">
           Se connecter
         </Link>

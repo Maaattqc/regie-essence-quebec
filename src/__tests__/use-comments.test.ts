@@ -234,4 +234,43 @@ describe("useComments", () => {
     // localStorage doit avoir été mis à jour
     expect(localStorage.getItem("anonymous_comment_id")).toBe(fakeUuid);
   });
+
+  it("submitComment retourne false et met error quand le POST échoue sans message", async () => {
+    mockFetchJson(fakeComments);
+
+    const { result } = renderHook(() => useComments(STATION, ADDRESS));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    // POST échoue sans message d'erreur spécifique
+    mockFetchJson({}, false);
+
+    let success!: boolean;
+    await act(async () => {
+      success = await result.current.submitComment("Test", null);
+    });
+
+    expect(success).toBe(false);
+    // Quand data.error est undefined, le fallback "Erreur" est utilisé
+    expect(result.current.error).toBe("Erreur");
+  });
+
+  it("handleDelete ne fait rien sans token", async () => {
+    mockSessionWithToken(null);
+    mockFetchJson(fakeComments);
+
+    const { result } = renderHook(() => useComments(STATION, ADDRESS));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    const callCountBefore = mocks.fetchMock.mock.calls.length;
+
+    await act(async () => {
+      await result.current.handleDelete(1);
+    });
+
+    // Aucun nouveau fetch (DELETE) n'est fait
+    const deleteCall = mocks.fetchMock.mock.calls.slice(callCountBefore).find(
+      (c: [string, RequestInit]) => c[1]?.method === "DELETE",
+    );
+    expect(deleteCall).toBeUndefined();
+  });
 });

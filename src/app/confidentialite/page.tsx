@@ -108,7 +108,7 @@ export default function ConfidentialitePage() {
 
         {/* Intro */}
         <section className="space-y-3">
-          <div className="flex items-center gap-2 text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+          <div className="flex items-center gap-2 text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
             <span>Conforme à la Loi 25 (Québec)</span>
             <span>·</span>
             <span>Mise à jour : {LAST_UPDATED}</span>
@@ -161,7 +161,7 @@ export default function ConfidentialitePage() {
                       </span>
                     </div>
                     <p className="text-[12px] text-gray-500 dark:text-gray-400">{item.purpose}</p>
-                    <div className="text-[11px] text-gray-400 dark:text-gray-500">
+                    <div className="text-[11px] text-gray-500 dark:text-gray-400">
                       Conservation : <span className="font-medium">{item.retention}</span>
                     </div>
                   </div>
@@ -190,7 +190,7 @@ export default function ConfidentialitePage() {
                 <div className="space-y-0.5">
                   <div className="text-[13px] font-semibold text-gray-900 dark:text-white">{p.name}</div>
                   <div className="text-[12px] text-gray-500 dark:text-gray-400">{p.role}</div>
-                  <div className="text-[11px] text-gray-400 dark:text-gray-500">Localisation : {p.location}</div>
+                  <div className="text-[11px] text-gray-500 dark:text-gray-400">Localisation : {p.location}</div>
                 </div>
                 <a
                   href={p.link}
@@ -246,7 +246,7 @@ export default function ConfidentialitePage() {
 
         {/* Contact & modifications */}
         <section className="text-center space-y-3 pb-4">
-          <div className="flex items-center justify-center gap-2 text-gray-300 dark:text-gray-700">
+          <div className="flex items-center justify-center gap-2 text-gray-400 dark:text-gray-600">
             <div className="h-px flex-1 bg-current" />
             <Mail className="size-4" />
             <div className="h-px flex-1 bg-current" />
@@ -257,7 +257,7 @@ export default function ConfidentialitePage() {
           <a href="mailto:mathieufournierqc@outlook.com" className="inline-flex items-center gap-2 text-[13px] font-semibold text-blue-600 dark:text-blue-400 hover:underline">
             <Mail className="size-3.5" /> mathieufournierqc@outlook.com
           </a>
-          <p className="text-[11px] text-gray-400 dark:text-gray-500 pt-2">
+          <p className="text-[11px] text-gray-500 dark:text-gray-400 pt-2">
             Cette politique peut être mise à jour. La date de dernière modification est indiquée en haut de page.
             L&apos;utilisation continue du service après modification vaut acceptation.
           </p>

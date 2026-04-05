@@ -243,4 +243,152 @@ describe("useEffectivePrice", () => {
 
     expect(mocks.roadDistances.mock.calls.length).toBe(callCount);
   });
+
+  it("demande la géolocalisation quand userPos est null", async () => {
+    const mockGetCurrentPosition = vi.fn(
+      (success: PositionCallback) => {
+        success({
+          coords: { latitude: 45.5, longitude: -73.6 },
+        } as GeolocationPosition);
+      },
+    );
+    Object.defineProperty(navigator, "geolocation", {
+      value: { getCurrentPosition: mockGetCurrentPosition },
+      configurable: true,
+      writable: true,
+    });
+
+    const params = defaultParams({ userPos: null });
+    const { result } = renderHook(() => useEffectivePrice(params));
+
+    await act(async () => {
+      result.current.findBestEffectivePrice();
+    });
+
+    await waitFor(() => expect(result.current.cheapestResults).not.toBeNull());
+    expect(params.setUserPos).toHaveBeenCalledWith([45.5, -73.6]);
+  });
+
+  it("affiche un message quand la géolocalisation échoue", async () => {
+    const mockGetCurrentPosition = vi.fn(
+      (_success: PositionCallback, error: PositionErrorCallback) => {
+        error({ code: 1, message: "User denied", PERMISSION_DENIED: 1, POSITION_UNAVAILABLE: 2, TIMEOUT: 3 } as GeolocationPositionError);
+      },
+    );
+    Object.defineProperty(navigator, "geolocation", {
+      value: { getCurrentPosition: mockGetCurrentPosition },
+      configurable: true,
+      writable: true,
+    });
+
+    const params = defaultParams({ userPos: null });
+    const { result } = renderHook(() => useEffectivePrice(params));
+
+    await act(async () => {
+      result.current.findBestEffectivePrice();
+    });
+
+    await waitFor(() => expect(result.current.cheapestResults).not.toBeNull());
+    expect(result.current.cheapestResults!.stations).toHaveLength(0);
+    expect(result.current.cheapestResults!.message).toContain("géolocalisation");
+  });
+
+  it("affiche un message quand navigator.geolocation est indisponible", async () => {
+    const original = navigator.geolocation;
+    Object.defineProperty(navigator, "geolocation", {
+      value: undefined,
+      configurable: true,
+      writable: true,
+    });
+
+    const params = defaultParams({ userPos: null });
+    const { result } = renderHook(() => useEffectivePrice(params));
+
+    await act(async () => {
+      result.current.findBestEffectivePrice();
+    });
+
+    await waitFor(() => expect(result.current.cheapestResults).not.toBeNull());
+    expect(result.current.cheapestResults!.stations).toHaveLength(0);
+    expect(result.current.cheapestResults!.message).toContain("géolocalisation");
+
+    Object.defineProperty(navigator, "geolocation", {
+      value: original,
+      configurable: true,
+      writable: true,
+    });
+  });
+
+  it("recalcule quand le type d'essence change après une recherche", async () => {
+    // Ajouter des stations Diesel
+    const dataWithDiesel = makeData([
+      makeStation("Station A", 45.51, -73.61, "175.9", "Régulier"),
+      makeStation("Station B", 45.52, -73.62, "170.0", "Régulier"),
+      makeStation("Station D", 45.51, -73.61, "180.0", "Diesel"),
+    ]);
+
+    const params = defaultParams({ geoReady: true, data: dataWithDiesel });
+    const { result, rerender } = renderHook(
+      (props) => useEffectivePrice(props),
+      { initialProps: params },
+    );
+
+    await waitFor(() => expect(result.current.cheapestResults).not.toBeNull());
+
+    const callCountBefore = mocks.roadDistances.mock.calls.length;
+
+    // Changer le type d'essence — les résultats existants + userPos + data déclenchent le recalcul
+    rerender({ ...params, geoReady: true, gasType: "Diesel" as const });
+
+    await waitFor(() => {
+      expect(mocks.roadDistances.mock.calls.length).toBeGreaterThan(callCountBefore);
+    }, { timeout: 3000 });
+  });
+
+  it("ne recalcule pas si pas de résultats existants quand gasType change", async () => {
+    // Sans auto-search (geoReady=false), cheapestResults reste null
+    const params = defaultParams({ geoReady: false });
+    const { result, rerender } = renderHook(
+      (props) => useEffectivePrice(props),
+      { initialProps: params },
+    );
+
+    expect(result.current.cheapestResults).toBeNull();
+
+    const callCountBefore = mocks.roadDistances.mock.calls.length;
+
+    // Changer le gasType sans résultats existants
+    rerender({ ...params, geoReady: false, gasType: "Diesel" as const });
+
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 50));
+    });
+
+    // Aucun appel supplémentaire
+    expect(mocks.roadDistances.mock.calls.length).toBe(callCountBefore);
+  });
+
+  it("utilise DEFAULT_RADIUS_KM quand radiusKm est 0", async () => {
+    const params = defaultParams({ radiusKm: 0 });
+    const { result } = renderHook(() => useEffectivePrice(params));
+
+    await act(async () => {
+      result.current.findBestEffectivePrice();
+    });
+
+    await waitFor(() => expect(result.current.cheapestResults).not.toBeNull());
+    expect(params.setRadiusKm).toHaveBeenCalledWith(5);
+  });
+
+  it("ne fait rien quand data est null", async () => {
+    const params = defaultParams({ data: null });
+    const { result } = renderHook(() => useEffectivePrice(params));
+
+    await act(async () => {
+      result.current.findBestEffectivePrice();
+    });
+
+    // Pas de résultats car pas de données
+    expect(result.current.cheapestResults).toBeNull();
+  });
 });

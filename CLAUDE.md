@@ -55,7 +55,7 @@
 ### Tests & Qualité
 | Technologie | Rôle |
 |---|---|
-| Vitest 4.1.2 | 196 tests unitaires/intégration (28 fichiers, 90%+ couverture) |
+| Vitest 4.1.2 | 610 tests unitaires/intégration (62 fichiers, 93%+ couverture) |
 | Playwright | Tests E2E multi-navigateurs (Chrome, Firefox, Safari) |
 | @testing-library/react | Tests de composants React |
 | @testing-library/jest-dom | Matchers DOM pour Vitest |
@@ -94,6 +94,8 @@ src/
 │   ├── faq/                      # FAQ
 │   ├── a-propos/                 # À propos
 │   ├── tech/                     # Fiche technique
+│   ├── accessibilite/            # Déclaration d'accessibilité (SGQRI 008)
+│   ├── conditions-utilisation/   # Conditions d'utilisation
 │   ├── confidentialite/          # Politique de confidentialité (Loi 25)
 │   │
 │   ├── auth/callback/route.ts    # Callback OAuth/OTP Supabase
@@ -105,6 +107,7 @@ src/
 │       ├── history/route.ts      # GET historique prix
 │       ├── admin/route.ts        # GET/PATCH admin (stats, users, signalements)
 │       ├── cron/route.ts         # GET sync prix (Vercel Cron)
+│       ├── cron/cleanup/route.ts # GET nettoyage données expirées (Vercel Cron)
 │       ├── changelog/route.ts    # GET commits GitHub
 │       ├── suggestion/route.ts   # POST suggestion
 │       ├── mapbox/route.ts       # POST proxy Mapbox (token serveur)

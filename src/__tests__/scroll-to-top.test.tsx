@@ -1,64 +1,72 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
 
-import ScrollToTop from '@/components/ScrollToTop'
+import ScrollToTop from "@/components/ScrollToTop";
 
-describe('ScrollToTop', () => {
-  let container: HTMLDivElement | null = null
+describe("ScrollToTop", () => {
+  let container: HTMLDivElement | null = null;
 
   function setupContainer() {
-    container = document.createElement('div')
-    container.id = 'scroll-root'
-    Object.defineProperty(container, 'scrollTop', {
+    container = document.createElement("div");
+    container.id = "scroll-root";
+    Object.defineProperty(container, "scrollTop", {
       value: 0,
       writable: true,
       configurable: true,
-    })
-    container.scrollTo = vi.fn()
-    document.body.appendChild(container)
-    return container
+    });
+    container.scrollTo = vi.fn();
+    document.body.appendChild(container);
+    return container;
   }
 
   afterEach(() => {
     if (container && document.body.contains(container)) {
-      document.body.removeChild(container)
+      document.body.removeChild(container);
     }
-    container = null
-  })
+    container = null;
+  });
 
-  it('retourne null initialement (bouton non visible)', () => {
-    setupContainer()
+  it("retourne null initialement (bouton non visible)", () => {
+    setupContainer();
 
-    const { container: wrapper } = render(<ScrollToTop containerId="scroll-root" />)
+    const { container: wrapper } = render(<ScrollToTop containerId="scroll-root" />);
 
-    expect(wrapper.innerHTML).toBe('')
-    expect(screen.queryByLabelText('Retour en haut')).not.toBeInTheDocument()
-  })
+    expect(wrapper.innerHTML).toBe("");
+    expect(screen.queryByLabelText("Retour en haut")).not.toBeInTheDocument();
+  });
 
-  it('affiche le bouton après un scroll supérieur à 300px', () => {
-    const el = setupContainer()
+  it("affiche le bouton après un scroll supérieur à 300px", () => {
+    const el = setupContainer();
 
-    render(<ScrollToTop containerId="scroll-root" />)
+    render(<ScrollToTop containerId="scroll-root" />);
 
     // Simuler un scroll > 300
-    Object.defineProperty(el, 'scrollTop', { value: 350, writable: true, configurable: true })
-    fireEvent.scroll(el)
+    Object.defineProperty(el, "scrollTop", { value: 350, writable: true, configurable: true });
+    fireEvent.scroll(el);
 
-    expect(screen.getByLabelText('Retour en haut')).toBeInTheDocument()
-  })
+    expect(screen.getByLabelText("Retour en haut")).toBeInTheDocument();
+  });
 
-  it('appelle scrollTo au clic', () => {
-    const el = setupContainer()
+  it("appelle scrollTo au clic", () => {
+    const el = setupContainer();
 
-    render(<ScrollToTop containerId="scroll-root" />)
+    render(<ScrollToTop containerId="scroll-root" />);
 
     // Rendre le bouton visible
-    Object.defineProperty(el, 'scrollTop', { value: 400, writable: true, configurable: true })
-    fireEvent.scroll(el)
+    Object.defineProperty(el, "scrollTop", { value: 400, writable: true, configurable: true });
+    fireEvent.scroll(el);
 
-    const button = screen.getByLabelText('Retour en haut')
-    fireEvent.click(button)
+    const button = screen.getByLabelText("Retour en haut");
+    fireEvent.click(button);
 
-    expect(el.scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' })
-  })
-})
+    expect(el.scrollTo).toHaveBeenCalledWith({ top: 0, behavior: "smooth" });
+  });
+
+  it("ne lance pas d'erreur quand le containerId n'existe pas dans le DOM", () => {
+    const { container: wrapper } = render(<ScrollToTop containerId="non-existent-id" />);
+
+    // Le composant ne devrait rien rendre et ne pas planter
+    expect(wrapper.innerHTML).toBe("");
+    expect(screen.queryByLabelText("Retour en haut")).not.toBeInTheDocument();
+  });
+});

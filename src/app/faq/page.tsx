@@ -145,6 +145,15 @@ export default function FaqPage() {
         <Link href="/tech" className="hover:text-blue-600 dark:hover:text-blue-400 hover:underline">
           Informations techniques
         </Link>
+        <Link href="/confidentialite" className="hover:text-blue-600 dark:hover:text-blue-400 hover:underline">
+          Confidentialité
+        </Link>
+        <Link href="/conditions-utilisation" className="hover:text-blue-600 dark:hover:text-blue-400 hover:underline">
+          Conditions d&apos;utilisation
+        </Link>
+        <Link href="/accessibilite" className="hover:text-blue-600 dark:hover:text-blue-400 hover:underline">
+          Accessibilité
+        </Link>
       </div>
     </main>
   );
