@@ -795,7 +795,7 @@ function ConformitePanel({
 const HEALTH_ENDPOINTS = [
   { key: "site", label: "Site web", url: "/", desc: "Page d'accueil essence-quebec.ca" },
   { key: "api-stations", label: "API Stations", url: "/api/stations", desc: "Endpoint GeoJSON des stations" },
-  { key: "api-cron", label: "API Cron", url: "/api/cron", desc: "Endpoint de synchronisation" },
+  { key: "api-health", label: "API Health", url: "/api/health", desc: "Liveness probe (Supabase + Upstash)" },
   { key: "api-admin", label: "API Admin", url: "/api/admin?type=stats", desc: "Endpoint statistiques" },
   { key: "supabase", label: "Supabase", url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/`, desc: "Base de données PostgreSQL" },
   { key: "source-req", label: "Source REQ", url: "https://regieessencequebec.ca/stations.geojson.gz", desc: "Données Régie de l'énergie" },
