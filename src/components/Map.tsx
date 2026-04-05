@@ -5,7 +5,7 @@ import { useMapAuth } from "@/hooks/useMapAuth";
 import { useStationsData } from "@/hooks/useStationsData";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { useEffectivePrice } from "@/hooks/useEffectivePrice";
-import { MapContainer, TileLayer, ZoomControl, AttributionControl } from "react-leaflet";
+import { MapContainer, TileLayer, ZoomControl } from "react-leaflet";
 import { Marker, Circle, Polyline } from "react-leaflet";
 import L from "leaflet";
 import type { Feature, Point } from "geojson";
@@ -364,7 +364,6 @@ export default function Map() {
           priceMin={priceMin}
           priceMax={priceMax}
         />
-        <AttributionControl position="bottomright" />
         {userPos && (
           <>
             <Marker position={userPos} icon={USER_POS_ICON} />
@@ -420,6 +419,17 @@ export default function Map() {
           />
         ))}
       </MapContainer>
+      <div className="absolute bottom-0 left-0 right-0 z-[400] pointer-events-none flex justify-end">
+        <div className="pointer-events-auto bg-white/80 dark:bg-black/60 text-[9px] text-gray-600 dark:text-gray-400 px-2 py-0.5 leading-snug text-right">
+          {mapStyle === "satellite" ? (
+            <>&copy; Esri &mdash; Esri, Maxar, Earthstar Geographics &nbsp;|&nbsp; Données&nbsp;: <a href="https://www.regie-energie.qc.ca" target="_blank" rel="noopener noreferrer" className="underline">Régie de l&apos;énergie</a> &nbsp;|&nbsp; &copy; <a href="https://www.linkedin.com/in/mathieu-fournier-4977591bb" target="_blank" rel="noopener noreferrer" className="underline">Mathieu Fournier</a> &nbsp;|&nbsp; <a href="/tech" target="_blank" rel="noopener noreferrer" className="underline">À propos</a></>
+          ) : mapStyle === "dark" ? (
+            <>&copy; <a href="https://carto.com/" target="_blank" rel="noopener noreferrer" className="underline">CARTO</a> &nbsp;|&nbsp; Données&nbsp;: <a href="https://www.regie-energie.qc.ca" target="_blank" rel="noopener noreferrer" className="underline">Régie de l&apos;énergie</a> &nbsp;|&nbsp; &copy; <a href="https://www.linkedin.com/in/mathieu-fournier-4977591bb" target="_blank" rel="noopener noreferrer" className="underline">Mathieu Fournier</a> &nbsp;|&nbsp; <a href="/tech" target="_blank" rel="noopener noreferrer" className="underline">À propos</a></>
+          ) : (
+            <>&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" className="underline">OpenStreetMap</a> contributors &nbsp;|&nbsp; Données&nbsp;: <a href="https://www.regie-energie.qc.ca" target="_blank" rel="noopener noreferrer" className="underline">Régie de l&apos;énergie</a> &nbsp;|&nbsp; &copy; <a href="https://www.linkedin.com/in/mathieu-fournier-4977591bb" target="_blank" rel="noopener noreferrer" className="underline">Mathieu Fournier</a> &nbsp;|&nbsp; <a href="/tech" target="_blank" rel="noopener noreferrer" className="underline">À propos</a></>
+          )}
+        </div>
+      </div>
       {data && (
         <PricePanel
           data={data}
