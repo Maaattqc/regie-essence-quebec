@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Flag, Send, X } from "lucide-react";
 import { reportSchema } from "@/lib/schemas";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function ReportModal({
   stationName,
@@ -17,6 +18,7 @@ export default function ReportModal({
   address: string;
   onClose: () => void;
 }) {
+  const { t } = useLanguage();
   const trapRef = useFocusTrap();
   const [form, setForm] = useState({ first_name: "", last_name: "", email: "", message: "" });
   const [sending, setSending] = useState(false);
@@ -79,7 +81,7 @@ export default function ReportModal({
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
           <h2 id="report-modal-title" style={{ fontSize: "1.0625rem", fontWeight: 700, margin: 0, display: "flex", alignItems: "center", gap: "0.5rem" }}>
             <Flag className="size-4" style={{ color: "#e63946" }} />
-            Signaler une inexactitude
+            {t.report.title}
           </h2>
           <button type="button" className="panel-close" onClick={onClose} aria-label="Fermer"><X className="size-4" /></button>
         </div>
@@ -93,8 +95,8 @@ export default function ReportModal({
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
           >
-            <p style={{ fontSize: "0.9375rem", fontWeight: 600 }}>Merci pour votre signalement !</p>
-            <p style={{ fontSize: "0.8125rem", color: "var(--text-muted)" }}>Nous allons examiner votre demande.</p>
+            <p style={{ fontSize: "0.9375rem", fontWeight: 600 }}>{t.report.successTitle}</p>
+            <p style={{ fontSize: "0.8125rem", color: "var(--text-muted)" }}>{t.report.successSubtitle}</p>
             <Button onClick={onClose} className="mt-3">Fermer</Button>
           </motion.div>
         ) : (
@@ -102,7 +104,7 @@ export default function ReportModal({
             <div style={{ display: "flex", gap: "0.5rem" }}>
               <div style={{ flex: 1 }}>
                 <Input
-                  placeholder="Prénom"
+                  placeholder={t.report.firstNameLabel}
                   value={form.first_name}
                   onChange={(e) => setForm({ ...form, first_name: e.target.value })}
                   aria-invalid={!!fieldErrors.first_name}
@@ -111,7 +113,7 @@ export default function ReportModal({
               </div>
               <div style={{ flex: 1 }}>
                 <Input
-                  placeholder="Nom"
+                  placeholder={t.report.lastNameLabel}
                   value={form.last_name}
                   onChange={(e) => setForm({ ...form, last_name: e.target.value })}
                   aria-invalid={!!fieldErrors.last_name}
@@ -122,7 +124,7 @@ export default function ReportModal({
             <div>
               <Input
                 type="email"
-                placeholder="Courriel"
+                placeholder={t.report.emailLabel}
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
                 aria-invalid={!!fieldErrors.email}
@@ -133,7 +135,7 @@ export default function ReportModal({
               <textarea
                 className="login-input"
                 style={{ minHeight: "80px", resize: "vertical", width: "100%" }}
-                placeholder="Décrivez l'inexactitude..."
+                placeholder={t.report.descriptionPlaceholder}
                 value={form.message}
                 onChange={(e) => setForm({ ...form, message: e.target.value })}
                 aria-invalid={!!fieldErrors.message}
@@ -144,7 +146,7 @@ export default function ReportModal({
             {error && <p style={{ fontSize: "0.875rem", color: "#e63946" }}>{error}</p>}
             <button className="login-btn" type="submit" disabled={sending} style={{ background: "#e63946", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.375rem" }}>
               <Send className="size-3.5" />
-              {sending ? "Envoi..." : "Envoyer le signalement"}
+              {sending ? t.report.sending : t.report.submit}
             </button>
           </form>
         )}

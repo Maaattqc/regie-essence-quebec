@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useEffect, useMemo, useState } from "react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface PricePoint {
   price: number;
@@ -20,6 +21,7 @@ export default memo(function PriceChart({
   address: string;
   gasType: string;
 }) {
+  const { t } = useLanguage();
   const [data, setData] = useState<PricePoint[] | null>(null);
   const [hover, setHover] = useState<number | null>(null);
 
@@ -49,9 +51,9 @@ export default memo(function PriceChart({
   }, [data]);
 
   if (data === null)
-    return <div style={{ fontSize: 11, color: "var(--text-muted)" }}>Chargement...</div>;
+    return <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{t.chart.loading}</div>;
   if (data.length < 2)
-    return <div style={{ fontSize: 11, color: "var(--text-muted)" }}>Pas assez de données</div>;
+    return <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{t.chart.noData}</div>;
 
   const hoverData = hover !== null ? data[hover] : null;
 
@@ -100,12 +102,12 @@ export default memo(function PriceChart({
       </svg>
       {hoverData && (
         <div style={{ fontSize: 11, textAlign: "center", color: "var(--text)" }}>
-          {hoverData.snapshot_date} — <strong>{hoverData.price}¢</strong>
+          {t.chart.tooltip(hoverData.snapshot_date, hoverData.price)}
         </div>
       )}
       <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "var(--text-muted)" }}>
-        <span>Min: {min}¢</span>
-        <span>Max: {max}¢</span>
+        <span>{t.chart.min(min)}</span>
+        <span>{t.chart.max(max)}</span>
       </div>
     </div>
   );

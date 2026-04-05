@@ -8,10 +8,12 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { Settings, Shield, FileText, Lock, Lightbulb, Sun, Moon, BookOpen, Cpu } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function NavDropdown({ onChangelogClick, onSuggestionClick }: { onChangelogClick: () => void; onSuggestionClick?: () => void }) {
   const { resolvedTheme, setTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
+  const { t, locale } = useLanguage();
 
   return (
     <DropdownMenu>
@@ -23,34 +25,34 @@ export default function NavDropdown({ onChangelogClick, onSuggestionClick }: { o
       <DropdownMenuContent align="end" className="!w-auto min-w-[12rem]">
         {onSuggestionClick && (
           <DropdownMenuItem className="nav-suggestion-mobile" onClick={onSuggestionClick}>
-            <Lightbulb className="size-3.5" /> Suggestion
+            <Lightbulb className="size-3.5" /> {t.filterBar.suggestion}
           </DropdownMenuItem>
         )}
         <DropdownMenuItem className="nav-theme-mobile" onClick={() => setTheme(isDark ? "light" : "dark")}>
           {isDark ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
-          {isDark ? "Mode clair" : "Mode sombre"}
+          {isDark ? t.filterBar.lightMode : t.filterBar.darkMode}
         </DropdownMenuItem>
         <DropdownMenuItem>
           <a href="/admin" className="flex items-center gap-2 w-full no-underline text-inherit">
-            <Shield className="size-3.5" /> Gestion Admin
+            <Shield className="size-3.5" /> {locale === "fr" ? "Gestion Admin" : "Admin"}
           </a>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={onChangelogClick}>
-          <FileText className="size-3.5" /> Changelogs Code
+          <FileText className="size-3.5" /> {t.nav.changelog}
         </DropdownMenuItem>
         <DropdownMenuItem>
           <a href="/a-propos" className="flex items-center gap-2 w-full no-underline text-inherit">
-            <BookOpen className="size-3.5" /> Résumé
+            <BookOpen className="size-3.5" /> {t.nav.about}
           </a>
         </DropdownMenuItem>
         <DropdownMenuItem>
           <a href="/tech" className="flex items-center gap-2 w-full no-underline text-inherit">
-            <Cpu className="size-3.5" /> Fiche technique
+            <Cpu className="size-3.5" /> {t.nav.tech}
           </a>
         </DropdownMenuItem>
         <DropdownMenuItem>
           <a href="/confidentialite" className="flex items-center gap-2 w-full no-underline text-inherit">
-            <Lock className="size-3.5" /> Confidentialité
+            <Lock className="size-3.5" /> {t.nav.privacy}
           </a>
         </DropdownMenuItem>
       </DropdownMenuContent>

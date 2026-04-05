@@ -7,8 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Lightbulb, Send, X } from "lucide-react";
 import { suggestionSchema } from "@/lib/schemas";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function SuggestionModal({ onClose }: { onClose: () => void }) {
+  const { t } = useLanguage();
   const trapRef = useFocusTrap();
   const [form, setForm] = useState({ first_name: "", last_name: "", email: "", message: "" });
   const [sending, setSending] = useState(false);
@@ -70,12 +72,12 @@ export default function SuggestionModal({ onClose }: { onClose: () => void }) {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
           <h2 id="suggestion-modal-title" style={{ fontSize: "1.0625rem", fontWeight: 700, margin: 0, display: "flex", alignItems: "center", gap: "0.5rem" }}>
             <Lightbulb className="size-4" style={{ color: "#f59e0b" }} />
-            Suggestion
+            {t.suggestion.title}
           </h2>
           <button type="button" className="panel-close" onClick={onClose} aria-label="Fermer"><X className="size-4" /></button>
         </div>
         <p style={{ fontSize: "0.8125rem", color: "var(--text-muted)", marginBottom: "0.75rem" }}>
-          Une idée pour améliorer Essence Québec ? Partagez-la avec nous !
+          {t.suggestion.subtitle}
         </p>
 
         {sent ? (
@@ -84,8 +86,8 @@ export default function SuggestionModal({ onClose }: { onClose: () => void }) {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
           >
-            <p style={{ fontSize: "0.9375rem", fontWeight: 600 }}>Merci pour votre suggestion !</p>
-            <p style={{ fontSize: "0.8125rem", color: "var(--text-muted)" }}>Nous allons l{"'"}examiner attentivement.</p>
+            <p style={{ fontSize: "0.9375rem", fontWeight: 600 }}>{t.suggestion.successTitle}</p>
+            <p style={{ fontSize: "0.8125rem", color: "var(--text-muted)" }}>{t.suggestion.successSubtitle}</p>
             <Button onClick={onClose} className="mt-3">Fermer</Button>
           </motion.div>
         ) : (
@@ -93,7 +95,7 @@ export default function SuggestionModal({ onClose }: { onClose: () => void }) {
             <div style={{ display: "flex", gap: "0.5rem" }}>
               <div style={{ flex: 1 }}>
                 <Input
-                  placeholder="Prénom"
+                  placeholder={t.suggestion.firstNameLabel}
                   value={form.first_name}
                   onChange={(e) => setForm({ ...form, first_name: e.target.value })}
                   aria-invalid={!!fieldErrors.first_name}
@@ -102,7 +104,7 @@ export default function SuggestionModal({ onClose }: { onClose: () => void }) {
               </div>
               <div style={{ flex: 1 }}>
                 <Input
-                  placeholder="Nom"
+                  placeholder={t.suggestion.lastNameLabel}
                   value={form.last_name}
                   onChange={(e) => setForm({ ...form, last_name: e.target.value })}
                   aria-invalid={!!fieldErrors.last_name}
@@ -113,7 +115,7 @@ export default function SuggestionModal({ onClose }: { onClose: () => void }) {
             <div>
               <Input
                 type="email"
-                placeholder="Courriel"
+                placeholder={t.suggestion.emailLabel}
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
                 aria-invalid={!!fieldErrors.email}
@@ -124,7 +126,7 @@ export default function SuggestionModal({ onClose }: { onClose: () => void }) {
               <textarea
                 className="login-input"
                 style={{ minHeight: "80px", resize: "vertical", width: "100%" }}
-                placeholder="Décrivez votre suggestion..."
+                placeholder={t.suggestion.descriptionPlaceholder}
                 value={form.message}
                 onChange={(e) => setForm({ ...form, message: e.target.value })}
                 aria-invalid={!!fieldErrors.message}
@@ -135,7 +137,7 @@ export default function SuggestionModal({ onClose }: { onClose: () => void }) {
             {error && <p style={{ fontSize: "0.875rem", color: "#e63946" }}>{error}</p>}
             <button className="login-btn" type="submit" disabled={sending} style={{ background: "#f59e0b", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.375rem" }}>
               <Send className="size-3.5" />
-              {sending ? "Envoi..." : "Envoyer la suggestion"}
+              {sending ? t.suggestion.sending : t.suggestion.submit}
             </button>
           </form>
         )}

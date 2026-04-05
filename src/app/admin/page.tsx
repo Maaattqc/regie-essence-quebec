@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { createBrowserClient } from "@/lib/auth";
 import type { User } from "@supabase/supabase-js";
 
@@ -33,6 +34,8 @@ function formatDate(iso: string): string {
 
 function TruncatedText({ text, limit = 80 }: { text: string; limit?: number }) {
   const [expanded, setExpanded] = useState(false);
+  const { locale } = useLanguage();
+  const a = adminUi[locale];
   if (text.length <= limit) return <span className="whitespace-normal">{text}</span>;
   return (
     <div className="whitespace-normal">
@@ -41,7 +44,7 @@ function TruncatedText({ text, limit = 80 }: { text: string; limit?: number }) {
         className="ml-1 text-xs text-primary font-semibold hover:underline"
         onClick={() => setExpanded((v) => !v)}
       >
-        {expanded ? "Réduire" : "Lire plus"}
+        {expanded ? a.collapse : a.readMore}
       </button>
     </div>
   );
@@ -179,6 +182,8 @@ function AdminUserDropdown({ email, onLogout }: { email: string; onLogout: () =>
   const initial = username[0]?.toUpperCase() || "?";
   const { resolvedTheme, setTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
+  const { locale } = useLanguage();
+  const a = adminUi[locale];
   return (
     <DropdownMenu>
       <DropdownMenuTrigger>
@@ -197,11 +202,11 @@ function AdminUserDropdown({ email, onLogout }: { email: string; onLogout: () =>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => setTheme(isDark ? "light" : "dark")}>
           {isDark ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
-          {isDark ? "Mode clair" : "Mode sombre"}
+          {isDark ? a.lightMode : a.darkMode}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onClick={onLogout}>
-          <LogOut className="size-3.5" /> Déconnexion
+          <LogOut className="size-3.5" /> {a.logout}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -211,25 +216,24 @@ function AdminUserDropdown({ email, onLogout }: { email: string; onLogout: () =>
 function ThemeToggleBtn() {
   const { resolvedTheme, setTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
+  const { locale } = useLanguage();
+  const a = adminUi[locale];
   return (
     <button
       onClick={() => setTheme(isDark ? "light" : "dark")}
       className="flex items-center justify-center size-7 rounded-lg hover:bg-white/15 transition-colors"
       style={{ background: "transparent", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.7)" }}
-      aria-label={isDark ? "Mode clair" : "Mode sombre"}
+      aria-label={isDark ? a.lightMode : a.darkMode}
     >
       {isDark ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
     </button>
   );
 }
 
-const LOG_CATEGORIES: { key: string; label: string; icon: React.ReactNode }[] = [
-  { key: "", label: "Tout", icon: <ScrollText className="size-3.5" /> },
+const LOG_CATEGORY_STATIC: { key: string; label: string; icon: React.ReactNode }[] = [
   { key: "cron", label: "Cron", icon: <Clock className="size-3.5" /> },
   { key: "auth", label: "Auth", icon: <Shield className="size-3.5" /> },
-  { key: "report", label: "Signalements", icon: <Flag className="size-3.5" /> },
   { key: "admin", label: "Admin", icon: <Database className="size-3.5" /> },
-  { key: "erreur", label: "Erreurs", icon: <AlertCircle className="size-3.5" /> },
 ];
 
 interface LogEntry {
@@ -245,6 +249,8 @@ function ActivityLogPanel() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState("");
+  const { locale } = useLanguage();
+  const a = adminUi[locale];
 
   const loadLogs = useCallback(async (cat: string) => {
     setLoading(true);
@@ -269,10 +275,17 @@ function ActivityLogPanel() {
     erreur: "bg-red-200 text-red-800 dark:bg-red-950 dark:text-red-300",
   };
 
+  const logCategories = [
+    { key: "", label: a.logAll, icon: <ScrollText className="size-3.5" /> },
+    ...LOG_CATEGORY_STATIC,
+    { key: "report", label: a.logReports, icon: <Flag className="size-3.5" /> },
+    { key: "erreur", label: a.logErrors, icon: <AlertCircle className="size-3.5" /> },
+  ];
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 flex-wrap">
-        {LOG_CATEGORIES.map((c) => (
+        {logCategories.map((c) => (
           <button
             key={c.key}
             onClick={() => setCategory(c.key)}
@@ -286,7 +299,7 @@ function ActivityLogPanel() {
           </button>
         ))}
         <Button variant="outline" size="sm" className="ml-auto" onClick={() => loadLogs(category)} disabled={loading}>
-          <RefreshCw className={`size-3.5 ${loading ? "animate-spin" : ""}`} /> Rafraîchir
+          <RefreshCw className={`size-3.5 ${loading ? "animate-spin" : ""}`} /> {a.refresh}
         </Button>
       </div>
 
@@ -295,7 +308,7 @@ function ActivityLogPanel() {
           {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-12 w-full rounded-md" />)}
         </div>
       ) : logs.length === 0 ? (
-        <p className="text-muted-foreground text-[13px] text-center py-8">Aucune activité enregistrée.</p>
+        <p className="text-muted-foreground text-[13px] text-center py-8">{a.noActivity}</p>
       ) : (
         <div className="space-y-1.5 max-h-[65vh] overflow-y-auto pr-1">
           {logs.map((log) => (
@@ -322,70 +335,73 @@ function ActivityLogPanel() {
 function AlertsPanel({ stats }: { stats: Stats | null }) {
   const [alerts, setAlerts] = useState<{ level: "error" | "warn" | "ok"; title: string; detail: string }[]>([]);
   const [loading, setLoading] = useState(true);
+  const { locale } = useLanguage();
+  const a = adminUi[locale];
 
   useEffect(() => {
     async function check() {
-      const results: typeof alerts = [];
+      const results: { level: "error" | "warn" | "ok"; title: string; detail: string }[] = [];
       try {
         // Check dernière sync
         if (stats?.lastSnapshot) {
           const last = new Date(stats.lastSnapshot);
           const hoursAgo = (Date.now() - last.getTime()) / 3600000;
           const fmtDate = formatSnapshot(stats.lastSnapshot);
-          if (hoursAgo > 24) results.push({ level: "error", title: "Sync inactive depuis 24h+", detail: `Dernier snapshot : ${fmtDate}` });
-          else if (hoursAgo > 6) results.push({ level: "warn", title: "Sync inactive depuis 6h+", detail: `Dernier snapshot : ${fmtDate}` });
-          else results.push({ level: "ok", title: "Sync active", detail: `Dernier snapshot : ${fmtDate}` });
+          if (hoursAgo > 24) results.push({ level: "error", title: a.syncInactive24h, detail: `${a.lastSnapshotDetail} ${fmtDate}` });
+          else if (hoursAgo > 6) results.push({ level: "warn", title: a.syncInactive6h, detail: `${a.lastSnapshotDetail} ${fmtDate}` });
+          else results.push({ level: "ok", title: a.syncActive, detail: `${a.lastSnapshotDetail} ${fmtDate}` });
         }
 
         // Check prix anormaux via API
         const res = await fetch("/api/admin?type=alerts");
         if (res.ok) {
           const data = await res.json();
-          if (data.highPrices > 0) results.push({ level: "warn", title: `${data.highPrices} prix anormalement hauts (>250¢)`, detail: "Vérifier les stations concernées" });
-          if (data.lowPrices > 0) results.push({ level: "warn", title: `${data.lowPrices} prix anormalement bas (<80¢)`, detail: "Vérifier les stations concernées" });
-          if (data.highPrices === 0 && data.lowPrices === 0) results.push({ level: "ok", title: "Aucun prix anormal détecté", detail: "Tous les prix sont dans la plage normale (80-250¢)" });
+          if (data.highPrices > 0) results.push({ level: "warn", title: `${data.highPrices} ${a.highPrices}`, detail: a.checkStations });
+          if (data.lowPrices > 0) results.push({ level: "warn", title: `${data.lowPrices} ${a.lowPrices}`, detail: a.checkStations });
+          if (data.highPrices === 0 && data.lowPrices === 0) results.push({ level: "ok", title: a.noPriceAnomaly, detail: a.normalPriceRange });
         }
 
         // Check signalements non traités
         if (stats && stats.totalReports > 0) {
-          results.push({ level: "warn", title: `${stats.totalReports} signalement(s) en base`, detail: "Vérifier l'onglet Signalements" });
+          results.push({ level: "warn", title: `${stats.totalReports} ${a.reportsInDb}`, detail: a.checkReportsTab });
         } else {
-          results.push({ level: "ok", title: "Aucun signalement en attente", detail: "" });
+          results.push({ level: "ok", title: a.noReportsPending, detail: "" });
         }
       } catch {
-        results.push({ level: "error", title: "Erreur lors de la vérification", detail: "Impossible de charger les alertes" });
+        results.push({ level: "error", title: a.alertsCheckError, detail: a.alertsLoadError });
       }
       setAlerts(results);
       setLoading(false);
     }
     check();
-  }, [stats]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stats, locale]);
 
   if (loading) return <div className="space-y-2">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-14 w-full rounded-md" />)}</div>;
 
-  const errors = alerts.filter((a) => a.level === "error").length;
-  const warns = alerts.filter((a) => a.level === "warn").length;
+  const errors = alerts.filter((al) => al.level === "error").length;
+  const warns = alerts.filter((al) => al.level === "warn").length;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
         {errors > 0 ? (
-          <div className="flex items-center gap-2 text-red-500 font-semibold"><CircleX className="size-5" /> {errors} alerte(s) critique(s)</div>
+          <div className="flex items-center gap-2 text-red-500 font-semibold"><CircleX className="size-5" /> {errors} {a.alertsCritical}</div>
         ) : warns > 0 ? (
-          <div className="flex items-center gap-2 text-yellow-600 dark:text-yellow-400 font-semibold"><AlertTriangle className="size-5" /> {warns} avertissement(s)</div>
+          <div className="flex items-center gap-2 text-yellow-600 dark:text-yellow-400 font-semibold"><AlertTriangle className="size-5" /> {warns} {a.alertsWarnings}</div>
         ) : (
-          <div className="flex items-center gap-2 text-green-600 dark:text-green-400 font-semibold"><CircleCheck className="size-5" /> Tout est normal</div>
+          <div className="flex items-center gap-2 text-green-600 dark:text-green-400 font-semibold"><CircleCheck className="size-5" /> {a.alertsAllOk}</div>
         )}
       </div>
       <div className="space-y-2">
-        {alerts.map((a, i) => (
+        {alerts.map((alert, i) => (
           <div key={i} className="flex items-start gap-3 rounded-lg border p-3">
-            {a.level === "error" ? <CircleX className="size-4 text-red-500 shrink-0 mt-0.5" /> :
-             a.level === "warn" ? <AlertTriangle className="size-4 text-yellow-500 shrink-0 mt-0.5" /> :
+            {alert.level === "error" ? <CircleX className="size-4 text-red-500 shrink-0 mt-0.5" /> :
+             alert.level === "warn" ? <AlertTriangle className="size-4 text-yellow-500 shrink-0 mt-0.5" /> :
              <CircleCheck className="size-4 text-green-500 shrink-0 mt-0.5" />}
             <div>
-              <div className="text-[13px] font-semibold">{a.title}</div>
-              {a.detail && <div className="text-[11px] text-muted-foreground">{a.detail}</div>}
+              <div className="text-[13px] font-semibold">{alert.title}</div>
+              {alert.detail && <div className="text-[11px] text-muted-foreground">{alert.detail}</div>}
             </div>
           </div>
         ))}
@@ -397,6 +413,8 @@ function AlertsPanel({ stats }: { stats: Stats | null }) {
 // ── Exports Panel ──
 function ExportsPanel({ token }: { token: string | null }) {
   const [exporting, setExporting] = useState<string | null>(null);
+  const { locale } = useLanguage();
+  const a = adminUi[locale];
 
   function authHeaders(): Record<string, string> {
     return token ? { Authorization: `Bearer ${token}` } : {};
@@ -434,15 +452,15 @@ function ExportsPanel({ token }: { token: string | null }) {
   }
 
   const exports = [
-    { type: "users", label: "Utilisateurs", desc: "Liste des comptes inscrits", icon: <Users className="size-4" />, filename: "utilisateurs" },
-    { type: "reports", label: "Signalements", desc: "Tous les signalements soumis", icon: <Flag className="size-4" />, filename: "signalements" },
-    { type: "snapshots", label: "Snapshots (résumé)", desc: "Historique des captures de prix", icon: <Database className="size-4" />, filename: "snapshots" },
-    { type: "logs", label: "Journal d'activité", desc: "Logs d'actions récentes", icon: <ScrollText className="size-4" />, filename: "journal" },
+    { type: "users", label: a.exportUsers, desc: a.exportUsersDesc, icon: <Users className="size-4" />, filename: "utilisateurs" },
+    { type: "reports", label: a.exportReports, desc: a.exportReportsDesc, icon: <Flag className="size-4" />, filename: "signalements" },
+    { type: "snapshots", label: a.exportSnapshots, desc: a.exportSnapshotsDesc, icon: <Database className="size-4" />, filename: "snapshots" },
+    { type: "logs", label: a.exportLogs, desc: a.exportLogsDesc, icon: <ScrollText className="size-4" />, filename: "journal" },
   ];
 
   return (
     <div className="space-y-4">
-      <p className="text-muted-foreground text-[13px]">Téléchargez les données au format CSV (compatible Excel).</p>
+      <p className="text-muted-foreground text-[13px]">{a.exportDesc}</p>
       <div className="grid sm:grid-cols-2 gap-3">
         {exports.map((e) => (
           <div key={e.type} className="flex items-center gap-3 rounded-lg border p-4">
@@ -468,6 +486,8 @@ function ExportsPanel({ token }: { token: string | null }) {
 function RapportsPanel({ stats, token }: { stats: Stats | null; token: string | null }) {
   const [reportData, setReportData] = useState<{ regions: { region: string; count: number; avg: number; min: number; max: number }[]; topStations: { name: string; address: string; price: number; type: string }[] } | null>(null);
   const [loading, setLoading] = useState(true);
+  const { locale } = useLanguage();
+  const a = adminUi[locale];
 
   useEffect(() => {
     async function load() {
@@ -482,7 +502,7 @@ function RapportsPanel({ stats, token }: { stats: Stats | null; token: string | 
         const regulierOnly = rows.filter((r) => r.gas_type === "Régulier");
         regulierOnly.forEach((r) => {
           const parts = r.address.split(",");
-          const region = parts[parts.length - 1]?.trim() || "Inconnu";
+          const region = parts[parts.length - 1]?.trim() || a.unknown;
           if (!regionMap[region]) regionMap[region] = { count: 0, total: 0, min: Infinity, max: -Infinity };
           regionMap[region].count++;
           regionMap[region].total += r.price;
@@ -502,13 +522,15 @@ function RapportsPanel({ stats, token }: { stats: Stats | null; token: string | 
       setLoading(false);
     }
     load();
-  }, [token]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, locale]);
 
   function exportPDF() {
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
-    const now = new Date().toLocaleDateString("fr-CA", { year: "numeric", month: "long", day: "numeric" });
-    printWindow.document.write(`<!DOCTYPE html><html><head><title>Rapport Essence Québec</title>
+    const pdfLocale = locale === "fr" ? "fr-CA" : "en-CA";
+    const now = new Date().toLocaleDateString(pdfLocale, { year: "numeric", month: "long", day: "numeric" });
+    printWindow.document.write(`<!DOCTYPE html><html><head><title>${a.pdfTitle}</title>
     <style>
       body { font-family: system-ui, sans-serif; padding: 40px; color: #333; max-width: 900px; margin: 0 auto; }
       h1 { color: #003DA5; font-size: 22px; border-bottom: 3px solid #003DA5; padding-bottom: 8px; }
@@ -525,40 +547,40 @@ function RapportsPanel({ stats, token }: { stats: Stats | null; token: string | 
       .footer { margin-top: 40px; padding-top: 15px; border-top: 1px solid #ddd; font-size: 11px; color: #999; text-align: center; }
       @media print { body { padding: 20px; } }
     </style></head><body>
-    <h1>Rapport — Essence Québec</h1>
-    <div class="meta">Généré le ${now} · essence-quebec.ca</div>`);
+    <h1>${a.pdfH1}</h1>
+    <div class="meta">${a.pdfGeneratedOn} ${now} · essence-quebec.ca</div>`);
 
     if (stats) {
       printWindow.document.write(`
       <div class="summary">
-        <div class="summary-card"><div class="value">${stats.totalStations.toLocaleString()}</div><div class="label">Stations actives</div></div>
-        <div class="summary-card"><div class="value">${stats.totalPageViews.toLocaleString()}</div><div class="label">Visites totales</div></div>
-        <div class="summary-card"><div class="value">${stats.totalUsers.toLocaleString()}</div><div class="label">Utilisateurs</div></div>
-        <div class="summary-card"><div class="value">${stats.totalReports.toLocaleString()}</div><div class="label">Signalements</div></div>
+        <div class="summary-card"><div class="value">${stats.totalStations.toLocaleString()}</div><div class="label">${a.pdfActiveStations}</div></div>
+        <div class="summary-card"><div class="value">${stats.totalPageViews.toLocaleString()}</div><div class="label">${a.pdfTotalVisits}</div></div>
+        <div class="summary-card"><div class="value">${stats.totalUsers.toLocaleString()}</div><div class="label">${a.pdfUsers}</div></div>
+        <div class="summary-card"><div class="value">${stats.totalReports.toLocaleString()}</div><div class="label">${a.pdfReports}</div></div>
       </div>
-      <h2>Prix moyens par carburant</h2>
-      <table><tr><th>Type</th><th>Prix moyen</th></tr>
-        <tr><td>Ordinaire</td><td>${stats.avgRegulier.toFixed(1)}¢/L</td></tr>
+      <h2>${a.pdfAvgFuelPrices}</h2>
+      <table><tr><th>${a.pdfType}</th><th>${a.pdfAvgPrice}</th></tr>
+        <tr><td>${a.pdfRegular}</td><td>${stats.avgRegulier.toFixed(1)}¢/L</td></tr>
         <tr><td>Super</td><td>${stats.avgSuper.toFixed(1)}¢/L</td></tr>
         <tr><td>Diesel</td><td>${stats.avgDiesel.toFixed(1)}¢/L</td></tr>
       </table>`);
     }
 
     if (reportData) {
-      printWindow.document.write(`<h2>Top 10 stations les moins chères (Ordinaire)</h2>
-      <table><tr><th>#</th><th>Station</th><th>Adresse</th><th>Prix</th></tr>
+      printWindow.document.write(`<h2>${a.pdfTop10}</h2>
+      <table><tr><th>#</th><th>${a.station}</th><th>${a.pdfAddress}</th><th>${a.price}</th></tr>
         ${reportData.topStations.map((s, i) => `<tr><td>${i + 1}</td><td>${escapeHtml(s.name)}</td><td>${escapeHtml(s.address)}</td><td>${s.price.toFixed(1)}¢</td></tr>`).join("")}
       </table>`);
 
       if (reportData.regions.length > 0) {
-        printWindow.document.write(`<h2>Prix par ville (Ordinaire)</h2>
-        <table><tr><th>Ville</th><th>Stations</th><th>Moy.</th><th>Min</th><th>Max</th></tr>
+        printWindow.document.write(`<h2>${a.pdfPriceByCity}</h2>
+        <table><tr><th>${a.city}</th><th>${a.stations}</th><th>${a.pdfAvg}</th><th>${a.min}</th><th>${a.max}</th></tr>
           ${reportData.regions.slice(0, 30).map((r) => `<tr><td>${escapeHtml(r.region)}</td><td>${r.count}</td><td>${r.avg.toFixed(1)}¢</td><td>${r.min.toFixed(1)}¢</td><td>${r.max.toFixed(1)}¢</td></tr>`).join("")}
         </table>`);
       }
     }
 
-    printWindow.document.write(`<div class="footer">Données officielles — Régie de l'énergie du Québec · Généré automatiquement par essence-quebec.ca</div></body></html>`);
+    printWindow.document.write(`<div class="footer">${a.pdfFooter}</div></body></html>`);
     printWindow.document.close();
     setTimeout(() => printWindow.print(), 300);
   }
@@ -568,24 +590,24 @@ function RapportsPanel({ stats, token }: { stats: Stats | null; token: string | 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <p className="text-muted-foreground text-[13px]">Rapports détaillés basés sur le dernier snapshot de prix.</p>
+        <p className="text-muted-foreground text-[13px]">{a.rapportDesc}</p>
         <Button variant="outline" size="sm" onClick={exportPDF}>
-          <Download className="size-3.5" /> Exporter PDF
+          <Download className="size-3.5" /> {a.exportPdf}
         </Button>
       </div>
 
       {/* Top 10 moins chers */}
       {reportData && reportData.topStations.length > 0 && (
         <Card>
-          <CardHeader><CardTitle className="flex items-center gap-2 text-[14px]"><TrendingUp className="size-4" /> Top 10 stations les moins chères (Ordinaire)</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="flex items-center gap-2 text-[14px]"><TrendingUp className="size-4" /> {a.top10Cheapest}</CardTitle></CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-10">#</TableHead>
-                  <TableHead>Station</TableHead>
-                  <TableHead>Adresse</TableHead>
-                  <TableHead className="text-right">Prix</TableHead>
+                  <TableHead>{a.station}</TableHead>
+                  <TableHead>{a.address}</TableHead>
+                  <TableHead className="text-right">{a.price}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -606,17 +628,17 @@ function RapportsPanel({ stats, token }: { stats: Stats | null; token: string | 
       {/* Prix par ville */}
       {reportData && reportData.regions.length > 0 && (
         <Card>
-          <CardHeader><CardTitle className="flex items-center gap-2 text-[14px]"><BarChart3 className="size-4" /> Prix moyen par ville (Ordinaire) — {reportData.regions.length} villes</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="flex items-center gap-2 text-[14px]"><BarChart3 className="size-4" /> {a.avgPriceByCity} — {reportData.regions.length} {a.citiesLabel}</CardTitle></CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Ville</TableHead>
-                  <TableHead className="text-right">Stations</TableHead>
-                  <TableHead className="text-right">Moyenne</TableHead>
-                  <TableHead className="text-right">Min</TableHead>
-                  <TableHead className="text-right">Max</TableHead>
-                  <TableHead className="text-right">Écart</TableHead>
+                  <TableHead>{a.city}</TableHead>
+                  <TableHead className="text-right">{a.stations}</TableHead>
+                  <TableHead className="text-right">{a.average}</TableHead>
+                  <TableHead className="text-right">{a.min}</TableHead>
+                  <TableHead className="text-right">{a.max}</TableHead>
+                  <TableHead className="text-right">{a.range}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -639,14 +661,14 @@ function RapportsPanel({ stats, token }: { stats: Stats | null; token: string | 
       {/* Résumé chiffres */}
       {stats && (
         <Card>
-          <CardHeader><CardTitle className="flex items-center gap-2 text-[14px]"><FileBarChart className="size-4" /> Indicateurs clés</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="flex items-center gap-2 text-[14px]"><FileBarChart className="size-4" /> {a.keyMetrics}</CardTitle></CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
               {[
-                { v: stats.totalStations.toLocaleString(), l: "Stations actives" },
-                { v: stats.totalPageViews.toLocaleString(), l: "Visites totales" },
-                { v: `${stats.avgRegulier.toFixed(1)}¢`, l: "Moy. Ordinaire" },
-                { v: `${stats.avgDiesel.toFixed(1)}¢`, l: "Moy. Diesel" },
+                { v: stats.totalStations.toLocaleString(), l: a.activeStations },
+                { v: stats.totalPageViews.toLocaleString(), l: a.totalVisits },
+                { v: `${stats.avgRegulier.toFixed(1)}¢`, l: a.avgRegular },
+                { v: `${stats.avgDiesel.toFixed(1)}¢`, l: a.avgDiesel },
               ].map((s) => (
                 <div key={s.l}>
                   <div className="text-xl font-bold">{s.v}</div>
@@ -672,13 +694,25 @@ function ConformitePanel({
   setChecks: React.Dispatch<React.SetStateAction<Record<string, { status: "loading" | "ok" | "error"; ms: number; detail?: string }>>>;
 }) {
   const [lastRun, setLastRun] = useState<string | null>(null);
+  const { locale } = useLanguage();
+  const a = adminUi[locale];
+  const timeLocale = locale === "fr" ? "fr-CA" : "en-CA";
+
+  const healthEndpoints = [
+    { key: "site", label: a.epSiteLabel, url: "/", desc: a.epSiteDesc },
+    { key: "api-stations", label: "API Stations", url: "/api/stations", desc: a.epStationsDesc },
+    { key: "api-health", label: "API Health", url: "/api/health", desc: a.epHealthDesc },
+    { key: "api-admin", label: "API Admin", url: "/api/admin?type=stats", desc: a.epAdminDesc },
+    { key: "supabase", label: "Supabase", url: HEALTH_ENDPOINT_URLS.find(e => e.key === "supabase")!.url, desc: a.epSupabaseDesc },
+    { key: "source-req", label: "Source REQ", url: "https://regieessencequebec.ca/stations.geojson.gz", desc: a.epReqDesc },
+  ];
 
   const runChecks = useCallback(async () => {
     const init: Record<string, { status: "loading" | "ok" | "error"; ms: number }> = {};
-    HEALTH_ENDPOINTS.forEach((ep) => { init[ep.key] = { status: "loading", ms: 0 }; });
+    HEALTH_ENDPOINT_URLS.forEach((ep) => { init[ep.key] = { status: "loading", ms: 0 }; });
     setChecks(init);
     await Promise.all(
-      HEALTH_ENDPOINTS.map(async (ep) => {
+      HEALTH_ENDPOINT_URLS.map(async (ep) => {
         const start = performance.now();
         try {
           const res = await fetch(ep.url, { method: "HEAD", cache: "no-store", signal: AbortSignal.timeout(10000) }).catch(() =>
@@ -688,12 +722,12 @@ function ConformitePanel({
           setChecks((prev) => ({ ...prev, [ep.key]: { status: res.ok || res.status === 401 || res.status === 403 ? "ok" : "error", ms, detail: `HTTP ${res.status}` } }));
         } catch {
           const ms = Math.round(performance.now() - start);
-          setChecks((prev) => ({ ...prev, [ep.key]: { status: "error", ms, detail: "Timeout ou réseau" } }));
+          setChecks((prev) => ({ ...prev, [ep.key]: { status: "error", ms, detail: a.timeoutError } }));
         }
       })
     );
-    setLastRun(new Date().toLocaleTimeString("fr-CA"));
-  }, [setChecks]);
+    setLastRun(new Date().toLocaleTimeString(timeLocale));
+  }, [setChecks, a, timeLocale]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -707,13 +741,13 @@ function ConformitePanel({
   const avgMs = servicesTotal > 0 ? Math.round(Object.values(checks).reduce((s, c) => s + c.ms, 0) / servicesTotal) : 0;
 
   const securityItems = [
-    { icon: <Clock className="size-4" />, label: "Dernier snapshot", value: stats?.lastSnapshot && stats.lastSnapshot !== "Aucun" ? formatSnapshot(stats.lastSnapshot) : (stats?.lastSnapshot ?? "...") },
-    { icon: <Database className="size-4" />, label: "Snapshots en base", value: stats?.totalSnapshots?.toLocaleString() ?? "..." },
-    { icon: <GitCommit className="size-4" />, label: "Version", value: "Production (Vercel)" },
-    { icon: <Shield className="size-4" />, label: "Auth OTP", value: "Supabase (sans mot de passe)" },
-    { icon: <ShieldCheck className="size-4" />, label: "Row Level Security", value: "Activé sur toutes les tables" },
-    { icon: <Eye className="size-4" />, label: "Données personnelles", value: "Masquées pour les non-admins" },
-    { icon: <RefreshCw className="size-4" />, label: "Fréquence de sync", value: "5 min (client) + 6h (cron)" },
+    { icon: <Clock className="size-4" />, label: a.lastSnapshotLabel, value: stats?.lastSnapshot && stats.lastSnapshot !== "Aucun" ? formatSnapshot(stats.lastSnapshot) : (stats?.lastSnapshot ?? "...") },
+    { icon: <Database className="size-4" />, label: a.snapshotsInDb, value: stats?.totalSnapshots?.toLocaleString() ?? "..." },
+    { icon: <GitCommit className="size-4" />, label: a.versionLabel, value: a.versionValue },
+    { icon: <Shield className="size-4" />, label: a.authOtpLabel, value: a.authOtpValue },
+    { icon: <ShieldCheck className="size-4" />, label: a.rlsLabel, value: a.rlsValue },
+    { icon: <Eye className="size-4" />, label: a.personalDataLabel, value: a.personalDataValue },
+    { icon: <RefreshCw className="size-4" />, label: a.syncFreqLabel, value: a.syncFreqValue },
   ];
 
   return (
@@ -722,29 +756,29 @@ function ConformitePanel({
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-[14px] font-semibold flex items-center gap-2">
-            <Wifi className="size-4" /> État des services
+            <Wifi className="size-4" /> {a.servicesStatus}
           </h3>
           <div className="flex items-center gap-3">
-            {lastRun && <span className="text-xs text-muted-foreground">Dernier test : {lastRun}</span>}
+            {lastRun && <span className="text-xs text-muted-foreground">{a.lastTest} {lastRun}</span>}
             <Button variant="outline" size="sm" onClick={runChecks} disabled={anyLoading}>
-              {anyLoading ? <Loader2 className="size-3.5 animate-spin" /> : <Wifi className="size-3.5" />} Tester
+              {anyLoading ? <Loader2 className="size-3.5 animate-spin" /> : <Wifi className="size-3.5" />} {a.test}
             </Button>
           </div>
         </div>
         <div className="flex items-center gap-2 text-[13px] font-semibold mb-1">
           {anyLoading ? (
-            <><Loader2 className="size-4 animate-spin text-muted-foreground" /> Test en cours...</>
+            <><Loader2 className="size-4 animate-spin text-muted-foreground" /> {a.testing}</>
           ) : allOk ? (
-            <span className="text-green-600 dark:text-green-400 flex items-center gap-1.5"><CircleCheck className="size-4" /> Tous les services sont opérationnels</span>
+            <span className="text-green-600 dark:text-green-400 flex items-center gap-1.5"><CircleCheck className="size-4" /> {a.allServicesOk}</span>
           ) : (
-            <span className="text-red-500 flex items-center gap-1.5"><CircleX className="size-4" /> Certains services sont en panne</span>
+            <span className="text-red-500 flex items-center gap-1.5"><CircleX className="size-4" /> {a.someServicesDown}</span>
           )}
           {!anyLoading && servicesTotal > 0 && (
-            <span className="text-muted-foreground font-normal ml-auto">{servicesOk}/{servicesTotal} OK · moy. {avgMs} ms</span>
+            <span className="text-muted-foreground font-normal ml-auto">{servicesOk}/{servicesTotal} OK · {a.avgLabel} {avgMs} ms</span>
           )}
         </div>
         <div className="space-y-1.5">
-          {HEALTH_ENDPOINTS.map((ep) => {
+          {healthEndpoints.map((ep) => {
             const check = checks[ep.key];
             const status = check?.status ?? "loading";
             return (
@@ -773,7 +807,7 @@ function ConformitePanel({
       {/* ── Sécurité & Conformité ── */}
       <div className="space-y-3">
         <h3 className="text-[14px] font-semibold flex items-center gap-2">
-          <ShieldCheck className="size-4" /> Sécurité et conformité
+          <ShieldCheck className="size-4" /> {a.securityAndCompliance}
         </h3>
         <div className="space-y-1.5">
           {securityItems.map((item, i) => (
@@ -792,16 +826,449 @@ function ConformitePanel({
   );
 }
 
-const HEALTH_ENDPOINTS = [
-  { key: "site", label: "Site web", url: "/", desc: "Page d'accueil essence-quebec.ca" },
-  { key: "api-stations", label: "API Stations", url: "/api/stations", desc: "Endpoint GeoJSON des stations" },
-  { key: "api-health", label: "API Health", url: "/api/health", desc: "Liveness probe (Supabase + Upstash)" },
-  { key: "api-admin", label: "API Admin", url: "/api/admin?type=stats", desc: "Endpoint statistiques" },
-  { key: "supabase", label: "Supabase", url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/`, desc: "Base de données PostgreSQL" },
-  { key: "source-req", label: "Source REQ", url: "https://regieessencequebec.ca/stations.geojson.gz", desc: "Données Régie de l'énergie" },
+const adminUi = {
+  fr: {
+    // Tabs
+    tabStats: "Stats",
+    tabAlerts: "Alertes",
+    tabRapports: "Rapports",
+    tabExports: "Exports",
+    tabConformite: "Conformité",
+    tabLogs: "Journal",
+    tabCron: "Cron",
+    tabUsers: "Utilisateurs",
+    tabData: "Données",
+    // Card headers
+    activeStations: "Stations actives",
+    dbSnapshots: "Snapshots en DB",
+    lastSnapshot: "Dernier snapshot",
+    registeredUsers: "Utilisateurs inscrits",
+    reports: "Signalements",
+    suggestions: "Suggestions",
+    siteTraffic: "Trafic du site",
+    trafficByPage: "Trafic par page",
+    seoScore: "Score SEO",
+    // Time filters
+    day: "Jour",
+    week: "Semaine",
+    month: "Mois",
+    // Stats labels
+    total: "Total",
+    today: "Aujourd'hui",
+    sevenDays: "7 jours",
+    thisMonth: "Ce mois",
+    totalVisits: "Visites totales",
+    avgRegular: "Moy. Ordinaire",
+    avgDiesel: "Moy. Diesel",
+    // Table headers
+    station: "Station",
+    address: "Adresse",
+    price: "Prix",
+    city: "Ville",
+    stations: "Stations",
+    average: "Moyenne",
+    min: "Min",
+    max: "Max",
+    range: "Écart",
+    // Rapport
+    exportPdf: "Exporter PDF",
+    rapportDesc: "Rapports détaillés basés sur le dernier snapshot de prix.",
+    top10Cheapest: "Top 10 stations les moins chères (Ordinaire)",
+    avgPriceByCity: "Prix moyen par ville (Ordinaire)",
+    keyMetrics: "Indicateurs clés",
+    noData: "Aucune donnée",
+    // Buttons / actions
+    collapse: "Réduire",
+    readMore: "Lire plus",
+    running: "En cours...",
+    runCron: "Lancer le cron maintenant",
+    signIn: "Connexion",
+    lightMode: "Mode clair",
+    darkMode: "Mode sombre",
+    none: "Aucun",
+    unknown: "Inconnu",
+    commentPlaceholder: "Commentaire...",
+    reasonPlaceholder: "Raison (optionnel)...",
+    // Station filters
+    all: "Tous",
+    sortPriceAsc: "Prix ↑",
+    sortPriceDesc: "Prix ↓",
+    sortNameAZ: "Nom A→Z",
+    // Exports panel
+    exportDesc: "Téléchargez les données au format CSV (compatible Excel).",
+    // Misc
+    refresh: "Rafraîchir",
+    noActivity: "Aucune activité enregistrée.",
+    // Navbar
+    logout: "Déconnexion",
+    readOnly: "Lecture seule",
+    // Log categories
+    logAll: "Tout",
+    logReports: "Signalements",
+    logErrors: "Erreurs",
+    // Conformite panel
+    servicesStatus: "État des services",
+    lastTest: "Dernier test :",
+    test: "Tester",
+    testing: "Test en cours...",
+    allServicesOk: "Tous les services sont opérationnels",
+    someServicesDown: "Certains services sont en panne",
+    securityAndCompliance: "Sécurité et conformité",
+    lastSnapshotLabel: "Dernier snapshot",
+    snapshotsInDb: "Snapshots en base",
+    versionLabel: "Version",
+    authOtpLabel: "Auth OTP",
+    rlsLabel: "Row Level Security",
+    personalDataLabel: "Données personnelles",
+    syncFreqLabel: "Fréquence de sync",
+    versionValue: "Production (Vercel)",
+    authOtpValue: "Supabase (sans mot de passe)",
+    rlsValue: "Activé sur toutes les tables",
+    personalDataValue: "Masquées pour les non-admins",
+    syncFreqValue: "5 min (client) + 6h (cron)",
+    // Exports panel
+    exportUsers: "Utilisateurs",
+    exportUsersDesc: "Liste des comptes inscrits",
+    exportReports: "Signalements",
+    exportReportsDesc: "Tous les signalements soumis",
+    exportSnapshots: "Snapshots (résumé)",
+    exportSnapshotsDesc: "Historique des captures de prix",
+    exportLogs: "Journal d'activité",
+    exportLogsDesc: "Logs d'actions récentes",
+    // Users panel
+    emailHeader: "Email",
+    roleHeader: "Rôle",
+    registeredAt: "Inscrit le",
+    action: "Action",
+    removeAdmin: "Retirer admin",
+    makeAdmin: "Rendre admin",
+    recentLogins: "Connexions récentes",
+    noLogins: "Aucune connexion enregistrée.",
+    methodHeader: "Méthode",
+    dateHeader: "Date",
+    // Reports panel
+    noReports: "Aucun signalement.",
+    fromHeader: "De",
+    messageHeader: "Message",
+    statusHeader: "Statut",
+    actionsHeader: "Actions",
+    inProgress: "En traitement",
+    resolved: "Résolu",
+    reject: "Rejeter",
+    editComment: "Modifier",
+    addComment: "Commenter",
+    // Suggestions panel
+    noSuggestions: "Aucune suggestion.",
+    accept: "Accepter",
+    refuse: "Refuser",
+    cancel: "Annuler",
+    acceptOrRefuse: "Accepter / Refuser",
+    // Data panel
+    loadingSnapshots: "Chargement des snapshots...",
+    snapshotsInBase: "snapshot(s) en base",
+    clickRowDetail: "Cliquez une ligne pour voir le détail",
+    timeHNE: "Heure (HNE)",
+    avgRegulierHeader: "Moy. Régulier",
+    avgSuperHeader: "Moy. Super",
+    avgDieselHeader: "Moy. Diesel",
+    minMax: "Min / Max",
+    back: "Retour",
+    snapshotOf: "Snapshot du",
+    loading: "Chargement...",
+    typeHeader: "Type",
+    entriesCount: "entrées",
+    // SEO panel
+    seoExcellent: "Excellent",
+    seoCorrect: "Correct",
+    seoWeak: "Faible",
+    seoGlobalScore: "score global SEO",
+    seoSource: "Source :",
+    // Cron panel
+    cronDesc1: "Le cron Vercel s'exécute automatiquement",
+    cronDesc2: "toutes les 6 heures",
+    cronDesc3: "(0h, 6h, 12h, 18h UTC).",
+    cronDesc4: "Les prix sont aussi vérifiés",
+    cronDesc5: "toutes les 5 minutes",
+    cronDesc6: "automatiquement. Vous pouvez aussi déclencher manuellement un snapshot :",
+    timeoutError: "Timeout ou réseau",
+    // Health endpoints
+    epSiteLabel: "Site web",
+    epSiteDesc: "Page d'accueil essence-quebec.ca",
+    epStationsDesc: "Endpoint GeoJSON des stations",
+    epHealthDesc: "Liveness probe (Supabase + Upstash)",
+    epAdminDesc: "Endpoint statistiques",
+    epSupabaseDesc: "Base de données PostgreSQL",
+    epReqDesc: "Données Régie de l'énergie",
+    // Services summary
+    avgLabel: "moy.",
+    // Alerts panel
+    alertsCritical: "alerte(s) critique(s)",
+    alertsWarnings: "avertissement(s)",
+    alertsAllOk: "Tout est normal",
+    syncInactive24h: "Sync inactive depuis 24h+",
+    syncInactive6h: "Sync inactive depuis 6h+",
+    syncActive: "Sync active",
+    lastSnapshotDetail: "Dernier snapshot :",
+    highPrices: "prix anormalement hauts (>250¢)",
+    lowPrices: "prix anormalement bas (<80¢)",
+    checkStations: "Vérifier les stations concernées",
+    noPriceAnomaly: "Aucun prix anormal détecté",
+    normalPriceRange: "Tous les prix sont dans la plage normale (80-250¢)",
+    reportsInDb: "signalement(s) en base",
+    checkReportsTab: "Vérifier l'onglet Signalements",
+    noReportsPending: "Aucun signalement en attente",
+    alertsCheckError: "Erreur lors de la vérification",
+    alertsLoadError: "Impossible de charger les alertes",
+    citiesLabel: "villes",
+    // PDF export
+    pdfTitle: "Rapport Essence Québec",
+    pdfH1: "Rapport — Essence Québec",
+    pdfGeneratedOn: "Généré le",
+    pdfActiveStations: "Stations actives",
+    pdfTotalVisits: "Visites totales",
+    pdfUsers: "Utilisateurs",
+    pdfReports: "Signalements",
+    pdfAvgFuelPrices: "Prix moyens par carburant",
+    pdfType: "Type",
+    pdfAvgPrice: "Prix moyen",
+    pdfRegular: "Ordinaire",
+    pdfTop10: "Top 10 stations les moins chères (Ordinaire)",
+    pdfAddress: "Adresse",
+    pdfPriceByCity: "Prix par ville (Ordinaire)",
+    pdfAvg: "Moy.",
+    pdfFooter: "Données officielles — Régie de l'énergie du Québec · Généré automatiquement par essence-quebec.ca",
+    seoMysite: "Mon site",
+    seoGovSite: "Site gouvernemental",
+    visits: "visites",
+  },
+  en: {
+    // Tabs
+    tabStats: "Stats",
+    tabAlerts: "Alerts",
+    tabRapports: "Reports",
+    tabExports: "Exports",
+    tabConformite: "Compliance",
+    tabLogs: "Log",
+    tabCron: "Cron",
+    tabUsers: "Users",
+    tabData: "Data",
+    // Card headers
+    activeStations: "Active stations",
+    dbSnapshots: "DB snapshots",
+    lastSnapshot: "Last snapshot",
+    registeredUsers: "Registered users",
+    reports: "Reports",
+    suggestions: "Suggestions",
+    siteTraffic: "Site traffic",
+    trafficByPage: "Traffic by page",
+    seoScore: "SEO Score",
+    // Time filters
+    day: "Day",
+    week: "Week",
+    month: "Month",
+    // Stats labels
+    total: "Total",
+    today: "Today",
+    sevenDays: "7 days",
+    thisMonth: "This month",
+    totalVisits: "Total visits",
+    avgRegular: "Avg. Regular",
+    avgDiesel: "Avg. Diesel",
+    // Table headers
+    station: "Station",
+    address: "Address",
+    price: "Price",
+    city: "City",
+    stations: "Stations",
+    average: "Average",
+    min: "Min",
+    max: "Max",
+    range: "Range",
+    // Rapport
+    exportPdf: "Export PDF",
+    rapportDesc: "Detailed reports based on the latest price snapshot.",
+    top10Cheapest: "Top 10 cheapest stations (Regular)",
+    avgPriceByCity: "Average price by city (Regular)",
+    keyMetrics: "Key metrics",
+    noData: "No data",
+    // Buttons / actions
+    collapse: "Collapse",
+    readMore: "Read more",
+    running: "Running...",
+    runCron: "Run cron now",
+    signIn: "Sign in",
+    lightMode: "Light mode",
+    darkMode: "Dark mode",
+    none: "None",
+    unknown: "Unknown",
+    commentPlaceholder: "Comment...",
+    reasonPlaceholder: "Reason (optional)...",
+    // Station filters
+    all: "All",
+    sortPriceAsc: "Price ↑",
+    sortPriceDesc: "Price ↓",
+    sortNameAZ: "Name A→Z",
+    // Exports panel
+    exportDesc: "Download data in CSV format (Excel-compatible).",
+    // Misc
+    refresh: "Refresh",
+    noActivity: "No activity recorded.",
+    // Navbar
+    logout: "Sign out",
+    readOnly: "Read only",
+    // Log categories
+    logAll: "All",
+    logReports: "Reports",
+    logErrors: "Errors",
+    // Conformite panel
+    servicesStatus: "Services status",
+    lastTest: "Last test:",
+    test: "Test",
+    testing: "Testing...",
+    allServicesOk: "All services are operational",
+    someServicesDown: "Some services are down",
+    securityAndCompliance: "Security and compliance",
+    lastSnapshotLabel: "Last snapshot",
+    snapshotsInDb: "Snapshots in DB",
+    versionLabel: "Version",
+    authOtpLabel: "OTP Auth",
+    rlsLabel: "Row Level Security",
+    personalDataLabel: "Personal data",
+    syncFreqLabel: "Sync frequency",
+    versionValue: "Production (Vercel)",
+    authOtpValue: "Supabase (passwordless)",
+    rlsValue: "Enabled on all tables",
+    personalDataValue: "Hidden from non-admins",
+    syncFreqValue: "5 min (client) + 6h (cron)",
+    // Exports panel
+    exportUsers: "Users",
+    exportUsersDesc: "List of registered accounts",
+    exportReports: "Reports",
+    exportReportsDesc: "All submitted reports",
+    exportSnapshots: "Snapshots (summary)",
+    exportSnapshotsDesc: "Price capture history",
+    exportLogs: "Activity log",
+    exportLogsDesc: "Recent action logs",
+    // Users panel
+    emailHeader: "Email",
+    roleHeader: "Role",
+    registeredAt: "Registered on",
+    action: "Action",
+    removeAdmin: "Remove admin",
+    makeAdmin: "Make admin",
+    recentLogins: "Recent logins",
+    noLogins: "No logins recorded.",
+    methodHeader: "Method",
+    dateHeader: "Date",
+    // Reports panel
+    noReports: "No reports.",
+    fromHeader: "From",
+    messageHeader: "Message",
+    statusHeader: "Status",
+    actionsHeader: "Actions",
+    inProgress: "In progress",
+    resolved: "Resolved",
+    reject: "Reject",
+    editComment: "Edit",
+    addComment: "Comment",
+    // Suggestions panel
+    noSuggestions: "No suggestions.",
+    accept: "Accept",
+    refuse: "Refuse",
+    cancel: "Cancel",
+    acceptOrRefuse: "Accept / Refuse",
+    // Data panel
+    loadingSnapshots: "Loading snapshots...",
+    snapshotsInBase: "snapshot(s) in database",
+    clickRowDetail: "Click a row to see details",
+    timeHNE: "Time (EST)",
+    avgRegulierHeader: "Avg. Regular",
+    avgSuperHeader: "Avg. Super",
+    avgDieselHeader: "Avg. Diesel",
+    minMax: "Min / Max",
+    back: "Back",
+    snapshotOf: "Snapshot of",
+    loading: "Loading...",
+    typeHeader: "Type",
+    entriesCount: "entries",
+    // SEO panel
+    seoExcellent: "Excellent",
+    seoCorrect: "Good",
+    seoWeak: "Poor",
+    seoGlobalScore: "overall SEO score",
+    seoSource: "Source:",
+    // Cron panel
+    cronDesc1: "The Vercel cron runs automatically",
+    cronDesc2: "every 6 hours",
+    cronDesc3: "(0h, 6h, 12h, 18h UTC).",
+    cronDesc4: "Prices are also checked",
+    cronDesc5: "every 5 minutes",
+    cronDesc6: "automatically. You can also manually trigger a snapshot:",
+    timeoutError: "Timeout or network error",
+    // Health endpoints
+    epSiteLabel: "Website",
+    epSiteDesc: "Homepage essence-quebec.ca",
+    epStationsDesc: "Stations GeoJSON endpoint",
+    epHealthDesc: "Liveness probe (Supabase + Upstash)",
+    epAdminDesc: "Statistics endpoint",
+    epSupabaseDesc: "PostgreSQL database",
+    epReqDesc: "REQ energy board data",
+    // Services summary
+    avgLabel: "avg.",
+    // Alerts panel
+    alertsCritical: "critical alert(s)",
+    alertsWarnings: "warning(s)",
+    alertsAllOk: "Everything is normal",
+    syncInactive24h: "Sync inactive for 24h+",
+    syncInactive6h: "Sync inactive for 6h+",
+    syncActive: "Sync active",
+    lastSnapshotDetail: "Last snapshot:",
+    highPrices: "abnormally high prices (>250¢)",
+    lowPrices: "abnormally low prices (<80¢)",
+    checkStations: "Check the affected stations",
+    noPriceAnomaly: "No abnormal prices detected",
+    normalPriceRange: "All prices are within normal range (80-250¢)",
+    reportsInDb: "report(s) in database",
+    checkReportsTab: "Check the Reports tab",
+    noReportsPending: "No pending reports",
+    alertsCheckError: "Error during verification",
+    alertsLoadError: "Unable to load alerts",
+    citiesLabel: "cities",
+    // PDF export
+    pdfTitle: "Essence Quebec Report",
+    pdfH1: "Report — Essence Québec",
+    pdfGeneratedOn: "Generated on",
+    pdfActiveStations: "Active stations",
+    pdfTotalVisits: "Total visits",
+    pdfUsers: "Users",
+    pdfReports: "Reports",
+    pdfAvgFuelPrices: "Average prices by fuel type",
+    pdfType: "Type",
+    pdfAvgPrice: "Avg. price",
+    pdfRegular: "Regular",
+    pdfTop10: "Top 10 cheapest stations (Regular)",
+    pdfAddress: "Address",
+    pdfPriceByCity: "Price by city (Regular)",
+    pdfAvg: "Avg.",
+    pdfFooter: "Official data — Régie de l'énergie du Québec · Auto-generated by essence-quebec.ca",
+    seoMysite: "My site",
+    seoGovSite: "Government site",
+    visits: "visits",
+  },
+} as const;
+
+const HEALTH_ENDPOINT_URLS: { key: string; url: string }[] = [
+  { key: "site", url: "/" },
+  { key: "api-stations", url: "/api/stations" },
+  { key: "api-health", url: "/api/health" },
+  { key: "api-admin", url: "/api/admin?type=stats" },
+  { key: "supabase", url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/` },
+  { key: "source-req", url: "https://regieessencequebec.ca/stations.geojson.gz" },
 ];
 
 export default function AdminPage() {
+  const { locale } = useLanguage();
+  const a = adminUi[locale];
   const supabase = createBrowserClient();
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
@@ -1061,17 +1528,17 @@ export default function AdminPage() {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "0.25rem", flexWrap: "wrap" }}>
           {([
-            { key: "stats", icon: <BarChart3 className="size-3.5" />, label: "Stats" },
-            { key: "alerts", icon: <AlertTriangle className="size-3.5" />, label: "Alertes" },
-            { key: "rapports", icon: <FileBarChart className="size-3.5" />, label: "Rapports" },
-            { key: "exports", icon: <Download className="size-3.5" />, label: "Exports" },
-            { key: "conformite", icon: <ShieldCheck className="size-3.5" />, label: "Conformité" },
-            { key: "logs", icon: <ScrollText className="size-3.5" />, label: "Journal" },
-            { key: "cron", icon: <Clock className="size-3.5" />, label: "Cron" },
-            { key: "users", icon: <Users className="size-3.5" />, label: "Utilisateurs" },
-            { key: "reports", icon: <Flag className="size-3.5" />, label: `Signalements (${reports.length})` },
-            { key: "suggestions", icon: <Lightbulb className="size-3.5" />, label: `Suggestions (${suggestions.length})` },
-            { key: "data", icon: <Database className="size-3.5" />, label: "Données" },
+            { key: "stats", icon: <BarChart3 className="size-3.5" />, label: a.tabStats },
+            { key: "alerts", icon: <AlertTriangle className="size-3.5" />, label: a.tabAlerts },
+            { key: "rapports", icon: <FileBarChart className="size-3.5" />, label: a.tabRapports },
+            { key: "exports", icon: <Download className="size-3.5" />, label: a.tabExports },
+            { key: "conformite", icon: <ShieldCheck className="size-3.5" />, label: a.tabConformite },
+            { key: "logs", icon: <ScrollText className="size-3.5" />, label: a.tabLogs },
+            { key: "cron", icon: <Clock className="size-3.5" />, label: a.tabCron },
+            { key: "users", icon: <Users className="size-3.5" />, label: a.tabUsers },
+            { key: "reports", icon: <Flag className="size-3.5" />, label: `${a.reports} (${reports.length})` },
+            { key: "suggestions", icon: <Lightbulb className="size-3.5" />, label: `${a.suggestions} (${suggestions.length})` },
+            { key: "data", icon: <Database className="size-3.5" />, label: a.tabData },
           ] as const).map((t) => (
             <button
               key={t.key}
@@ -1093,7 +1560,7 @@ export default function AdminPage() {
         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginLeft: "auto" }}>
           {readOnly && (
             <Badge variant="secondary" className="bg-white/15 text-white border-0 text-xs font-semibold">
-              Lecture seule
+              {a.readOnly}
             </Badge>
           )}
           {user ? (
@@ -1110,7 +1577,7 @@ export default function AdminPage() {
           ) : (<>
             <ThemeToggleBtn />
             <a href="/login" className="flex items-center gap-1.5 text-white/80 hover:text-white text-[0.8125rem] font-medium no-underline">
-              <Users className="size-3.5" /> Connexion
+              <Users className="size-3.5" /> {a.signIn}
             </a>
           </>)}
         </div>
@@ -1124,7 +1591,7 @@ export default function AdminPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-muted-foreground">
                     <Database className="size-4" />
-                    Stations actives
+                    {a.activeStations}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -1135,7 +1602,7 @@ export default function AdminPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-muted-foreground">
                     <BarChart3 className="size-4" />
-                    Snapshots en DB
+                    {a.dbSnapshots}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -1146,18 +1613,18 @@ export default function AdminPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-muted-foreground">
                     <Clock className="size-4" />
-                    Dernier snapshot
+                    {a.lastSnapshot}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-lg font-bold">{stats ? (stats.lastSnapshot !== "Aucun" ? formatSnapshot(stats.lastSnapshot) : "Aucun") : <Skeleton className="h-7 w-36" />}</div>
+                  <div className="text-lg font-bold">{stats ? (stats.lastSnapshot !== "Aucun" ? formatSnapshot(stats.lastSnapshot) : a.none) : <Skeleton className="h-7 w-36" />}</div>
                 </CardContent>
               </Card>
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-muted-foreground">
                     <Users className="size-4" />
-                    Utilisateurs inscrits
+                    {a.registeredUsers}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -1168,7 +1635,7 @@ export default function AdminPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-muted-foreground">
                     <Flag className="size-4" />
-                    Signalements
+                    {a.reports}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -1179,7 +1646,7 @@ export default function AdminPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-muted-foreground">
                     <Lightbulb className="size-4" />
-                    Suggestions
+                    {a.suggestions}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -1192,7 +1659,7 @@ export default function AdminPage() {
             <Card className="mt-4">
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center justify-between">
-                  <span className="flex items-center gap-2 text-muted-foreground"><Eye className="size-4" /> Trafic du site</span>
+                  <span className="flex items-center gap-2 text-muted-foreground"><Eye className="size-4" /> {a.siteTraffic}</span>
                   <div className="flex gap-1">
                     {(["day", "week", "month"] as const).map((r) => (
                       <button
@@ -1200,17 +1667,17 @@ export default function AdminPage() {
                         onClick={() => { setTrafficRange(r); loadTraffic(r); }}
                         className={`px-2 py-0.5 rounded text-xs font-semibold transition-colors ${trafficRange === r ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
                       >
-                        {r === "day" ? "Jour" : r === "week" ? "Semaine" : "Mois"}
+                        {r === "day" ? a.day : r === "week" ? a.week : a.month}
                       </button>
                     ))}
                   </div>
                 </CardTitle>
                 <div className="grid grid-cols-4 gap-2 mt-2">
                   {[
-                    { label: "Total", value: stats?.totalPageViews },
-                    { label: "Aujourd'hui", value: stats?.todayPageViews },
-                    { label: "7 jours", value: stats?.weekPageViews },
-                    { label: "Ce mois", value: stats?.monthPageViews },
+                    { label: a.total, value: stats?.totalPageViews },
+                    { label: a.today, value: stats?.todayPageViews },
+                    { label: a.sevenDays, value: stats?.weekPageViews },
+                    { label: a.thisMonth, value: stats?.monthPageViews },
                   ].map((s) => (
                     <div key={s.label} className="rounded-md border border-border p-2 text-center">
                       <div className="text-lg font-bold">{s.value != null ? s.value.toLocaleString() : "—"}</div>
@@ -1221,13 +1688,13 @@ export default function AdminPage() {
               </CardHeader>
               <CardContent>
                 {trafficData.length === 0 ? (
-                  <div className="text-center text-muted-foreground text-sm py-4">Aucune donnée</div>
+                  <div className="text-center text-muted-foreground text-sm py-4">{a.noData}</div>
                 ) : (() => {
                   const max = Math.max(...trafficData.map((d) => d.count), 1);
                   return (
                     <div className="flex items-end gap-1" style={{ height: 180 }}>
                       {trafficData.map((d, i) => (
-                        <div key={i} className="flex-1 flex flex-col items-center gap-0.5" title={`${d.label}: ${d.count} visites`}>
+                        <div key={i} className="flex-1 flex flex-col items-center gap-0.5" title={`${d.label}: ${d.count} ${a.visits}`}>
                           <span className="text-[10px] text-muted-foreground font-semibold">{d.count}</span>
                           <div
                             className="w-full rounded-t bg-primary/80 min-h-[2px] transition-all"
@@ -1247,7 +1714,7 @@ export default function AdminPage() {
               <Card className="mt-4">
                 <CardHeader className="pb-2">
                   <CardTitle className="flex items-center gap-2 text-muted-foreground text-sm">
-                    <BarChart3 className="size-4" /> Trafic par page
+                    <BarChart3 className="size-4" /> {a.trafficByPage}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -1271,19 +1738,19 @@ export default function AdminPage() {
 
             {/* SEO Score — titre toujours visible, données après chargement */}
             <h3 className="text-lg font-semibold mt-6 mb-3 flex items-center gap-2">
-              <Search className="size-5" /> Score SEO
+              <Search className="size-5" /> {a.seoScore}
               <a href="https://www.seobility.net/" target="_blank" rel="noopener noreferrer" className="text-xs font-normal text-muted-foreground hover:text-foreground flex items-center gap-1 ml-auto">
-                Source : Seobility <ExternalLink className="size-3" />
+                {a.seoSource} Seobility <ExternalLink className="size-3" />
               </a>
             </h3>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {[
-                { tag: "Mon site", label: "essence-quebec.ca", score: 92, color: "#22c55e", url: "https://www.seobility.net/en/seocheck/check/?url=https%3A%2F%2Fessence-quebec.ca%2F&mode=standard", source: "Seobility" },
-                { tag: "Mon site", label: "essence-quebec.ca", score: 97, color: "#22c55e", url: "https://tools.backlinko.com/seo-checker?q=essence-quebec.ca", source: "Backlinko" },
-                { tag: "Mon site", label: "essence-quebec.ca", score: 88, color: "#22c55e", url: "https://socialtraffic.ca/free-seo-audit?scan=7defee94-0f54-4180-ad39-4ae400032ac5", source: "SocialTraffic" },
-                { tag: "Site gouvernemental", label: "regieessencequebec.ca", score: 42, color: "#ef4444", url: "https://www.seobility.net/en/seocheck/check/?url=https%3A%2F%2Fregieessencequebec.ca%2F&mode=standard", source: "Seobility" },
-                { tag: "Site gouvernemental", label: "regieessencequebec.ca", score: 75, color: "#f59e0b", url: "https://tools.backlinko.com/seo-checker?q=https%3A%2F%2Fregieessencequebec.ca%2F", source: "Backlinko" },
-                { tag: "Site gouvernemental", label: "regieessencequebec.ca", score: 67, color: "#f59e0b", url: "https://socialtraffic.ca/free-seo-audit?scan=8b643fa7-8d22-4599-b832-751959a95764", source: "SocialTraffic" },
+                { tag: a.seoMysite, label: "essence-quebec.ca", score: 92, color: "#22c55e", url: "https://www.seobility.net/en/seocheck/check/?url=https%3A%2F%2Fessence-quebec.ca%2F&mode=standard", source: "Seobility" },
+                { tag: a.seoMysite, label: "essence-quebec.ca", score: 97, color: "#22c55e", url: "https://tools.backlinko.com/seo-checker?q=essence-quebec.ca", source: "Backlinko" },
+                { tag: a.seoMysite, label: "essence-quebec.ca", score: 88, color: "#22c55e", url: "https://socialtraffic.ca/free-seo-audit?scan=7defee94-0f54-4180-ad39-4ae400032ac5", source: "SocialTraffic" },
+                { tag: a.seoGovSite, label: "regieessencequebec.ca", score: 42, color: "#ef4444", url: "https://www.seobility.net/en/seocheck/check/?url=https%3A%2F%2Fregieessencequebec.ca%2F&mode=standard", source: "Seobility" },
+                { tag: a.seoGovSite, label: "regieessencequebec.ca", score: 75, color: "#f59e0b", url: "https://tools.backlinko.com/seo-checker?q=https%3A%2F%2Fregieessencequebec.ca%2F", source: "Backlinko" },
+                { tag: a.seoGovSite, label: "regieessencequebec.ca", score: 67, color: "#f59e0b", url: "https://socialtraffic.ca/free-seo-audit?scan=8b643fa7-8d22-4599-b832-751959a95764", source: "SocialTraffic" },
               ].map(({ tag, label, score, color, url, source }) => (
                 <Card key={`${source}-${label}`}>
                   <CardContent className="pt-5">
@@ -1309,7 +1776,7 @@ export default function AdminPage() {
                       )}
                     </div>
                     <div className="text-[11px] text-muted-foreground mt-2">
-                      {stats ? (<>{score >= 80 ? "Excellent" : score >= 60 ? "Correct" : "Faible"} — score global SEO</>) : <Skeleton className="h-3 w-32" />}
+                      {stats ? (<>{score >= 80 ? a.seoExcellent : score >= 60 ? a.seoCorrect : a.seoWeak} — {a.seoGlobalScore}</>) : <Skeleton className="h-3 w-32" />}
                     </div>
                   </CardContent>
                 </Card>
@@ -1330,13 +1797,12 @@ export default function AdminPage() {
           {tab === "cron" && (
             <div className="space-y-4">
               <p className="text-muted-foreground">
-                Le cron Vercel s{"'"}exécute automatiquement <strong>toutes les 6 heures</strong> (0h, 6h, 12h, 18h UTC).
-                Les prix sont aussi vérifiés <strong>toutes les 5 minutes</strong> automatiquement.
-                Vous pouvez aussi déclencher manuellement un snapshot :
+                {a.cronDesc1} <strong>{a.cronDesc2}</strong> {a.cronDesc3}{" "}
+                {a.cronDesc4} <strong>{a.cronDesc5}</strong> {a.cronDesc6}
               </p>
               <Button onClick={triggerCron} disabled={cronLoading || readOnly}>
                 <Play className="size-4" />
-                {cronLoading ? "En cours..." : "Lancer le cron maintenant"}
+                {cronLoading ? a.running : a.runCron}
               </Button>
               {cronResult && (
                 <pre className="admin-pre">{cronResult}</pre>
@@ -1348,10 +1814,10 @@ export default function AdminPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Rôle</TableHead>
-                  <TableHead>Inscrit le</TableHead>
-                  <TableHead>Action</TableHead>
+                  <TableHead>{a.emailHeader}</TableHead>
+                  <TableHead>{a.roleHeader}</TableHead>
+                  <TableHead>{a.registeredAt}</TableHead>
+                  <TableHead>{a.action}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -1373,7 +1839,7 @@ export default function AdminPage() {
                         disabled={readOnly}
                       >
                         <Shield className="size-3" />
-                        {u.role === "admin" ? "Retirer admin" : "Rendre admin"}
+                        {u.role === "admin" ? a.removeAdmin : a.makeAdmin}
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -1381,17 +1847,17 @@ export default function AdminPage() {
               </TableBody>
             </Table>
             <h3 className="text-lg font-semibold mt-6 mb-3 flex items-center gap-2">
-              <Shield className="size-5" /> Connexions récentes
+              <Shield className="size-5" /> {a.recentLogins}
             </h3>
             {authLogs.length === 0 ? (
-              <div className="text-muted-foreground text-sm">Aucune connexion enregistrée.</div>
+              <div className="text-muted-foreground text-sm">{a.noLogins}</div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Méthode</TableHead>
-                    <TableHead>Date</TableHead>
+                    <TableHead>{a.emailHeader}</TableHead>
+                    <TableHead>{a.methodHeader}</TableHead>
+                    <TableHead>{a.dateHeader}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1409,18 +1875,18 @@ export default function AdminPage() {
 
           {tab === "reports" && (
             reports.length === 0 ? (
-              <p className="text-muted-foreground">Aucun signalement.</p>
+              <p className="text-muted-foreground">{a.noReports}</p>
             ) : (
               <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Station</TableHead>
-                    <TableHead>De</TableHead>
-                    <TableHead>Message</TableHead>
-                    <TableHead>Statut</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead>{a.station}</TableHead>
+                    <TableHead>{a.fromHeader}</TableHead>
+                    <TableHead>{a.messageHeader}</TableHead>
+                    <TableHead>{a.statusHeader}</TableHead>
+                    <TableHead>{a.dateHeader}</TableHead>
+                    <TableHead>{a.actionsHeader}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1460,17 +1926,17 @@ export default function AdminPage() {
                         <div className="flex flex-col gap-1">
                           {r.status === "nouveau" && (
                             <Button variant="outline" size="xs" onClick={() => updateReportStatus(r.id, "en traitement")} disabled={readOnly}>
-                              En traitement
+                              {a.inProgress}
                             </Button>
                           )}
                           {r.status !== "résolu" && r.status !== "rejeté" && (
                             <Button variant="secondary" size="xs" onClick={() => updateReportStatus(r.id, "résolu")} disabled={readOnly}>
-                              <Check className="size-3" /> Résolu
+                              <Check className="size-3" /> {a.resolved}
                             </Button>
                           )}
                           {r.status !== "rejeté" && r.status !== "résolu" && (
                             <Button variant="ghost" size="xs" className="text-muted-foreground" onClick={() => updateReportStatus(r.id, "rejeté")} disabled={readOnly}>
-                              <XIcon className="size-3" /> Rejeter
+                              <XIcon className="size-3" /> {a.reject}
                             </Button>
                           )}
                           {editingComment?.type === "report" && editingComment.id === r.id ? (
@@ -1479,7 +1945,7 @@ export default function AdminPage() {
                                 className="flex-1 rounded border border-input bg-background px-2 py-1 text-xs"
                                 value={editingComment.value}
                                 onChange={(e) => setEditingComment({ ...editingComment, value: e.target.value })}
-                                placeholder="Commentaire..."
+                                placeholder={a.commentPlaceholder}
                                 autoFocus
                               />
                               <Button variant="outline" size="xs" onClick={() => saveReportComment(r.id, editingComment.value)}>
@@ -1492,7 +1958,7 @@ export default function AdminPage() {
                           ) : (
                             <Button variant="ghost" size="xs" onClick={() => setEditingComment({ type: "report", id: r.id, value: r.admin_comment ?? "" })} disabled={readOnly}>
                               <MessageSquare className="size-3" />
-                              {r.admin_comment ? "Modifier" : "Commenter"}
+                              {r.admin_comment ? a.editComment : a.addComment}
                             </Button>
                           )}
                           {r.admin_comment && editingComment?.id !== r.id && (
@@ -1510,7 +1976,7 @@ export default function AdminPage() {
 
           {tab === "suggestions" && (
             suggestions.length === 0 ? (
-              <p className="text-muted-foreground">Aucune suggestion.</p>
+              <p className="text-muted-foreground">{a.noSuggestions}</p>
             ) : (
               <div className="flex flex-col gap-3">
                 {suggestions.map((s) => (
@@ -1545,7 +2011,7 @@ export default function AdminPage() {
                       <div className="flex gap-1.5 flex-wrap">
                         {s.status === "nouveau" && (
                           <Button variant="outline" size="xs" onClick={() => updateSuggestionStatus(s.id, "en traitement")} disabled={readOnly}>
-                            En traitement
+                            {a.inProgress}
                           </Button>
                         )}
                         {s.status !== "accepté" && s.status !== "refusé" && (
@@ -1555,22 +2021,22 @@ export default function AdminPage() {
                                 className="rounded border border-input bg-background px-2 py-1.5 text-sm w-full"
                                 value={editingComment.value}
                                 onChange={(e) => setEditingComment({ ...editingComment, value: e.target.value })}
-                                placeholder="Raison (optionnel)..."
+                                placeholder={a.reasonPlaceholder}
                                 autoFocus
                               />
                               <div className="flex gap-1.5">
                                 <Button variant="default" size="sm" className="flex-1" onClick={() => { updateSuggestionStatus(s.id, "accepté", editingComment.value); setEditingComment(null); }}>
-                                  <Check className="size-3" /> Accepter
+                                  <Check className="size-3" /> {a.accept}
                                 </Button>
                                 <Button variant="destructive" size="sm" className="flex-1" onClick={() => { updateSuggestionStatus(s.id, "refusé", editingComment.value); setEditingComment(null); }}>
-                                  <XIcon className="size-3" /> Refuser
+                                  <XIcon className="size-3" /> {a.refuse}
                                 </Button>
-                                <Button variant="ghost" size="sm" onClick={() => setEditingComment(null)}>Annuler</Button>
+                                <Button variant="ghost" size="sm" onClick={() => setEditingComment(null)}>{a.cancel}</Button>
                               </div>
                             </div>
                           ) : (
                             <Button variant="outline" size="xs" onClick={() => setEditingComment({ type: "suggestion", id: s.id, value: s.admin_comment ?? "" })} disabled={readOnly}>
-                              Accepter / Refuser
+                              {a.acceptOrRefuse}
                             </Button>
                           )
                         )}
@@ -1585,23 +2051,23 @@ export default function AdminPage() {
           {tab === "data" && !selectedSnapshot && snapshotsLoading && (
             <div className="flex items-center justify-center gap-2 py-12 text-muted-foreground">
               <Loader2 className="size-5 animate-spin" />
-              <span>Chargement des snapshots...</span>
+              <span>{a.loadingSnapshots}</span>
             </div>
           )}
 
           {tab === "data" && !selectedSnapshot && !snapshotsLoading && (
             <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">{snapshots.length} snapshot{snapshots.length !== 1 ? "s" : ""} en base · Cliquez une ligne pour voir le détail</p>
+              <p className="text-sm text-muted-foreground">{snapshots.length} {a.snapshotsInBase} · {a.clickRowDetail}</p>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Heure (HNE)</TableHead>
-                    <TableHead className="text-right">Stations</TableHead>
-                    <TableHead className="text-right">Moy. Régulier</TableHead>
-                    <TableHead className="text-right">Moy. Super</TableHead>
-                    <TableHead className="text-right">Moy. Diesel</TableHead>
-                    <TableHead className="text-right">Min / Max</TableHead>
+                    <TableHead>{a.dateHeader}</TableHead>
+                    <TableHead>{a.timeHNE}</TableHead>
+                    <TableHead className="text-right">{a.stations}</TableHead>
+                    <TableHead className="text-right">{a.avgRegulierHeader}</TableHead>
+                    <TableHead className="text-right">{a.avgSuperHeader}</TableHead>
+                    <TableHead className="text-right">{a.avgDieselHeader}</TableHead>
+                    <TableHead className="text-right">{a.minMax}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1659,26 +2125,31 @@ export default function AdminPage() {
                     onClick={() => { setSelectedSnapshot(null); setSnapshotDetail([]); }}
                     className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                   >
-                    <ArrowLeft className="size-4" /> Retour
+                    <ArrowLeft className="size-4" /> {a.back}
                   </button>
                   <div className="h-4 w-px bg-border" />
-                  <span className="font-semibold text-sm">Snapshot du {label}</span>
-                  <Badge variant="secondary">{snapshotDetail.length.toLocaleString()} entrées</Badge>
+                  <span className="font-semibold text-sm">{a.snapshotOf} {label}</span>
+                  <Badge variant="secondary">{snapshotDetail.length.toLocaleString()} {a.entriesCount}</Badge>
                 </div>
 
                 {/* Filtres + tri */}
                 <div className="flex items-center gap-2 flex-wrap">
-                  {["Tous", "Régulier", "Super", "Diesel"].map((g) => (
+                  {[
+                    { key: "Tous", display: a.all },
+                    { key: "Régulier", display: "Régulier" },
+                    { key: "Super", display: "Super" },
+                    { key: "Diesel", display: "Diesel" },
+                  ].map(({ key: g, display }) => (
                     <button
                       key={g}
                       onClick={() => setDetailGasFilter(g)}
                       className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${detailGasFilter === g ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}
                     >
-                      {g}{g !== "Tous" && snapshotDetail.filter(r => r.gas_type === g).length > 0 ? ` (${snapshotDetail.filter(r => r.gas_type === g).length})` : ""}
+                      {display}{g !== "Tous" && snapshotDetail.filter(r => r.gas_type === g).length > 0 ? ` (${snapshotDetail.filter(r => r.gas_type === g).length})` : ""}
                     </button>
                   ))}
                   <div className="ml-4 h-4 w-px bg-border" />
-                  {([["price_asc", "Prix ↑"], ["price_desc", "Prix ↓"], ["name", "Nom A→Z"]] as const).map(([val, label]) => (
+                  {([ ["price_asc", a.sortPriceAsc], ["price_desc", a.sortPriceDesc], ["name", a.sortNameAZ] ] as ["price_asc" | "price_desc" | "name", string][]).map(([val, label]) => (
                     <button
                       key={val}
                       onClick={() => setDetailSort(val)}
@@ -1691,17 +2162,17 @@ export default function AdminPage() {
 
                 {/* Tableau pleine largeur */}
                 {snapshotDetailLoading ? (
-                  <p className="text-sm text-muted-foreground py-8 text-center">Chargement...</p>
+                  <p className="text-sm text-muted-foreground py-8 text-center">{a.loading}</p>
                 ) : (
                   <div className="rounded-md border overflow-hidden">
                     <div className="overflow-y-auto" style={{ maxHeight: "calc(100vh - 280px)" }}>
                       <table className="w-full text-sm">
                         <thead className="sticky top-0 bg-muted/80 backdrop-blur border-b z-10">
                           <tr>
-                            <th className="text-left px-4 py-2.5 font-semibold text-muted-foreground">Station</th>
-                            <th className="text-left px-4 py-2.5 font-semibold text-muted-foreground">Adresse</th>
-                            <th className="text-left px-4 py-2.5 font-semibold text-muted-foreground">Type</th>
-                            <th className="text-right px-4 py-2.5 font-semibold text-muted-foreground">Prix</th>
+                            <th className="text-left px-4 py-2.5 font-semibold text-muted-foreground">{a.station}</th>
+                            <th className="text-left px-4 py-2.5 font-semibold text-muted-foreground">{a.address}</th>
+                            <th className="text-left px-4 py-2.5 font-semibold text-muted-foreground">{a.typeHeader}</th>
+                            <th className="text-right px-4 py-2.5 font-semibold text-muted-foreground">{a.price}</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border">

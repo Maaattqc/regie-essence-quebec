@@ -13,6 +13,7 @@ import {
 } from "@/lib/stations";
 import NavDropdown from "@/components/NavDropdown";
 import UserDropdown from "@/components/UserDropdown";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 function SearchWithSuggestions({
   search,
@@ -20,12 +21,14 @@ function SearchWithSuggestions({
   onConfirm,
   cities,
   cityCounts,
+  placeholder,
 }: {
   search: string;
   onSearchChange: (s: string) => void;
   onConfirm: (s: string) => void;
   cities: string[];
   cityCounts: Record<string, number>;
+  placeholder?: string;
 }) {
   const [input, setInput] = useState(search);
   const [focused, setFocused] = useState(false);
@@ -81,7 +84,7 @@ function SearchWithSuggestions({
           onKeyDown={handleKeyDown}
           onFocus={() => setFocused(true)}
           onBlur={() => setTimeout(() => setFocused(false), 150)}
-          placeholder="Ville…"
+          placeholder={placeholder ?? "Ville…"}
           className="nb-input"
           style={{ paddingRight: input ? 28 : 10 }}
           autoComplete="off"
@@ -133,15 +136,30 @@ function NbSelect({
 
 function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
+  const { t } = useLanguage();
   const isDark = resolvedTheme === "dark";
   return (
     <button
       onClick={() => setTheme(isDark ? "light" : "dark")}
       className="flex items-center justify-center size-8 rounded-lg text-white/70 hover:text-white hover:bg-white/15 transition-colors"
       style={{ background: "transparent", border: "none", cursor: "pointer" }}
-      aria-label={isDark ? "Mode clair" : "Mode sombre"}
+      aria-label={isDark ? t.filterBar.lightMode : t.filterBar.darkMode}
     >
       {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}
+    </button>
+  );
+}
+
+function LangToggle() {
+  const { locale, toggle } = useLanguage();
+  return (
+    <button
+      onClick={toggle}
+      className="flex items-center justify-center h-8 px-2 rounded-lg text-white/70 hover:text-white hover:bg-white/15 transition-colors text-[11px] font-semibold tracking-wide"
+      style={{ background: "transparent", border: "none", cursor: "pointer" }}
+      aria-label={locale === "fr" ? "Switch to English" : "Passer en français"}
+    >
+      {locale === "fr" ? "EN" : "FR"}
     </button>
   );
 }
@@ -168,6 +186,7 @@ export default function FilterBar({
   currentUser,
   onLogout,
 }: {
+
   gasType: GasTypeKey;
   onGasTypeChange: (t: GasTypeKey) => void;
   brand: string;
@@ -189,6 +208,7 @@ export default function FilterBar({
   currentUser: { email: string } | null;
   onLogout: () => void;
 }) {
+  const { t } = useLanguage();
   return (
     <header className="gov-header">
 
@@ -197,8 +217,8 @@ export default function FilterBar({
         <div className="gov-bar-title">
           <span className="gov-bar-fleur">&#9884;</span>
           <div className="gov-bar-title-text">
-            Essence Québec
-            <div className="gov-bar-subtitle">Prix en temps réel des stations-service</div>
+            {t.filterBar.appTitle}
+            <div className="gov-bar-subtitle">{t.filterBar.tagline}</div>
           </div>
         </div>
 
@@ -206,14 +226,14 @@ export default function FilterBar({
 
         {/* Pills carburant — toujours visibles */}
         <div className="nb-pills">
-          {GAS_TYPES.map((t) => (
+          {GAS_TYPES.map((gt) => (
             <button
-              key={t.key}
-              className={`nb-pill${gasType === t.key ? " nb-pill-active" : ""}`}
-              style={gasType === t.key ? { background: t.color, borderColor: t.color } : undefined}
-              onClick={() => onGasTypeChange(t.key)}
+              key={gt.key}
+              className={`nb-pill${gasType === gt.key ? " nb-pill-active" : ""}`}
+              style={gasType === gt.key ? { background: gt.color, borderColor: gt.color } : undefined}
+              onClick={() => onGasTypeChange(gt.key)}
             >
-              {t.label}
+              {t.gasTypes[gt.key]}
             </button>
           ))}
         </div>
@@ -226,15 +246,16 @@ export default function FilterBar({
             onConfirm={onSearchChange}
             cities={cities}
             cityCounts={cityCounts}
+            placeholder={t.filterBar.cityPlaceholder}
           />
           <NbSelect value={region} onChange={onRegionChange} icon={MapPin}>
-            <option value="">Toutes les régions ({totalStations})</option>
+            <option value="">{t.filterBar.allRegions} ({totalStations})</option>
             {REGIONS.map((r) => (
               <option key={r} value={r}>{r} ({regionCounts[r] || 0})</option>
             ))}
           </NbSelect>
           <NbSelect value={brand} onChange={onBrandChange} icon={Building2}>
-            <option value="">Toutes les compagnies ({totalStations})</option>
+            <option value="">{t.filterBar.allBrands} ({totalStations})</option>
             {BRANDS.map((b) => (
               <option key={b} value={b}>{b} ({brandCounts[b] || 0})</option>
             ))}
@@ -244,7 +265,7 @@ export default function FilterBar({
             onClick={onToggleFavorites}
           >
             {showFavorites ? <Star className="size-3.5 fill-current" /> : <StarOff className="size-3.5" />}
-            <span className="nb-label-text">Favoris</span>
+            <span className="nb-label-text">{t.filterBar.favorites}</span>
           </button>
         </div>
 
@@ -252,19 +273,20 @@ export default function FilterBar({
           <button
             className="nb-fav nb-hide-mobile"
             onClick={onSuggestionClick}
-            title="Suggestion"
+            title={t.filterBar.suggestion}
           >
             <Lightbulb className="size-3.5" />
-            <span className="nb-label-text">Suggestion</span>
+            <span className="nb-label-text">{t.filterBar.suggestion}</span>
           </button>
           <NavDropdown onChangelogClick={onChangelogClick} onSuggestionClick={onSuggestionClick} />
           <span className="nb-hide-mobile"><ThemeToggle /></span>
+          <LangToggle />
           {currentUser ? (
             <UserDropdown email={currentUser.email} onLogout={onLogout} />
           ) : (
             <button className="nb-login-btn" onClick={onLoginClick}>
               <User className="size-3.5" />
-              <span className="nb-label-text">Connexion</span>
+              <span className="nb-label-text">{t.filterBar.login}</span>
             </button>
           )}
         </div>
@@ -282,7 +304,7 @@ export default function FilterBar({
           cityCounts={cityCounts}
         />
         <NbSelect value={region} onChange={onRegionChange} icon={MapPin}>
-          <option value="">Région ({totalStations})</option>
+          <option value="">{t.filterBar.allRegions} ({totalStations})</option>
           {REGIONS.map((r) => (
             <option key={r} value={r}>{r} ({regionCounts[r] || 0})</option>
           ))}

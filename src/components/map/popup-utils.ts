@@ -1,4 +1,5 @@
 import { type StationProperties, stationId, getFavorites } from "@/lib/stations";
+import type { Translations } from "@/lib/i18n/fr";
 
 export const SVG = {
   navigation: `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>`,
@@ -13,11 +14,11 @@ export function escHtml(s: string) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
-export function formatPopup(props: StationProperties, lat: number, lng: number) {
+export function formatPopup(props: StationProperties, lat: number, lng: number, p: Translations["popup"], gasTypes?: Translations["gasTypes"]) {
   const priceChips = props.Prices.filter((p) => p.IsAvailable)
     .map((p) => `
       <div style="display:flex;justify-content:space-between;align-items:center;background:#f5f5f5;border-radius:6px;padding:5px 9px;font-size:12.5px">
-        <span style="color:#555;font-weight:500">${escHtml(p.GasType)}</span>
+        <span style="color:#555;font-weight:500">${escHtml(gasTypes ? (gasTypes[p.GasType as keyof typeof gasTypes] ?? p.GasType) : p.GasType)}</span>
         <strong style="color:#111;font-size:14px;margin-left:10px">${escHtml(p.Price)} <span style="font-size:10px;font-weight:400;color:#888">¢/L</span></strong>
       </div>`)
     .join("");
@@ -37,38 +38,38 @@ export function formatPopup(props: StationProperties, lat: number, lng: number) 
         <div style="font-size:11.5px;color:#999">${esc(props.Address)}</div>
       </div>
 
-      <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:10px" aria-label="Prix disponibles">
+      <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:10px" aria-label="${p.available}">
         ${priceChips}
       </div>
 
       <div style="display:flex;gap:5px;margin-bottom:5px">
         <a href="${mapsUrl}" target="_blank" rel="noopener noreferrer"
           style="${btnBase}background:#4285f4;color:#fff;text-decoration:none;flex:2"
-          aria-label="Itinéraire vers ${esc(props.Name)}">
-          ${SVG.navigation} Itinéraire
+          aria-label="${p.directionsTo(esc(props.Name))}">
+          ${SVG.navigation} ${p.directions}
         </a>
         <button onclick="window.__toggleFav('${esc(sid)}')"
           style="${btnBase}background:${isFav ? "#ff9800" : "#f0f0f0"};color:${isFav ? "#fff" : "#555"}"
-          aria-label="${isFav ? "Retirer des favoris" : "Ajouter aux favoris"}" aria-pressed="${isFav}">
-          ${isFav ? SVG.star : SVG.starEmpty} Favori
+          aria-label="${isFav ? p.removeFavorite : p.addFavorite}" aria-pressed="${isFav}">
+          ${isFav ? SVG.star : SVG.starEmpty} ${p.favorite}
         </button>
       </div>
 
       <div style="display:flex;gap:5px">
         <button onclick="window.__showHistory('${esc(props.Name)}','${esc(props.Address)}')"
           style="${btnBase}background:#ede9fe;color:#6d28d9"
-          aria-label="Historique des prix de ${esc(props.Name)}">
-          ${SVG.barChart} Historique
+          aria-label="${p.historyOf(esc(props.Name))}">
+          ${SVG.barChart} ${p.history}
         </button>
         <button onclick="window.__showReviews('${esc(props.Name)}','${esc(props.Address)}')"
           style="${btnBase}background:#e0f2fe;color:#0369a1"
-          aria-label="Commentaires sur ${esc(props.Name)}">
-          ${SVG.messageCircle} Commentaires
+          aria-label="${p.commentsOf(esc(props.Name))}">
+          ${SVG.messageCircle} ${p.comments}
         </button>
         <button onclick="window.__showReport('${esc(props.Name)}','${esc(props.Address)}')"
           style="${btnBase}background:#fee2e2;color:#dc2626"
-          aria-label="Signaler une inexactitude pour ${esc(props.Name)}">
-          ${SVG.flag} Signaler
+          aria-label="${p.reportOf(esc(props.Name))}">
+          ${SVG.flag} ${p.report}
         </button>
       </div>
     </div>

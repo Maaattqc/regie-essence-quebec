@@ -32,6 +32,7 @@ vi.mock("@/lib/stations", async (importOriginal) => {
 /* ------------------------------------------------------------------ */
 
 import { useEffectivePrice } from "@/hooks/useEffectivePrice";
+import type { GasTypeKey } from "@/lib/stations";
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -65,7 +66,7 @@ function defaultParams(overrides: Record<string, unknown> = {}) {
       makeStation("Station B", 45.52, -73.62, "170.0"),
       makeStation("Station C", 45.60, -73.80, "165.0"),
     ]),
-    gasType: "Régulier" as const,
+    gasType: "Régulier" as GasTypeKey,
     userPos: USER_POS,
     setUserPos: vi.fn(),
     geoReady: false, // false par défaut pour contrôler l'auto-search
@@ -338,7 +339,7 @@ describe("useEffectivePrice", () => {
     const callCountBefore = mocks.roadDistances.mock.calls.length;
 
     // Changer le type d'essence — les résultats existants + userPos + data déclenchent le recalcul
-    rerender({ ...params, geoReady: true, gasType: "Diesel" as const });
+    rerender({ ...params, geoReady: true, gasType: "Diesel" as GasTypeKey });
 
     await waitFor(() => {
       expect(mocks.roadDistances.mock.calls.length).toBeGreaterThan(callCountBefore);
@@ -358,7 +359,7 @@ describe("useEffectivePrice", () => {
     const callCountBefore = mocks.roadDistances.mock.calls.length;
 
     // Changer le gasType sans résultats existants
-    rerender({ ...params, geoReady: false, gasType: "Diesel" as const });
+    rerender({ ...params, geoReady: false, gasType: "Diesel" as GasTypeKey });
 
     await act(async () => {
       await new Promise((r) => setTimeout(r, 50));

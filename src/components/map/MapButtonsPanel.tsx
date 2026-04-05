@@ -7,6 +7,7 @@ import {
   X, Share2, BarChart3, Users, ChevronLeft, ChevronRight,
   Trophy, Satellite, Moon, MapPin, Settings, Map as MapIcon,
 } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface MapButtonsPanelProps {
   mapPanelOpen: boolean;
@@ -59,6 +60,8 @@ export default function MapButtonsPanel(props: MapButtonsPanelProps) {
     priceMin, priceMax,
   } = props;
 
+  const { t } = useLanguage();
+
   return (
     <div
       className="map-buttons-panel flex flex-col gap-1.5 leaflet-control"
@@ -68,7 +71,7 @@ export default function MapButtonsPanel(props: MapButtonsPanelProps) {
       <button
         className="map-panel-toggle"
         onClick={() => setMapPanelOpen((v) => !v)}
-        aria-label={mapPanelOpen ? "Masquer les boutons" : "Afficher les boutons"}
+        aria-label={mapPanelOpen ? t.mapButtons.hide : t.mapButtons.show}
       >
         {mapPanelOpen ? <ChevronLeft className="size-4" /> : <ChevronRight className="size-4" />}
       </button>
@@ -90,7 +93,7 @@ export default function MapButtonsPanel(props: MapButtonsPanelProps) {
                   onClick={onToggleCheapest}
                 >
                   <Trophy className="size-4" />
-                  <span className="map-btn-label">{cheapestResults ? "Masquer" : "Meilleur prix"}</span>
+                  <span className="map-btn-label">{cheapestResults ? t.mapButtons.hidePanel : t.mapButtons.bestPrice}</span>
                 </Button>
                 <Button
                   ref={settingsBtnRef}
@@ -122,13 +125,13 @@ export default function MapButtonsPanel(props: MapButtonsPanelProps) {
                     }}
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <div className="text-xs font-semibold">Réglages</div>
+                      <div className="text-xs font-semibold">{t.mapButtons.settings}</div>
                       <button onClick={() => setShowEffectiveSettings(() => false)} className="text-red-500 hover:text-red-700">
                         <X className="size-3.5" />
                       </button>
                     </div>
                     <div className="mb-2">
-                      <div className="text-[11px] text-[var(--text-muted)] mb-1">Rayon : {radiusKm === 0 ? "Tout" : `${radiusKm} km`}</div>
+                      <div className="text-[11px] text-[var(--text-muted)] mb-1">{radiusKm === 0 ? t.mapButtons.radiusAll : t.mapButtons.radiusKm(radiusKm)}</div>
                       <Slider
                         min={0}
                         max={50}
@@ -139,7 +142,7 @@ export default function MapButtonsPanel(props: MapButtonsPanelProps) {
                       />
                     </div>
                     <div className="mb-2">
-                      <div className="text-[11px] text-[var(--text-muted)] mb-1">Consommation : {consoLper100} L/100km</div>
+                      <div className="text-[11px] text-[var(--text-muted)] mb-1">{t.mapButtons.consumption(consoLper100)}</div>
                       <Slider
                         min={4}
                         max={20}
@@ -150,7 +153,7 @@ export default function MapButtonsPanel(props: MapButtonsPanelProps) {
                       />
                     </div>
                     <div className="mb-2">
-                      <div className="text-[11px] text-[var(--text-muted)] mb-1">Réservoir : {tankVolume} L</div>
+                      <div className="text-[11px] text-[var(--text-muted)] mb-1">{t.mapButtons.tank(tankVolume)}</div>
                       <Slider
                         min={15}
                         max={100}
@@ -167,7 +170,7 @@ export default function MapButtonsPanel(props: MapButtonsPanelProps) {
                         onChange={(e) => { setShowRadiusCircle(e.target.checked); localStorage.setItem("eff_showRadius", String(e.target.checked)); }}
                         className="accent-[#4285f4] w-3.5 h-3.5"
                       />
-                      <span className="text-[11px] text-[var(--text-muted)]">Afficher le cercle du rayon</span>
+                      <span className="text-[11px] text-[var(--text-muted)]">{t.mapButtons.showCircle}</span>
                     </label>
                   </motion.div>
                 )}
@@ -180,11 +183,11 @@ export default function MapButtonsPanel(props: MapButtonsPanelProps) {
               onClick={() => setShowPricePanel((v) => !v)}
             >
               <BarChart3 className="size-3.5" />
-              <span className="map-btn-label">Prix moyens</span>
+              <span className="map-btn-label">{t.mapButtons.avgPrices}</span>
             </Button>
             <Button variant="outline" size="sm" className="map-panel-btn w-full shadow-md !bg-[var(--bg-panel)] !text-[var(--text)] !border-0 font-semibold text-[13px]" onClick={onShareLink}>
               <Share2 className="size-3.5" />
-              <span className="map-btn-label">Partager</span>
+              <span className="map-btn-label">{t.mapButtons.share}</span>
             </Button>
             <Button
               variant="outline"
@@ -193,12 +196,12 @@ export default function MapButtonsPanel(props: MapButtonsPanelProps) {
               onClick={onCycleMapStyle}
             >
               {mapStyle === "satellite" ? <Satellite className="size-3.5" /> : mapStyle === "dark" ? <Moon className="size-3.5" /> : <MapIcon className="size-3.5" />}
-              <span className="map-btn-label">{mapStyle === "carte" ? "Carte" : mapStyle === "satellite" ? "Satellite" : "Dark"}</span>
+              <span className="map-btn-label">{mapStyle === "carte" ? t.mapButtons.styleMap : mapStyle === "satellite" ? t.mapButtons.styleSatellite : t.mapButtons.styleDark}</span>
             </Button>
             <Button variant="outline" size="sm" className={`map-panel-btn map-panel-btn-wide w-full shadow-md font-semibold text-[13px] ${showCursors ? "!bg-[#457b9d] !text-white" : "!bg-[var(--bg-panel)] !text-[var(--text)]"} !border-0`} onClick={() => setShowCursors((v) => !v)}>
               <Users className="size-3.5" />
               <span className="map-btn-count">{onlineCount}</span>
-              <span className="map-btn-label">{showCursors ? `En ligne (${onlineCount})` : `Visiteurs en ligne (${onlineCount})`}</span>
+              <span className="map-btn-label">{t.mapButtons.online(onlineCount)}</span>
             </Button>
             {isDev && (
               <Button
@@ -208,7 +211,7 @@ export default function MapButtonsPanel(props: MapButtonsPanelProps) {
                 onClick={() => setDevPinMode((v) => !v)}
               >
                 <MapPin className="size-3.5" />
-                <span className="map-btn-label">{devPinMode ? "Cliquer sur la carte..." : "DEV: Simuler position"}</span>
+                <span className="map-btn-label">{devPinMode ? t.mapButtons.devClick : t.mapButtons.devSimulate}</span>
               </Button>
             )}
             {/* Jauge prix : desktop horizontal inline */}

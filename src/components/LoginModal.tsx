@@ -7,6 +7,7 @@ import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { Input } from "@/components/ui/input";
 import { Mail, ArrowLeft, CheckCircle, X } from "lucide-react";
 import { createBrowserClient } from "@/lib/auth";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const ERROR_FR: Record<string, string> = {
   "Token has expired or is invalid": "Le code a expiré ou est invalide. Veuillez en demander un nouveau.",
@@ -25,6 +26,7 @@ function toFrench(msg: string) {
 }
 
 export default function LoginModal({ onClose }: { onClose: () => void }) {
+  const { t } = useLanguage();
   const trapRef = useFocusTrap();
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
@@ -80,7 +82,7 @@ export default function LoginModal({ onClose }: { onClose: () => void }) {
         <div className="flex justify-between items-center mb-3">
           <div className="flex items-center gap-2">
             <Mail className="size-4" />
-            <h2 id="login-modal-title" className="text-base font-bold m-0">Connexion</h2>
+            <h2 id="login-modal-title" className="text-base font-bold m-0">{t.login.title}</h2>
           </div>
           <button type="button" className="panel-close" onClick={onClose} aria-label="Fermer"><X className="size-4" /></button>
         </div>
@@ -88,13 +90,13 @@ export default function LoginModal({ onClose }: { onClose: () => void }) {
         {step === "email" && (
           <form onSubmit={handleSendCode} className="flex flex-col gap-3">
             <p className="text-[0.8125rem] text-[var(--text-secondary)] m-0">
-              Entrez votre courriel pour recevoir un code de connexion
+              {t.login.subtitle}
             </p>
             <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1 block">Adresse courriel</label>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">{t.login.emailLabel}</label>
               <Input
                 type="email"
-                placeholder="exemple@courriel.com"
+                placeholder={t.login.emailPlaceholder}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -103,10 +105,10 @@ export default function LoginModal({ onClose }: { onClose: () => void }) {
             </div>
             {error && <p className="text-[0.8125rem] text-destructive m-0">{error}</p>}
             <Button type="submit" disabled={loading}>
-              {loading ? "Envoi..." : "Envoyer le code"}
+              {loading ? t.login.sending : t.login.sendCode}
             </Button>
             <p className="text-xs text-muted-foreground m-0 leading-normal">
-              Aucun mot de passe requis. Un code à 6 chiffres sera envoyé à votre courriel.
+              {t.login.noPassword}
             </p>
           </form>
         )}
@@ -114,17 +116,17 @@ export default function LoginModal({ onClose }: { onClose: () => void }) {
         {step === "code" && (
           <form onSubmit={handleVerifyCode} className="flex flex-col gap-3">
             <p className="text-[0.8125rem] text-[var(--text-secondary)] m-0">
-              Un code a été envoyé à <strong>{email}</strong>
+              {t.login.codeSentTo(email)}
             </p>
             <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1 block">Code de vérification</label>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">{t.login.codeLabel}</label>
               <Input
                 className="text-center text-2xl tracking-[0.3em] font-mono"
                 type="text"
                 inputMode="numeric"
                 pattern="[0-9]*"
                 maxLength={6}
-                placeholder="000000"
+                placeholder={t.login.codePlaceholder}
                 value={code}
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
                 required
@@ -133,7 +135,7 @@ export default function LoginModal({ onClose }: { onClose: () => void }) {
             </div>
             {error && <p className="text-[0.8125rem] text-destructive m-0">{error}</p>}
             <Button type="submit" disabled={loading || code.length < 6}>
-              {loading ? "Vérification..." : "Vérifier le code"}
+              {loading ? t.login.verifying : t.login.verifyCode}
             </Button>
             <button
               type="button"
@@ -141,7 +143,7 @@ export default function LoginModal({ onClose }: { onClose: () => void }) {
               className="bg-transparent border-none cursor-pointer text-muted-foreground text-[0.8125rem] flex items-center gap-1 p-0"
             >
               <ArrowLeft className="size-3" />
-              Changer de courriel
+              {t.login.changeEmail}
             </button>
           </form>
         )}
@@ -160,11 +162,11 @@ export default function LoginModal({ onClose }: { onClose: () => void }) {
             >
               <CheckCircle className="size-12 mx-auto mb-3" style={{ color: "#2d9a2d" }} />
             </motion.div>
-            <p className="text-[0.9375rem] font-semibold mb-1" style={{ color: "#2d9a2d" }}>Connexion réussie !</p>
+            <p className="text-[0.9375rem] font-semibold mb-1" style={{ color: "#2d9a2d" }}>{t.login.successTitle}</p>
             <p className="text-[0.8125rem] text-muted-foreground">
-              Vous êtes maintenant connecté.
+              {t.login.successSubtitle}
             </p>
-            <Button onClick={onClose} className="mt-4">Fermer</Button>
+            <Button onClick={onClose} className="mt-4">{t.login.close}</Button>
           </motion.div>
         )}
       </div>

@@ -73,7 +73,7 @@ describe('GET /api/history — intégration paramètres et erreurs', () => {
       ),
     )
 
-    const eqCalls = mocks.query.eq.mock.calls as [string, unknown][]
+    const eqCalls = (mocks.query.eq.mock.calls as unknown) as [string, unknown][]
     const gasTypeCall = eqCalls.find(([col]) => col === 'gas_type')
     expect(gasTypeCall).toBeDefined()
   })

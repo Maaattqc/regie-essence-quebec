@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { Analytics } from "@vercel/analytics/next";
 import PageTracker from "@/components/PageTracker";
+import { LanguageProvider } from "@/contexts/LanguageContext";
 import "./globals.css";
 
 const inter = Inter({
@@ -160,11 +161,13 @@ export default function RootLayout({
           Passer au contenu principal
         </a>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-          <Analytics />
-          <PageTracker />
-          <div id="main-content">
-            {children}
-          </div>
+          <LanguageProvider>
+            <Analytics />
+            <PageTracker />
+            <div id="main-content">
+              {children}
+            </div>
+          </LanguageProvider>
         </ThemeProvider>
       </body>
     </html>

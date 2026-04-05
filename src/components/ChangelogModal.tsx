@@ -5,10 +5,12 @@ import { History, X } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import type { ChangelogCommit } from "@/components/types";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export type { ChangelogCommit };
 
 export default function ChangelogModal({ onClose }: { onClose: () => void }) {
+  const { t } = useLanguage();
   const trapRef = useFocusTrap();
   const [commits, setCommits] = useState<ChangelogCommit[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,7 +41,7 @@ export default function ChangelogModal({ onClose }: { onClose: () => void }) {
       >
         <div className="flex justify-between items-center mb-3 shrink-0">
           <h2 id="changelog-modal-title" className="text-base font-bold m-0 flex items-center gap-2">
-            <History className="size-4" /> Changelog
+            <History className="size-4" /> {t.changelog.title}
           </h2>
           <button type="button" className="panel-close" onClick={onClose} aria-label="Fermer"><X className="size-4" /></button>
         </div>
@@ -47,7 +49,7 @@ export default function ChangelogModal({ onClose }: { onClose: () => void }) {
           {loading ? (
             <Spinner />
           ) : commits.length === 0 ? (
-            <p className="text-muted-foreground text-[0.8125rem]">Aucun commit trouvé.</p>
+            <p className="text-muted-foreground text-[0.8125rem]">{t.changelog.empty}</p>
           ) : (
             <div className="changelog-list">
               {commits.map((c) => (

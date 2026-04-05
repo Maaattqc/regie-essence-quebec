@@ -1,4 +1,4 @@
-import { memo, useMemo } from "react";
+import { memo, useEffect, useMemo, useRef } from "react";
 import { Marker, Popup } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import L from "leaflet";
@@ -12,6 +12,7 @@ import {
   getPriceColor,
 } from "@/lib/stations";
 import { formatPopup } from "./popup-utils";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const iconCache: Record<string, L.DivIcon> = {};
 
@@ -79,6 +80,10 @@ const StationsLayer = memo(function StationsLayer({
   priceMax: number;
   hasFilter: boolean;
 }) {
+  const { t } = useLanguage();
+  const tRef = useRef(t);
+  useEffect(() => { tRef.current = t; });
+
   const { min, max } = useMemo(() => {
     let lo = Infinity;
     let hi = -Infinity;
@@ -111,7 +116,7 @@ const StationsLayer = memo(function StationsLayer({
         eventHandlers={{
           popupopen: (e) => {
             const popup = e.target.getPopup();
-            if (popup) popup.setContent(formatPopup(props, lat, lng));
+            if (popup) popup.setContent(formatPopup(props, lat, lng, tRef.current.popup, tRef.current.gasTypes));
           },
         }}
       >

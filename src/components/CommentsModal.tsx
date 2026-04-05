@@ -9,6 +9,7 @@ import { createBrowserClient } from "@/lib/auth";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { useComments } from "@/hooks/useComments";
 import { X, ThumbsUp, ThumbsDown } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export interface Comment {
   id: number;
@@ -22,15 +23,6 @@ export interface Comment {
   my_vote: number;
 }
 
-function timeAgo(d: string) {
-  const diff = new Date().getTime() - new Date(d).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 60) return `il y a ${mins}m`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `il y a ${hrs}h`;
-  return `il y a ${Math.floor(hrs / 24)}j`;
-}
-
 const CommentItem = memo(function CommentItem({ c, replies, allComments, onVote, onSubmitReply, isAdmin, onDelete }: {
   c: Comment;
   replies: Comment[];
@@ -40,10 +32,20 @@ const CommentItem = memo(function CommentItem({ c, replies, allComments, onVote,
   isAdmin?: boolean;
   onDelete?: (id: number) => void;
 }) {
+  const { t } = useLanguage();
   const [showReply, setShowReply] = useState(false);
   const [replyText, setReplyText] = useState("");
   const [sending, setSending] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+
+  function timeAgo(d: string) {
+    const diff = new Date().getTime() - new Date(d).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 60) return t.comments.minutesAgo(mins);
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return t.comments.hoursAgo(hrs);
+    return t.comments.daysAgo(Math.floor(hrs / 24));
+  }
 
   async function handleReply() {
     if (!replyText.trim()) return;
@@ -69,14 +71,14 @@ const CommentItem = memo(function CommentItem({ c, replies, allComments, onVote,
             <button
               onClick={() => onVote(c.id, 1)}
               className={`bg-transparent border-none cursor-pointer flex items-center gap-1 p-0 ${c.my_vote === 1 ? "text-[#0ea5e9]" : "text-muted-foreground"}`}
-              aria-label={`J'aime${c.likes > 0 ? ` (${c.likes})` : ""}`}
+              aria-label={c.likes > 0 ? t.comments.likes(c.likes) : t.comments.likes(0)}
             >
               <ThumbsUp className="size-3.5" /> {c.likes > 0 && c.likes}
             </button>
             <button
               onClick={() => onVote(c.id, -1)}
               className={`bg-transparent border-none cursor-pointer flex items-center gap-1 p-0 ${c.my_vote === -1 ? "text-[#e63946]" : "text-muted-foreground"}`}
-              aria-label={`Je n'aime pas${c.dislikes > 0 ? ` (${c.dislikes})` : ""}`}
+              aria-label={c.dislikes > 0 ? t.comments.dislikes(c.dislikes) : t.comments.dislikes(0)}
             >
               <ThumbsDown className="size-3.5" /> {c.dislikes > 0 && c.dislikes}
             </button>
@@ -84,14 +86,14 @@ const CommentItem = memo(function CommentItem({ c, replies, allComments, onVote,
               onClick={() => setShowReply(!showReply)}
               className="bg-transparent border-none cursor-pointer text-muted-foreground p-0 font-semibold text-xs"
             >
-              Répondre
+              {t.comments.reply}
             </button>
             {isAdmin && onDelete && (
               <button
                 onClick={() => setConfirmDelete(true)}
                 className="bg-transparent border-none cursor-pointer text-[#e63946] p-0 font-semibold text-xs"
               >
-                Supprimer
+                {t.comments.delete}
               </button>
             )}
           </div>
@@ -105,18 +107,18 @@ const CommentItem = memo(function CommentItem({ c, replies, allComments, onVote,
                 className="overflow-hidden"
               >
                 <div className="flex items-center gap-2 mt-1.5 p-2 rounded-md bg-[var(--bg-hover)] text-xs">
-                  <span className="font-semibold">Supprimer ce commentaire ?</span>
+                  <span className="font-semibold">{t.comments.confirmDelete}</span>
                   <button
                     onClick={() => { onDelete?.(c.id); setConfirmDelete(false); }}
                     className="bg-[#e63946] text-white border-none rounded px-2 py-0.5 cursor-pointer font-semibold text-xs"
                   >
-                    Oui
+                    {t.comments.yes}
                   </button>
                   <button
                     onClick={() => setConfirmDelete(false)}
                     className="bg-transparent border border-[var(--divider)] rounded px-2 py-0.5 cursor-pointer font-semibold text-xs text-[var(--text)]"
                   >
-                    Non
+                    {t.comments.no}
                   </button>
                 </div>
               </motion.div>
@@ -126,7 +128,7 @@ const CommentItem = memo(function CommentItem({ c, replies, allComments, onVote,
           {showReply && (
             <div className="flex gap-1.5 mt-1.5">
               <Input
-                placeholder={`Répondre à ${c.author}...`}
+                placeholder={t.comments.replyTo(c.author)}
                 value={replyText}
                 onChange={(e) => setReplyText(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") handleReply(); }}
@@ -140,7 +142,7 @@ const CommentItem = memo(function CommentItem({ c, replies, allComments, onVote,
                 onClick={() => { setShowReply(false); setReplyText(""); }}
                 className="bg-transparent border-none cursor-pointer text-muted-foreground text-xs p-0"
               >
-                Annuler
+                {t.comments.cancel}
               </button>
             </div>
           )}
@@ -163,6 +165,7 @@ export default function CommentsModal({ stationName, address, onClose, userEmail
   onClose: () => void;
   userEmail?: string;
 }) {
+  const { t } = useLanguage();
   const trapRef = useFocusTrap();
   const { comments, loading, error, setError, submitComment, handleVote, handleDelete } = useComments(stationName, address);
   const [newComment, setNewComment] = useState("");
@@ -214,15 +217,15 @@ export default function CommentsModal({ stationName, address, onClose, userEmail
         aria-labelledby="comments-modal-title"
       >
         <div className="flex justify-between items-center mb-3 shrink-0">
-          <h2 id="comments-modal-title" className="text-[1.0625rem] font-bold m-0">Commentaires — {stationName}</h2>
+          <h2 id="comments-modal-title" className="text-[1.0625rem] font-bold m-0">{t.comments.title(stationName)}</h2>
           <button type="button" className="panel-close" onClick={onClose} aria-label="Fermer"><X className="size-4" /></button>
         </div>
-        <div className="text-xs text-muted-foreground mb-3">{comments.length} commentaire{comments.length !== 1 ? "s" : ""}</div>
+        <div className="text-xs text-muted-foreground mb-3">{t.comments.count(comments.length)}</div>
 
         <form onSubmit={handleSubmit} className="shrink-0 mb-3">
           <div className="flex gap-1.5">
             <Input
-              placeholder="Ajouter un commentaire..."
+              placeholder={t.comments.placeholder}
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
               className="flex-1"
@@ -238,7 +241,7 @@ export default function CommentsModal({ stationName, address, onClose, userEmail
           {loading ? (
             <Spinner />
           ) : topLevel.length === 0 ? (
-            <p className="text-muted-foreground text-[0.8125rem]">Aucun commentaire. Soyez le premier !</p>
+            <p className="text-muted-foreground text-[0.8125rem]">{t.comments.empty}</p>
           ) : (
             topLevel.map((c) => (
               <CommentItem key={c.id} c={c} replies={getReplies(c.id)} allComments={comments} onVote={handleVote} onSubmitReply={handleReply} isAdmin={isAdmin} onDelete={handleDelete} />

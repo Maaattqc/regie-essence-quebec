@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useMapAuth } from "@/hooks/useMapAuth";
 import { useStationsData } from "@/hooks/useStationsData";
 import { useGeolocation } from "@/hooks/useGeolocation";
@@ -58,6 +59,7 @@ function readSearchParam(name: string) {
 }
 
 export default function Map() {
+  const { t } = useLanguage();
   const [gasType, setGasType] = useState<GasTypeKey>(
     () => (readSearchParam("type") as GasTypeKey) || "Régulier"
   );
@@ -396,7 +398,7 @@ export default function Map() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
             >
-              {!data ? "Chargement des stations..." : "Géolocalisation..."}
+              {!data ? t.map.loadingStations : t.map.loadingGeo}
             </motion.div>
           )}
         </AnimatePresence>
@@ -425,11 +427,11 @@ export default function Map() {
       <div className="absolute left-0 right-0 z-[400] pointer-events-none" style={{ bottom: 'env(safe-area-inset-bottom, 0px)' }}>
         <div className="pointer-events-auto w-full bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border-t border-gray-200/60 dark:border-gray-700/60 text-[8px] md:text-[11px] text-gray-600 dark:text-gray-400 px-2 md:px-3 py-1 leading-snug text-right md:text-center whitespace-nowrap overflow-hidden">
           {mapStyle === "satellite" ? (
-            <>&copy; <a href="https://leafletjs.com" target="_blank" rel="noopener noreferrer" className="underline">Leaflet</a> &nbsp;|&nbsp; &copy; Esri, Maxar &nbsp;|&nbsp; <a href="https://www.regie-energie.qc.ca" target="_blank" rel="noopener noreferrer" className="underline">Régie de l&apos;énergie</a>{lastUpdatedLabel && <> &nbsp;|&nbsp; Màj&nbsp;: {lastUpdatedLabel}</>} &nbsp;|&nbsp; &copy; <a href="https://www.linkedin.com/in/mathieu-fournier-4977591bb" target="_blank" rel="noopener noreferrer" className="underline">Mathieu Fournier</a> &nbsp;|&nbsp; <a href="/tech" target="_blank" rel="noopener noreferrer" className="underline">À propos</a></>
+            <>&copy; <a href="https://leafletjs.com" target="_blank" rel="noopener noreferrer" className="underline">Leaflet</a> &nbsp;|&nbsp; &copy; Esri, Maxar &nbsp;|&nbsp; <a href="https://www.regie-energie.qc.ca" target="_blank" rel="noopener noreferrer" className="underline">Régie de l&apos;énergie</a>{lastUpdatedLabel && <> &nbsp;|&nbsp; {t.map.lastUpdated(lastUpdatedLabel)}</>} &nbsp;|&nbsp; &copy; <a href="https://www.linkedin.com/in/mathieu-fournier-4977591bb" target="_blank" rel="noopener noreferrer" className="underline">Mathieu Fournier</a> &nbsp;|&nbsp; <a href="/tech" target="_blank" rel="noopener noreferrer" className="underline">{t.nav.about}</a></>
           ) : mapStyle === "dark" ? (
-            <>&copy; <a href="https://leafletjs.com" target="_blank" rel="noopener noreferrer" className="underline">Leaflet</a> &nbsp;|&nbsp; &copy; <a href="https://carto.com/" target="_blank" rel="noopener noreferrer" className="underline">CARTO</a> &nbsp;|&nbsp; <a href="https://www.regie-energie.qc.ca" target="_blank" rel="noopener noreferrer" className="underline">Régie de l&apos;énergie</a>{lastUpdatedLabel && <> &nbsp;|&nbsp; Màj&nbsp;: {lastUpdatedLabel}</>} &nbsp;|&nbsp; &copy; <a href="https://www.linkedin.com/in/mathieu-fournier-4977591bb" target="_blank" rel="noopener noreferrer" className="underline">Mathieu Fournier</a> &nbsp;|&nbsp; <a href="/tech" target="_blank" rel="noopener noreferrer" className="underline">À propos</a></>
+            <>&copy; <a href="https://leafletjs.com" target="_blank" rel="noopener noreferrer" className="underline">Leaflet</a> &nbsp;|&nbsp; &copy; <a href="https://carto.com/" target="_blank" rel="noopener noreferrer" className="underline">CARTO</a> &nbsp;|&nbsp; <a href="https://www.regie-energie.qc.ca" target="_blank" rel="noopener noreferrer" className="underline">Régie de l&apos;énergie</a>{lastUpdatedLabel && <> &nbsp;|&nbsp; {t.map.lastUpdated(lastUpdatedLabel)}</>} &nbsp;|&nbsp; &copy; <a href="https://www.linkedin.com/in/mathieu-fournier-4977591bb" target="_blank" rel="noopener noreferrer" className="underline">Mathieu Fournier</a> &nbsp;|&nbsp; <a href="/tech" target="_blank" rel="noopener noreferrer" className="underline">{t.nav.about}</a></>
           ) : (
-            <>&copy; <a href="https://leafletjs.com" target="_blank" rel="noopener noreferrer" className="underline">Leaflet</a> &nbsp;|&nbsp; &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" className="underline">OpenStreetMap</a> &nbsp;|&nbsp; <a href="https://www.regie-energie.qc.ca" target="_blank" rel="noopener noreferrer" className="underline">Régie de l&apos;énergie</a>{lastUpdatedLabel && <> &nbsp;|&nbsp; Màj&nbsp;: {lastUpdatedLabel}</>} &nbsp;|&nbsp; &copy; <a href="https://www.linkedin.com/in/mathieu-fournier-4977591bb" target="_blank" rel="noopener noreferrer" className="underline">Mathieu Fournier</a> &nbsp;|&nbsp; <a href="/tech" target="_blank" rel="noopener noreferrer" className="underline">À propos</a></>
+            <>&copy; <a href="https://leafletjs.com" target="_blank" rel="noopener noreferrer" className="underline">Leaflet</a> &nbsp;|&nbsp; &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" className="underline">OpenStreetMap</a> &nbsp;|&nbsp; <a href="https://www.regie-energie.qc.ca" target="_blank" rel="noopener noreferrer" className="underline">Régie de l&apos;énergie</a>{lastUpdatedLabel && <> &nbsp;|&nbsp; {t.map.lastUpdated(lastUpdatedLabel)}</>} &nbsp;|&nbsp; &copy; <a href="https://www.linkedin.com/in/mathieu-fournier-4977591bb" target="_blank" rel="noopener noreferrer" className="underline">Mathieu Fournier</a> &nbsp;|&nbsp; <a href="/tech" target="_blank" rel="noopener noreferrer" className="underline">{t.nav.about}</a></>
           )}
         </div>
       </div>
@@ -494,7 +496,7 @@ export default function Map() {
             exit={{ opacity: 0, y: 20 }}
             style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", zIndex: 9999, background: "var(--bg-panel)", color: "var(--text)", padding: "0.5rem 1rem", borderRadius: "0.5rem", boxShadow: "0 4px 12px rgba(0,0,0,0.2)", fontSize: "0.8125rem", fontWeight: 600, display: "flex", alignItems: "center", gap: "0.375rem" }}
           >
-            <Share2 className="size-3.5" style={{ color: "#2d9a2d" }} /> Lien copié !
+            <Share2 className="size-3.5" style={{ color: "#2d9a2d" }} /> {t.map.linkCopied}
           </motion.div>
         )}
       </AnimatePresence>

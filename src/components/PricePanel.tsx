@@ -7,6 +7,7 @@ import { X, TrendingDown, TrendingUp, Minus, ArrowUpDown, Search, SlidersHorizon
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
+import { useLanguage } from "@/contexts/LanguageContext";
 import {
   type StationProperties,
   type GasTypeKey,
@@ -38,6 +39,7 @@ const PriceRow = memo(function PriceRow({ entry, rank, activeType, provAvg, absM
   isSelected: boolean;
   onToggle: (key: string) => void;
 }) {
+  const { t } = useLanguage();
   const p = entry.prices[activeType];
   if (!p) return null as ReactNode;
   const delta = p.avg - provAvg;
@@ -82,24 +84,16 @@ const PriceRow = memo(function PriceRow({ entry, rank, activeType, provAvg, absM
         <div className="h-full rounded-full transition-all" style={{ width: `${barPct}%`, background: color }} />
       </div>
       <div className="flex gap-3 text-[11px] text-[var(--text-muted)]">
-        <span>{entry.count} station{entry.count > 1 ? "s" : ""}</span>
-        <span>Min <strong className="text-green-600 dark:text-green-400">{p.min.toFixed(1)}¢</strong></span>
-        <span>Max <strong className="text-red-500">{p.max.toFixed(1)}¢</strong></span>
-        {p.min !== p.max && <span>Écart <strong>{(p.max - p.min).toFixed(1)}¢</strong></span>}
+        <span>{entry.count} {t.pricePanel.station(entry.count)}</span>
+        <span>{t.pricePanel.min} <strong className="text-green-600 dark:text-green-400">{p.min.toFixed(1)}¢</strong></span>
+        <span>{t.pricePanel.max} <strong className="text-red-500">{p.max.toFixed(1)}¢</strong></span>
+        {p.min !== p.max && <span>{t.pricePanel.gap} <strong>{(p.max - p.min).toFixed(1)}¢</strong></span>}
       </div>
     </div>
   );
 });
 
-const SORT_OPTIONS: Array<{ value: SortKey; label: string }> = [
-  { value: "price-asc", label: "Prix croissant" },
-  { value: "price-desc", label: "Prix décroissant" },
-  { value: "name-asc", label: "Nom A-Z" },
-  { value: "name-desc", label: "Nom Z-A" },
-  { value: "delta-asc", label: "Moins cher vs moy." },
-  { value: "delta-desc", label: "Plus cher vs moy." },
-  { value: "count-desc", label: "Nb stations" },
-];
+// SORT_OPTIONS is now built dynamically inside PricePanel using t translations
 
 export type MultiTypeEntry = {
   name: string;
@@ -169,6 +163,7 @@ const PricePanel = memo(function PricePanel({
   visible: boolean;
   onClose: () => void;
 }) {
+  const { t } = useLanguage();
   const [view, setView] = useState<ViewMode>("region");
   const [activeType, setActiveType] = useState<GasTypeKey>(mapGasType);
   const [query, setQuery] = useState("");
@@ -177,6 +172,16 @@ const PricePanel = memo(function PricePanel({
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 300]);
   const [showFilters, setShowFilters] = useState(false);
   const [compareSet, setCompareSet] = useState<Set<string>>(new Set());
+
+  const SORT_OPTIONS: Array<{ value: SortKey; label: string }> = [
+    { value: "price-asc", label: t.pricePanel.sortPriceAsc },
+    { value: "price-desc", label: t.pricePanel.sortPriceDesc },
+    { value: "name-asc", label: t.pricePanel.sortNameAZ },
+    { value: "name-desc", label: t.pricePanel.sortNameZA },
+    { value: "delta-asc", label: t.pricePanel.sortCheapestVsAvg },
+    { value: "delta-desc", label: t.pricePanel.sortExpensiveVsAvg },
+    { value: "count-desc", label: t.pricePanel.sortStations },
+  ];
 
   const toggleCompare = useCallback((key: string) => {
     setCompareSet((prev) => {
@@ -275,11 +280,13 @@ const PricePanel = memo(function PricePanel({
             {/* Header */}
             <div className="mb-3 flex items-start justify-between gap-2 shrink-0">
               <div>
-                <div className="text-[15px] font-bold">Prix moyens</div>
+                <div className="text-[15px] font-bold">{t.pricePanel.title}</div>
                 <div className="text-[11px] text-[var(--text-muted)]">
                   {view === "compare"
-                    ? `${compareItems.length} sélectionnés`
-                    : `${displayed.length} / ${totalEntries} ${view === "region" ? "régions" : "villes"}`
+                    ? t.pricePanel.selected(compareItems.length)
+                    : view === "region"
+                      ? t.pricePanel.displayedRegions(displayed.length, totalEntries)
+                      : t.pricePanel.displayedCities(displayed.length, totalEntries)
                   }
                 </div>
               </div>
@@ -288,7 +295,7 @@ const PricePanel = memo(function PricePanel({
 
             {/* View toggle */}
             <div className="flex gap-1 mb-3 p-0.5 bg-[var(--bg-hover)] rounded-lg shrink-0">
-              {([["region", "Par région"], ["city", "Par ville"], ["compare", `Comparer (${compareSet.size})`]] as const).map(([v, label]) => (
+              {([["region", t.pricePanel.byRegion], ["city", t.pricePanel.byCity], ["compare", t.pricePanel.compare(compareSet.size)]] as const).map(([v, label]) => (
                 <button
                   key={v}
                   className={`flex-1 py-1.5 px-2 rounded-md text-[12px] font-semibold transition-all ${view === v ? "bg-[#457b9d] text-white" : "text-[var(--text-secondary)] bg-transparent"}`}
@@ -309,7 +316,7 @@ const PricePanel = memo(function PricePanel({
                   style={activeType === gt.key ? { borderColor: gt.color } : undefined}
                   onClick={() => setActiveType(gt.key)}
                 >
-                  <div className="text-[10px] text-[var(--text-muted)] uppercase tracking-wide">{gt.label}</div>
+                  <div className="text-[10px] text-[var(--text-muted)] uppercase tracking-wide">{t.gasTypes[gt.key]}</div>
                   <div className="text-[15px] font-bold" style={{ color: gt.color }}>{provAvgs[gt.key].toFixed(1)}¢</div>
                 </div>
               ))}
@@ -324,7 +331,7 @@ const PricePanel = memo(function PricePanel({
                     <Input
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
-                      placeholder={view === "region" ? "Rechercher une région..." : "Rechercher une ville..."}
+                      placeholder={view === "region" ? t.pricePanel.searchRegion : t.pricePanel.searchCity}
                       className="h-8 text-[13px] pl-7"
                       autoComplete="off"
                     />
@@ -353,13 +360,13 @@ const PricePanel = memo(function PricePanel({
                           value={regionFilter}
                           onChange={(e) => setRegionFilter(e.target.value)}
                         >
-                          <option value="">Toutes les régions</option>
+                          <option value="">{t.pricePanel.allRegions}</option>
                           {regions.map((r) => <option key={r} value={r}>{r}</option>)}
                         </select>
                       )}
                       <div>
                         <div className="text-[11px] text-[var(--text-muted)] mb-1">
-                          Prix entre {priceRange[0].toFixed(0)}¢ et {priceRange[1].toFixed(0)}¢
+                          {t.pricePanel.priceRange(Number(priceRange[0].toFixed(0)), Number(priceRange[1].toFixed(0)))}
                         </div>
                         <Slider
                           min={effectiveMin}
@@ -391,7 +398,7 @@ const PricePanel = memo(function PricePanel({
               {view === "compare" ? (
                 compareItems.length === 0 ? (
                   <div className="py-8 text-center text-[13px] text-[var(--text-muted)]">
-                    Cliquez sur des régions ou villes pour les comparer.
+                    {t.pricePanel.clickToCompare}
                   </div>
                 ) : (
                   <>
@@ -400,11 +407,11 @@ const PricePanel = memo(function PricePanel({
                       <table className="w-full text-[12px]">
                         <thead>
                           <tr className="border-b border-[var(--divider)]">
-                            <th className="text-left py-2 px-2 font-semibold text-[var(--text-muted)]">Lieu</th>
+                            <th className="text-left py-2 px-2 font-semibold text-[var(--text-muted)]">{t.pricePanel.location}</th>
                             {GAS_TYPES.map((gt) => (
                               <th key={gt.key} className="text-center py-2 px-2 font-semibold" style={{ color: gt.color }}>{gt.label}</th>
                             ))}
-                            <th className="text-center py-2 px-2 font-semibold text-[var(--text-muted)]">Stations</th>
+                            <th className="text-center py-2 px-2 font-semibold text-[var(--text-muted)]">{t.pricePanel.stations}</th>
                             <th className="w-8" />
                           </tr>
                         </thead>
@@ -447,7 +454,7 @@ const PricePanel = memo(function PricePanel({
                     {/* Cheapest highlight */}
                     {compareItems.length >= 2 && (
                       <div className="mt-2 rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950/30 p-3">
-                        <div className="text-[11px] font-semibold text-green-700 dark:text-green-400 mb-1">Le moins cher pour {GAS_TYPES.find((t) => t.key === activeType)?.label}</div>
+                        <div className="text-[11px] font-semibold text-green-700 dark:text-green-400 mb-1">{t.pricePanel.cheapestFor(GAS_TYPES.find((gt) => gt.key === activeType)?.label ?? "")}</div>
                         {(() => {
                           const sorted = [...compareItems]
                             .filter((e) => e.prices[activeType])
@@ -459,7 +466,7 @@ const PricePanel = memo(function PricePanel({
                           return (
                             <div className="text-[12px]">
                               <strong>{best.name}</strong> à <strong className="text-green-600 dark:text-green-400">{best.prices[activeType]?.avg.toFixed(1)}¢</strong>
-                              {diff > 0 && <span className="text-[var(--text-muted)]"> — {diff.toFixed(1)}¢ de moins que {worst.name}</span>}
+                              {diff > 0 && <span className="text-[var(--text-muted)]"> — {t.pricePanel.cheaper(diff.toFixed(1), worst.name)}</span>}
                             </div>
                           );
                         })()}
@@ -468,7 +475,7 @@ const PricePanel = memo(function PricePanel({
                   </>
                 )
               ) : displayed.length === 0 ? (
-                <div className="py-8 text-center text-[13px] text-[var(--text-muted)]">Aucun résultat trouvé.</div>
+                <div className="py-8 text-center text-[13px] text-[var(--text-muted)]">{t.pricePanel.noResults}</div>
               ) : (
                 displayed.map((entry, i) => (
                   <PriceRow key={entryKey(entry)} entry={entry} rank={view === "region" ? i + 1 : undefined} activeType={activeType} provAvg={provAvg} absMin={absMin} absMax={absMax} isSelected={compareSet.has(entryKey(entry))} onToggle={toggleCompare} />

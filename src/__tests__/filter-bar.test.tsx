@@ -1,10 +1,34 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 
 const mockSetTheme = vi.fn();
 
 vi.mock("next-themes", () => ({
   useTheme: () => ({ resolvedTheme: "light", setTheme: mockSetTheme }),
+}));
+
+vi.mock("@/contexts/LanguageContext", () => ({
+  useLanguage: () => ({
+    locale: "fr",
+    toggle: vi.fn(),
+    t: {
+      filterBar: {
+        cityPlaceholder: "Ville…",
+        allRegions: "Toutes les régions",
+        allBrands: "Toutes les compagnies",
+        favorites: "Favoris",
+        suggestion: "Suggestion",
+        login: "Connexion",
+        lightMode: "Mode clair",
+        darkMode: "Mode sombre",
+        appTitle: "Essence Québec",
+        tagline: "Prix en temps réel des stations-service",
+        changelog: "Historique des mises à jour",
+        logout: "Déconnexion",
+        loggedInAs: "Connecté en tant que",
+      },
+    },
+  }),
 }));
 
 vi.mock("next/navigation", () => ({

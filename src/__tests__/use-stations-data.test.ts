@@ -75,8 +75,9 @@ describe("useStationsData", () => {
       expect(result.current.data).not.toBeNull();
     });
 
-    expect(result.current.data!.features).toHaveLength(1);
-    expect(result.current.data!.features[0].properties.Name).toBe("Shell Québec");
+    const features = (result.current.data as GeoJSON.FeatureCollection).features;
+    expect(features).toHaveLength(1);
+    expect((features[0].properties as Record<string, unknown>).Name).toBe("Shell Québec");
   });
 
   it("charge les données depuis le cache sessionStorage", async () => {
