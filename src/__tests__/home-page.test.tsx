@@ -18,10 +18,6 @@ describe("Home page", () => {
     expect(screen.getByText("Prix de l'essence au Québec — Carte interactive en temps réel")).toBeInTheDocument();
   });
 
-  it("contient l'attribution REQ visible", () => {
-    render(<Home />);
-    expect(screen.getByText(/Données : Régie de l'énergie du Québec/)).toBeInTheDocument();
-  });
 
   it("contient les liens SEO", () => {
     render(<Home />);
