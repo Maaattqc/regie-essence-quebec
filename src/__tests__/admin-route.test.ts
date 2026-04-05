@@ -623,12 +623,51 @@ describe('/api/admin', () => {
       return chain
     }
 
-    it('retourne 403 pour un non-admin (données sensibles protégées)', async () => {
+    it('retourne les données masquées pour un non-admin (accès sans connexion autorisé)', async () => {
       setupNonAdmin()
 
+      const snapshotsCount = makeChain({ count: 100 })
+      const snapshotsLatest = makeChain({ data: [{ snapshot_at: '2026-04-01T10:00:00Z' }] })
+      const reportsCount = makeChain({ count: 3 })
+      const profilesCount = makeChain({ count: 8 })
+      const pvTotal = makeChain({ count: 500 })
+      const pvToday = makeChain({ count: 20 })
+      const pvWeek = makeChain({ count: 150 })
+      const pvMonth = makeChain({ count: 400 })
+      const profilesList = makeChain({
+        data: [{ id: 'u1', email: 'alice@example.com', created_at: '2026-01-01' }],
+      })
+      const reportsList = makeChain({
+        data: [{ id: 1, email: 'rep@test.com', first_name: 'Jean', last_name: 'Dupont', message: 'test' }],
+      })
+      const suggestionsList = makeChain({
+        data: [{ id: 1, email: 'sug@test.com', first_name: 'Marie', last_name: 'Lavoie', message: 'idée' }],
+      })
+
+      let callIndex = 0
+      const fromResults = [
+        snapshotsCount, snapshotsLatest, reportsCount, profilesCount,
+        pvTotal, pvToday, pvWeek, pvMonth,
+        profilesList, reportsList, suggestionsList,
+      ]
+      mocks.from.mockImplementation(() => {
+        const result = fromResults[callIndex] ?? makeChain()
+        callIndex++
+        return result as ReturnType<typeof makeChain>
+      })
+      mocks.rpc.mockResolvedValue({ data: { regulier: 170, super: 190, diesel: 180 } })
+      mocks.getUserById.mockResolvedValue({ data: { user: { email: 'alice@example.com' } } })
+
       const response = await GET(makeGetRequest({ type: 'init' }))
-      expect(response.status).toBe(403)
-      await expect(response.json()).resolves.toEqual({ error: 'Non autorisé' })
+      expect(response.status).toBe(200)
+
+      const json = await response.json()
+      expect(json.stats.totalSnapshots).toBe(100)
+      // Emails et noms masqués pour non-admin
+      expect(json.users[0].email).toContain('***')
+      expect(json.reports[0].email).toContain('***')
+      expect(json.reports[0].first_name).toContain('***')
+      expect(json.suggestions[0].email).toContain('***')
     })
 
     it('retourne les données non masquées pour un admin', async () => {
