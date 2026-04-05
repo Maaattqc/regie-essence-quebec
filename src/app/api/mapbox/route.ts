@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { rateLimit, getIP } from "@/lib/rateLimit";
+import { rateLimit, getIP, checkCsrf } from "@/lib/rateLimit";
 import { logActivity } from "@/lib/activity-log";
 import { z } from "zod";
 
@@ -17,6 +17,7 @@ const bodySchema = z.union([
 
 // Proxy Mapbox Matrix API (distances multi-destinations)
 export async function POST(request: NextRequest) {
+  if (!checkCsrf(request)) return NextResponse.json({ error: "Requête invalide" }, { status: 403 });
   if (!(await rateLimit(getIP(request)))) {
     return NextResponse.json({ error: "Trop de requêtes" }, { status: 429 });
   }

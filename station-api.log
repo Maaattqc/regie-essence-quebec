@@ -1,0 +1,13 @@
+
+> regie-essence-quebec@0.1.0 start
+> next start --port 3010
+
+▲ Next.js 16.2.2
+- Local:         http://localhost:3010
+- Network:       http://10.5.0.2:3010
+✓ Ready in 259ms
+{"stationFeedExpectedCount":2313,"stationFeedRowCount":2313}
+An error occurred in a function passed to `after()`: Error: insert or update on table "station_sync_state" violates foreign key constraint "station_sync_state_running_dataset_id_fkey"
+    at c (C:\Users\mathf\OneDrive\Bureau\regie-essence-quebec\.next\server\chunks\[root-of-the-server]__0a0xu5h._.js:1:4212)
+    at async g (C:\Users\mathf\OneDrive\Bureau\regie-essence-quebec\.next\server\chunks\[root-of-the-server]__0a0xu5h._.js:1:6746)
+    at async (C:\Users\mathf\OneDrive\Bureau\regie-essence-quebec\.next\server\chunks\[root-of-the-server]__0pa1nag._.js:1:9966)

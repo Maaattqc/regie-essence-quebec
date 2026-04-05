@@ -18,7 +18,7 @@ const mocks = vi.hoisted(() => {
   const from = vi.fn(() => ({ select, update, insert }))
   const rpc = vi.fn()
   const getUser = vi.fn()
-  const getUserById = vi.fn()
+  const listUsers = vi.fn()
 
   return {
     createClient: vi.fn(() => ({
@@ -26,7 +26,7 @@ const mocks = vi.hoisted(() => {
       rpc,
       auth: {
         getUser,
-        admin: { getUserById },
+        admin: { listUsers },
       },
     })),
     from,
@@ -43,10 +43,12 @@ const mocks = vi.hoisted(() => {
     insert,
     rpc,
     getUser,
-    getUserById,
+    listUsers,
     logActivity: vi.fn(),
     rateLimit: vi.fn(),
     getIP: vi.fn(),
+    checkCsrf: vi.fn(() => true),
+    getRequestId: vi.fn(() => 'test-request-id'),
   }
 })
 
@@ -61,6 +63,8 @@ vi.mock('@/lib/activity-log', () => ({
 vi.mock('@/lib/rateLimit', () => ({
   rateLimit: mocks.rateLimit,
   getIP: mocks.getIP,
+  checkCsrf: mocks.checkCsrf,
+  getRequestId: mocks.getRequestId,
 }))
 
 import { GET, PATCH } from '@/app/api/admin/route'
@@ -125,7 +129,8 @@ describe('/api/admin', () => {
     mocks.insert.mockClear()
     mocks.rpc.mockClear()
     mocks.getUser.mockReset()
-    mocks.getUserById.mockReset()
+    mocks.listUsers.mockReset()
+    mocks.listUsers.mockResolvedValue({ data: { users: [] } })
     mocks.logActivity.mockReset()
     mocks.rateLimit.mockReturnValue(true)
     mocks.getIP.mockReturnValue('127.0.0.1')
@@ -293,14 +298,13 @@ describe('/api/admin', () => {
       setupAdmin()
       setupUsersQuery()
 
-      mocks.getUserById.mockResolvedValue({
-        data: { user: { email: 'alice@example.com' } },
+      // listUsers remplace N×getUserById — 1 seul appel
+      mocks.listUsers.mockResolvedValue({
+        data: { users: [
+          { id: 'u1', email: 'alice@example.com' },
+          { id: 'u2', email: 'bob@example.com' },
+        ] },
       })
-
-      // getUserById called for each profile
-      mocks.getUserById
-        .mockResolvedValueOnce({ data: { user: { email: 'alice@example.com' } } })
-        .mockResolvedValueOnce({ data: { user: { email: 'bob@example.com' } } })
 
       const response = await GET(makeGetRequest({ type: 'users' }, 'valid-token'))
       expect(response.status).toBe(200)
@@ -326,16 +330,18 @@ describe('/api/admin', () => {
       }
       mocks.from.mockReturnValue(chain as ReturnType<typeof vi.fn>)
 
-      mocks.getUserById
-        .mockResolvedValueOnce({ data: { user: { email: 'alice@example.com' } } })
-        .mockResolvedValueOnce({ data: { user: { email: 'bob@example.com' } } })
+      mocks.listUsers.mockResolvedValue({
+        data: { users: [
+          { id: 'u1', email: 'alice@example.com' },
+          { id: 'u2', email: 'bob@example.com' },
+        ] },
+      })
 
       const response = await GET(makeGetRequest({ type: 'users' }))
       expect(response.status).toBe(200)
 
       const json = await response.json()
       expect(json).toHaveLength(2)
-      // Masked: short names get fully masked
       expect(json[0].email).not.toBe('alice@example.com')
       expect(json[0].email).toContain('***')
       expect(json[1].email).not.toBe('bob@example.com')
@@ -656,7 +662,7 @@ describe('/api/admin', () => {
         return result as ReturnType<typeof makeChain>
       })
       mocks.rpc.mockResolvedValue({ data: { regulier: 170, super: 190, diesel: 180 } })
-      mocks.getUserById.mockResolvedValue({ data: { user: { email: 'alice@example.com' } } })
+      mocks.listUsers.mockResolvedValue({ data: { users: [{ id: 'u1', email: 'alice@example.com' }] } })
 
       const response = await GET(makeGetRequest({ type: 'init' }))
       expect(response.status).toBe(200)
@@ -723,9 +729,7 @@ describe('/api/admin', () => {
       })
 
       mocks.rpc.mockResolvedValue({ data: { regulier: 170, super: 190, diesel: 180 } })
-      mocks.getUserById.mockResolvedValue({
-        data: { user: { email: 'admin@test.com' } },
-      })
+      mocks.listUsers.mockResolvedValue({ data: { users: [{ id: 'u1', email: 'admin@test.com' }] } })
 
       const response = await GET(makeGetRequest({ type: 'init' }, 'valid-token'))
       expect(response.status).toBe(200)

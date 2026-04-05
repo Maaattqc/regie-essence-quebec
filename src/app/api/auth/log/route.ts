@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { rateLimit, getIP } from "@/lib/rateLimit";
+import { rateLimit, getIP, checkCsrf } from "@/lib/rateLimit";
 import { logActivity } from "@/lib/activity-log";
 
 export async function POST(request: NextRequest) {
+  if (!checkCsrf(request)) return NextResponse.json({ error: "Requête invalide" }, { status: 403 });
   if (!(await rateLimit(getIP(request), "strict"))) {
     return NextResponse.json({ error: "Trop de requêtes" }, { status: 429 });
   }

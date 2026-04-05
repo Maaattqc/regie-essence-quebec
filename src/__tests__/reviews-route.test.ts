@@ -64,6 +64,8 @@ vi.mock('@/lib/supabase', () => ({
 vi.mock('@/lib/rateLimit', () => ({
   getIP: mocks.getIP,
   rateLimit: mocks.rateLimit,
+  checkCsrf: vi.fn(() => true),
+  getRequestId: vi.fn(() => 'test-req-id'),
 }))
 
 import { DELETE, GET, POST } from '@/app/api/reviews/route'

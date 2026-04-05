@@ -1,13 +1,17 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
-import { rateLimit, getIP } from "@/lib/rateLimit";
+import { rateLimit, getIP, getRequestId, checkCsrf } from "@/lib/rateLimit";
 import { logActivity } from "@/lib/activity-log";
 import { suggestionSchema } from "@/lib/schemas";
 
 export async function POST(request: Request) {
+  if (!checkCsrf(request)) {
+    return NextResponse.json({ error: "Requête invalide" }, { status: 403 });
+  }
   if (!(await rateLimit(getIP(request), "strict"))) {
     return NextResponse.json({ error: "Trop de requêtes" }, { status: 429 });
   }
+  const requestId = getRequestId(request);
 
   const body = await request.json();
   const result = suggestionSchema.safeParse(body);
@@ -25,7 +29,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 
-  await logActivity("suggestion", "Nouvelle suggestion");
+  await logActivity("suggestion", "Nouvelle suggestion", undefined, { requestId });
 
   return NextResponse.json({ ok: true });
 }

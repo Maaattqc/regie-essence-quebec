@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
-import { rateLimit, getIP } from "@/lib/rateLimit";
+import { rateLimit, getIP, checkCsrf } from "@/lib/rateLimit";
 import { commentSchema, voteSchema } from "@/lib/schemas";
 
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
@@ -82,6 +82,7 @@ export async function GET(request: NextRequest) {
 
 // POST new comment or vote
 export async function POST(request: NextRequest) {
+  if (!checkCsrf(request)) return NextResponse.json({ error: "Requête invalide" }, { status: 403 });
   if (!(await rateLimit(getIP(request)))) return NextResponse.json({ error: "Trop de requêtes" }, { status: 429 });
 
   const token = getToken(request);

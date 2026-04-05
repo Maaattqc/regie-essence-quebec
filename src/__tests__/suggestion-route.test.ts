@@ -23,6 +23,8 @@ vi.mock("@/lib/supabase", () => ({
 vi.mock("@/lib/rateLimit", () => ({
   getIP: mocks.getIP,
   rateLimit: mocks.rateLimit,
+  checkCsrf: vi.fn(() => true),
+  getRequestId: vi.fn(() => "test-req-id"),
 }));
 
 vi.mock("@/lib/activity-log", () => ({
@@ -114,6 +116,8 @@ describe("POST /api/suggestion", () => {
     expect(mocks.logActivity).toHaveBeenCalledWith(
       "suggestion",
       "Nouvelle suggestion",
+      undefined,
+      expect.objectContaining({ requestId: "test-req-id" }),
     );
     // Vérifier que le nom complet n'apparaît pas dans les arguments du log
     const callArgs = mocks.logActivity.mock.calls[0];

@@ -11,6 +11,8 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@/lib/rateLimit', () => ({
   getIP: mocks.getIP,
   rateLimit: mocks.rateLimit,
+  checkCsrf: vi.fn(() => true),
+  getRequestId: vi.fn(() => 'test-req-id'),
 }))
 
 vi.mock('@/lib/activity-log', () => ({

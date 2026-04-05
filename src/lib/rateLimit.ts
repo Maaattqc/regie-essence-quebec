@@ -82,3 +82,23 @@ export function getIP(request: Request): string {
     "unknown"
   );
 }
+
+/** Retourne le request ID envoyé par le client, ou en génère un nouveau. */
+export function getRequestId(req: Request): string {
+  return req.headers.get("x-request-id") ?? crypto.randomUUID();
+}
+
+/**
+ * Vérifie que la requête provient bien du même domaine (protection CSRF basique).
+ * Retourne true si l'origine est valide ou absente (requête serveur-à-serveur).
+ */
+export function checkCsrf(req: Request): boolean {
+  const origin = req.headers.get("origin");
+  if (!origin) return true; // pas d'Origin = requête serveur ou même domaine — safe
+  const host = req.headers.get("host") ?? "";
+  try {
+    return new URL(origin).host === host;
+  } catch {
+    return false;
+  }
+}

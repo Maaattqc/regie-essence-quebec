@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 
-import { getIP, rateLimit } from '@/lib/rateLimit'
+import { getIP, rateLimit, getRequestId, checkCsrf } from '@/lib/rateLimit'
 
 describe('rateLimit (memoire)', () => {
   it('autorise les cinq premieres requetes dans la fenetre', async () => {
@@ -59,6 +59,51 @@ describe('getIP', () => {
     const request = new Request('http://localhost')
 
     expect(getIP(request)).toBe('unknown')
+  })
+})
+
+describe('getRequestId', () => {
+  it('retourne le header x-request-id si present', () => {
+    const request = new Request('http://localhost', {
+      headers: { 'x-request-id': 'mon-id-custom' },
+    })
+    expect(getRequestId(request)).toBe('mon-id-custom')
+  })
+
+  it('genere un UUID v4 si le header est absent', () => {
+    const request = new Request('http://localhost')
+    const id = getRequestId(request)
+    expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)
+  })
+})
+
+describe('checkCsrf', () => {
+  it('autorise si aucun header Origin (requete serveur-a-serveur)', () => {
+    const request = new Request('http://localhost', {
+      headers: { host: 'exemple.com' },
+    })
+    expect(checkCsrf(request)).toBe(true)
+  })
+
+  it('autorise si Origin correspond au host', () => {
+    const request = new Request('http://exemple.com/api/test', {
+      headers: { origin: 'https://exemple.com', host: 'exemple.com' },
+    })
+    expect(checkCsrf(request)).toBe(true)
+  })
+
+  it('refuse si Origin est un domaine different', () => {
+    const request = new Request('http://exemple.com/api/test', {
+      headers: { origin: 'https://attaquant.com', host: 'exemple.com' },
+    })
+    expect(checkCsrf(request)).toBe(false)
+  })
+
+  it('refuse si Origin est malformé', () => {
+    const request = new Request('http://exemple.com/api/test', {
+      headers: { origin: 'not-a-url', host: 'exemple.com' },
+    })
+    expect(checkCsrf(request)).toBe(false)
   })
 })
 

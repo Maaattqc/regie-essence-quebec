@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(update-config)",
+      "mcp__sentry__find_projects",
+      "mcp__sentry__find_dsns",
+      "mcp__sentry__get_sentry_resource",
+      "mcp__plugin_vercel_vercel__get_deployment_build_logs"
+    ]
+  }
+}

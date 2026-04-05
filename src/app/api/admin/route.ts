@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
-import { rateLimit, getIP } from "@/lib/rateLimit";
+import { rateLimit, getIP, getRequestId, checkCsrf } from "@/lib/rateLimit";
 import { logActivity } from "@/lib/activity-log";
 
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
@@ -31,24 +31,32 @@ function maskName(name: string) {
 
 const VALID_LOG_CATEGORIES = ["sync", "cron", "auth", "report", "admin", "erreur", "suggestion"];
 
-/** Retourne minuit Montréal (il y a `daysAgo` jours) en ISO UTC */
+const MTZ = "America/Montreal";
+
+/**
+ * Retourne minuit Montréal (il y a `daysAgo` jours) en ISO UTC.
+ * Sonde à midi pour calculer l'offset DST — midi n'est jamais ambigu lors des transitions.
+ */
 function montrealMidnight(daysAgo = 0): string {
-  const nowReal = Date.now();
-  const nowMtlFake = new Date(new Date(nowReal).toLocaleString("en-US", { timeZone: "America/Montreal" }));
-  const mtlOffset = nowReal - nowMtlFake.getTime();
-  const midnight = new Date(nowMtlFake);
-  midnight.setHours(0, 0, 0, 0);
-  midnight.setDate(midnight.getDate() - daysAgo);
-  return new Date(midnight.getTime() + mtlOffset).toISOString();
+  const todayMtl = new Date().toLocaleDateString("en-CA", { timeZone: MTZ }); // "YYYY-MM-DD"
+  const [y, m, d] = todayMtl.split("-").map(Number);
+  const target = new Date(Date.UTC(y, m - 1, d - daysAgo));
+  const yy = target.getUTCFullYear();
+  const mm = String(target.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(target.getUTCDate()).padStart(2, "0");
+  const noonUtc = new Date(`${yy}-${mm}-${dd}T12:00:00Z`);
+  const offsetMs = noonUtc.getTime() - new Date(noonUtc.toLocaleString("en-US", { timeZone: MTZ })).getTime();
+  return new Date(Date.UTC(yy, Number(mm) - 1, Number(dd)) + offsetMs).toISOString();
 }
 
-/** Retourne le 1er du mois courant à Montréal en ISO UTC */
+/** Retourne le 1er du mois courant à minuit Montréal en ISO UTC. */
 function montrealMonthStart(): string {
-  const nowReal = Date.now();
-  const nowMtlFake = new Date(new Date(nowReal).toLocaleString("en-US", { timeZone: "America/Montreal" }));
-  const mtlOffset = nowReal - nowMtlFake.getTime();
-  const first = new Date(nowMtlFake.getFullYear(), nowMtlFake.getMonth(), 1);
-  return new Date(first.getTime() + mtlOffset).toISOString();
+  const todayMtl = new Date().toLocaleDateString("en-CA", { timeZone: MTZ });
+  const [y, m] = todayMtl.split("-").map(Number);
+  const mm = String(m).padStart(2, "0");
+  const noonUtc = new Date(`${y}-${mm}-01T12:00:00Z`);
+  const offsetMs = noonUtc.getTime() - new Date(noonUtc.toLocaleString("en-US", { timeZone: MTZ })).getTime();
+  return new Date(Date.UTC(y, m - 1, 1) + offsetMs).toISOString();
 }
 
 // GET /api/admin?type=stats|users|reports
@@ -100,26 +108,13 @@ export async function GET(req: NextRequest) {
 
     const avgs = avgsResult?.data ?? null;
 
-    // Enrichir les profils avec les emails
-    const profileList = profiles || [];
-    const enrichedUsers: Record<string, unknown>[] = [];
-    const UBATCH = 10;
-    for (let i = 0; i < profileList.length; i += UBATCH) {
-      const batch = profileList.slice(i, i + UBATCH);
-      const results = await Promise.all(
-        batch.map(async (p: Record<string, unknown>) => {
-          try {
-            const { data: { user: authUser } } = await supabaseAdmin.auth.admin.getUserById(p.id as string);
-            const email = authUser?.email ?? (p.email as string) ?? "";
-            return { ...p, email: isAdmin ? email : maskEmail(email) };
-          } catch (error) {
-            await logActivity("erreur", "Échec getUserById (init)", undefined, { userId: p.id as string, error: String(error) });
-            return { ...p, email: isAdmin ? ((p.email as string) ?? "") : "***@***" };
-          }
-        })
-      );
-      enrichedUsers.push(...results);
-    }
+    // Charger tous les emails en 1 appel Auth (remplace N×getUserById)
+    const { data: authData } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
+    const emailMap = new Map((authData?.users ?? []).map((u) => [u.id, u.email ?? ""]));
+    const enrichedUsers = (profiles ?? []).map((p: Record<string, unknown>) => {
+      const email = emailMap.get(p.id as string) ?? (p.email as string) ?? "";
+      return { ...p, email: isAdmin ? email : maskEmail(email) };
+    });
 
     const reports = (reportsData ?? []).map((r: Record<string, unknown>) =>
       isAdmin ? r : { ...r, email: typeof r.email === "string" ? maskEmail(r.email) : "***", first_name: typeof r.first_name === "string" ? maskName(r.first_name) : "***", last_name: typeof r.last_name === "string" ? maskName(r.last_name) : "***" }
@@ -205,26 +200,13 @@ export async function GET(req: NextRequest) {
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1);
 
-    // Batch email lookup (limit concurrent calls)
-    const list = profiles || [];
-    const enriched: Record<string, unknown>[] = [];
-    const BATCH = 10;
-    for (let i = 0; i < list.length; i += BATCH) {
-      const batch = list.slice(i, i + BATCH);
-      const results = await Promise.all(
-        batch.map(async (p) => {
-          try {
-            const { data: { user: authUser } } = await supabaseAdmin.auth.admin.getUserById(p.id);
-            const email = authUser?.email ?? p.email ?? "";
-            return { ...p, email: isAdmin ? email : maskEmail(email) };
-          } catch (error) {
-            await logActivity("erreur", "Échec getUserById (users)", undefined, { userId: p.id, error: String(error) });
-            return { ...p, email: isAdmin ? (p.email ?? "") : "***@***" };
-          }
-        })
-      );
-      enriched.push(...results);
-    }
+    // Charger tous les emails en 1 appel Auth (remplace N×getUserById)
+    const { data: authData } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
+    const emailMap = new Map((authData?.users ?? []).map((u) => [u.id, u.email ?? ""]));
+    const enriched = (profiles ?? []).map((p) => {
+      const email = emailMap.get(p.id) ?? p.email ?? "";
+      return { ...p, email: isAdmin ? email : maskEmail(email) };
+    });
     return NextResponse.json(enriched);
   }
 
@@ -454,10 +436,12 @@ export async function GET(req: NextRequest) {
 
 // PATCH /api/admin  body: { action: "report_status", id, status } | { action: "toggle_role", id } | { action: "suggestion_status", id, status }
 export async function PATCH(req: NextRequest) {
+  if (!checkCsrf(req)) return NextResponse.json({ error: "Requête invalide" }, { status: 403 });
   if (!(await rateLimit(getIP(req)))) return NextResponse.json({ error: "Trop de requêtes" }, { status: 429 });
   const user = await verifyAdmin(req);
   if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
 
+  const requestId = getRequestId(req);
   const body = await req.json();
 
   const VALID_REPORT_STATUSES = ["pending", "resolved", "rejected", "in_progress"];
@@ -468,7 +452,7 @@ export async function PATCH(req: NextRequest) {
     if (!id || !status) return NextResponse.json({ error: "id et status requis" }, { status: 400 });
     if (!VALID_REPORT_STATUSES.includes(status)) return NextResponse.json({ error: `Status invalide. Valeurs permises : ${VALID_REPORT_STATUSES.join(", ")}` }, { status: 400 });
     await supabaseAdmin.from("reports").update({ status }).eq("id", id);
-    await logActivity("admin", `Signalement #${id} → ${status}`, undefined, { reportId: id, status, by: user.email });
+    await logActivity("admin", `Signalement #${id} → ${status}`, undefined, { reportId: id, status, by: user.email, requestId });
     return NextResponse.json({ ok: true });
   }
 
@@ -477,7 +461,7 @@ export async function PATCH(req: NextRequest) {
     if (!id) return NextResponse.json({ error: "id requis" }, { status: 400 });
     const newRole = currentRole === "admin" ? "user" : "admin";
     await supabaseAdmin.from("profiles").update({ role: newRole }).eq("id", id);
-    await logActivity("admin", `Rôle changé → ${newRole}`, undefined, { userId: id, newRole, by: user.email });
+    await logActivity("admin", `Rôle changé → ${newRole}`, undefined, { userId: id, newRole, by: user.email, requestId });
     return NextResponse.json({ ok: true });
   }
 
@@ -491,7 +475,7 @@ export async function PATCH(req: NextRequest) {
     const update: Record<string, unknown> = { status };
     if (admin_comment !== undefined) update.admin_comment = admin_comment;
     await supabaseAdmin.from("suggestions").update(update).eq("id", id);
-    await logActivity("admin", `Suggestion #${id} → ${status}`, admin_comment ?? undefined, { suggestionId: id, status, by: user.email });
+    await logActivity("admin", `Suggestion #${id} → ${status}`, admin_comment ?? undefined, { suggestionId: id, status, by: user.email, requestId });
     return NextResponse.json({ ok: true });
   }
 
@@ -502,7 +486,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "admin_comment invalide" }, { status: 400 });
     }
     await supabaseAdmin.from("reports").update({ admin_comment }).eq("id", id);
-    await logActivity("admin", `Commentaire signalement #${id}`, admin_comment ?? undefined, { reportId: id, by: user.email });
+    await logActivity("admin", `Commentaire signalement #${id}`, admin_comment ?? undefined, { reportId: id, by: user.email, requestId });
     return NextResponse.json({ ok: true });
   }
 
