@@ -18,8 +18,6 @@ async function getUser(token: string) {
   return user;
 }
 
-const VALID_COLUMNS = ["likes", "dislikes"] as const;
-
 // GET comments for a station
 export async function GET(request: NextRequest) {
   if (!(await rateLimit(getIP(request)))) return NextResponse.json({ error: "Trop de requêtes" }, { status: 429 });
@@ -90,7 +88,7 @@ export async function POST(request: NextRequest) {
   const user = token ? await getUser(token) : null;
   const body = await request.json();
 
-  // Vote action
+  // Vote action (atomique via RPC)
   if (body.action === "vote") {
     const parsed = voteSchema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Données invalides" }, { status: 400 });
@@ -98,43 +96,14 @@ export async function POST(request: NextRequest) {
 
     if (!user && !anonymous_id) return NextResponse.json({ error: "Identifiant requis" }, { status: 400 });
 
-    const likeCol = vote === 1 ? "likes" : "dislikes";
-    const dislikeCol = vote === 1 ? "dislikes" : "likes";
-    if (!VALID_COLUMNS.includes(likeCol) || !VALID_COLUMNS.includes(dislikeCol)) {
-      return NextResponse.json({ error: "Invalide" }, { status: 400 });
-    }
+    const { error: rpcError } = await supabaseAdmin.rpc("handle_vote", {
+      p_comment_id: comment_id,
+      p_vote: vote,
+      p_user_id: user?.id ?? null,
+      p_anonymous_id: user ? null : (anonymous_id ?? null),
+    });
 
-    const voteFilter = user
-      ? supabaseAdmin.from("comment_votes").select("vote").eq("user_id", user.id).eq("comment_id", comment_id)
-      : supabaseAdmin.from("comment_votes").select("vote").eq("anonymous_id", anonymous_id!).is("user_id", null).eq("comment_id", comment_id);
-
-    const { data: existing } = await voteFilter.maybeSingle();
-
-    if (existing) {
-      const deleteQ = user
-        ? supabaseAdmin.from("comment_votes").delete().eq("user_id", user.id).eq("comment_id", comment_id)
-        : supabaseAdmin.from("comment_votes").delete().eq("anonymous_id", anonymous_id!).is("user_id", null).eq("comment_id", comment_id);
-      const updateQ = (v: number) => user
-        ? supabaseAdmin.from("comment_votes").update({ vote: v }).eq("user_id", user.id).eq("comment_id", comment_id)
-        : supabaseAdmin.from("comment_votes").update({ vote: v }).eq("anonymous_id", anonymous_id!).is("user_id", null).eq("comment_id", comment_id);
-
-      if (existing.vote === vote) {
-        await deleteQ;
-        await supabaseAdmin.rpc("decrement", { row_id: comment_id, col_name: likeCol });
-      } else {
-        await updateQ(vote);
-        await supabaseAdmin.rpc("increment", { row_id: comment_id, col_name: likeCol });
-        await supabaseAdmin.rpc("decrement", { row_id: comment_id, col_name: dislikeCol });
-      }
-    } else {
-      await supabaseAdmin.from("comment_votes").insert({
-        user_id: user?.id || null,
-        anonymous_id: user ? null : anonymous_id!,
-        comment_id,
-        vote,
-      });
-      await supabaseAdmin.rpc("increment", { row_id: comment_id, col_name: likeCol });
-    }
+    if (rpcError) return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
     return NextResponse.json({ ok: true });
   }
 

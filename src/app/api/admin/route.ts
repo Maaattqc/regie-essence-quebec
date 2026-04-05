@@ -113,7 +113,6 @@ export async function GET(req: NextRequest) {
             const email = authUser?.email ?? (p.email as string) ?? "";
             return { ...p, email: isAdmin ? email : maskEmail(email) };
           } catch (error) {
-            console.error("[admin/init] Échec getUserById:", error);
             await logActivity("erreur", "Échec getUserById (init)", undefined, { userId: p.id as string, error: String(error) });
             return { ...p, email: isAdmin ? ((p.email as string) ?? "") : "***@***" };
           }
@@ -179,7 +178,6 @@ export async function GET(req: NextRequest) {
       const { data } = await supabaseAdmin.rpc("get_avg_prices");
       avgs = data;
     } catch (error) {
-      console.error("[admin/stats] Échec get_avg_prices:", error);
       await logActivity("erreur", "Échec get_avg_prices (stats)", undefined, { error: String(error) });
     }
 
@@ -220,7 +218,6 @@ export async function GET(req: NextRequest) {
             const email = authUser?.email ?? p.email ?? "";
             return { ...p, email: isAdmin ? email : maskEmail(email) };
           } catch (error) {
-            console.error("[admin/users] Échec getUserById:", error);
             await logActivity("erreur", "Échec getUserById (users)", undefined, { userId: p.id, error: String(error) });
             return { ...p, email: isAdmin ? (p.email ?? "") : "***@***" };
           }

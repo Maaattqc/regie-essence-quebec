@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMapAuth } from "@/hooks/useMapAuth";
 import { useStationsData } from "@/hooks/useStationsData";
 import { useGeolocation } from "@/hooks/useGeolocation";
+import { useEffectivePrice } from "@/hooks/useEffectivePrice";
 import { MapContainer, TileLayer, ZoomControl, AttributionControl } from "react-leaflet";
 import { Marker, Circle, Polyline } from "react-leaflet";
 import L from "leaflet";
@@ -35,15 +36,21 @@ import {
   stationId,
   parsePrice,
   distanceKm,
-  effectivePrice,
-  roadDistances,
-  roadRoute,
   normalize,
   deduplicateCities,
 } from "@/lib/stations";
 import "leaflet/dist/leaflet.css";
 
 const PriceChart = dynamic(() => import("./PriceChart"), { ssr: false });
+
+const REGION_ZOOM: Record<string, number> = { "Montréal": 11, "Laval": 12 };
+
+const USER_POS_ICON = L.divIcon({
+  html: `<div class="user-pos-marker"><div class="user-pos-pulse"></div><div class="user-pos-dot"></div></div>`,
+  className: "",
+  iconSize: [40, 40],
+  iconAnchor: [20, 20],
+});
 
 function readSearchParam(name: string) {
   if (typeof window === "undefined") return null;
@@ -72,8 +79,6 @@ export default function Map() {
   const [showSuggestion, setShowSuggestion] = useState(false);
   const [commentStation, setCommentStation] = useState<{ name: string; address: string } | null>(null);
   const { currentUser, setCurrentUser } = useMapAuth();
-  const [cheapestResults, setCheapestResults] = useState<{ stations: { lat: number; lng: number; price: number; name: string; dist: number; durationMin?: number; effectivePrice?: number }[]; message: string } | null>(null);
-  const [cheapestRoute, setCheapestRoute] = useState<[number, number][] | null>(null);
   const [radiusKm, setRadiusKm] = useState(0);
   const [showFavorites, setShowFavorites] = useState(false);
   const [flyTarget, setFlyTarget] = useState<{ center: [number, number]; zoom: number } | null>(null);
@@ -101,6 +106,11 @@ export default function Map() {
     return Number(localStorage.getItem("eff_tank")) || 40;
   });
 
+  const { cheapestResults, cheapestRoute, findBestEffectivePrice, clearCheapest } = useEffectivePrice({
+    data, gasType, userPos, setUserPos, geoReady,
+    radiusKm, setRadiusKm, consoLper100, tankVolume, setFlyTarget,
+  });
+
   useEffect(() => {
     if (!showEffectiveSettings) return;
     function handlePointerDown(e: PointerEvent) {
@@ -115,8 +125,7 @@ export default function Map() {
     return () => document.removeEventListener("pointerdown", handlePointerDown);
   }, [showEffectiveSettings]);
 
-
-  function shareLink() {
+  const shareLink = useCallback(() => {
     const params = new URLSearchParams();
     if (search) params.set("ville", search);
     if (region) params.set("region", region);
@@ -127,31 +136,12 @@ export default function Map() {
     navigator.clipboard.writeText(url);
     setShareToast(true);
     setTimeout(() => setShareToast(false), 2000);
-  }
+  }, [search, region, gasType, brand, mapStyle]);
 
-  const autoSearchDone = useRef(false);
-  useEffect(() => {
-    if (autoSearchDone.current || !data || !userPos || !geoReady) return;
-    autoSearchDone.current = true;
-    findBestEffectivePrice(true);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, userPos, geoReady]);
-
-  // Recalculer le meilleur prix quand le type d'essence change
-  const prevGasType = useRef(gasType);
-  useEffect(() => {
-    if (prevGasType.current === gasType) return;
-    prevGasType.current = gasType;
-    if (cheapestResults && userPos && data) {
-      findBestEffectivePrice(true);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gasType]);
-
-  function handleSearchChange(v: string) {
+  const handleSearchChange = useCallback((v: string) => {
     setSearch(v);
     setRadiusKm(0);
-    setCheapestResults(null); setCheapestRoute(null);
+    clearCheapest();
     const vNorm = normalize(v);
     if (v && data) {
       const match = data.features.find((f) => {
@@ -180,13 +170,13 @@ export default function Map() {
     } else {
       setFlyTarget(null);
     }
-  }
-  const REGION_ZOOM: Record<string, number> = { "Montréal": 11, "Laval": 12 };
-  function handleRegionChange(v: string) {
+  }, [data, region, clearCheapest, setFlyTarget]);
+
+  const handleRegionChange = useCallback((v: string) => {
     setRegion(v);
     setSearch("");
     setRadiusKm(0);
-    setCheapestResults(null); setCheapestRoute(null);
+    clearCheapest();
     if (!v) {
       setFlyTarget({ center: QUEBEC_CENTER, zoom: QUEBEC_ZOOM });
     } else if (REGION_CENTERS[v]) {
@@ -194,77 +184,43 @@ export default function Map() {
     } else {
       setFlyTarget(null);
     }
-  }
-  function handleBrandChange(v: string) {
+  }, [clearCheapest, setFlyTarget]);
+
+  const handleBrandChange = useCallback((v: string) => {
     setBrand(v);
     setRadiusKm(0);
-    setCheapestResults(null); setCheapestRoute(null);
-  }
+    clearCheapest();
+  }, [clearCheapest]);
 
+  const handleGasTypeChange = useCallback((v: GasTypeKey) => setGasType(v), []);
 
-  function findBestEffectivePrice(skipZoom = false) {
-    if (!data) return;
-    if (radiusKm === 0) setRadiusKm(5);
-    const doSearch = async (latitude: number, longitude: number) => {
-      const r = radiusKm > 0 ? radiusKm : 5;
-      // 1) Filtrage Haversine rapide
-      const prefiltered: { lat: number; lng: number; price: number; name: string; haversineDist: number }[] = [];
-      data.features.forEach((f) => {
-        const feature = f as Feature<Point, StationProperties>;
-        const props = feature.properties;
-        const [lng, lat] = feature.geometry.coordinates;
-        const dist = distanceKm(latitude, longitude, lat, lng);
-        if (dist > r) return;
-        const p = props.Prices.find((pr) => pr.GasType === gasType && pr.IsAvailable);
-        if (!p) return;
-        prefiltered.push({ lat, lng, price: parsePrice(p.Price), name: props.Name, haversineDist: dist });
-      });
-      if (prefiltered.length === 0) {
-        setCheapestResults({ stations: [], message: `Aucune station trouvée dans un rayon de ${r} km` });
-        return;
-      }
-      // 2) Trier par prix effectif Haversine, garder top 15 pour Mapbox
-      prefiltered.sort((a, b) =>
-        effectivePrice(a.price, a.haversineDist, consoLper100, tankVolume) -
-        effectivePrice(b.price, b.haversineDist, consoLper100, tankVolume),
-      );
-      const top = prefiltered.slice(0, 15);
-      // 3) Distances + durées routières réelles (Mapbox avec trafic)
-      const destinations = top.map((c) => [c.lat, c.lng] as [number, number]);
-      const roadInfos = await roadDistances([latitude, longitude], destinations);
-      // 4) Recalculer avec distances réelles (fallback Haversine)
-      const candidates = top.map((c, i) => {
-        const dist = roadInfos[i].distKm ?? c.haversineDist;
-        const durationMin = roadInfos[i].durationMin ?? undefined;
-        return { ...c, dist, durationMin, effectivePrice: effectivePrice(c.price, dist, consoLper100, tankVolume) };
-      });
-      candidates.sort((a, b) => a.effectivePrice - b.effectivePrice);
-      const best = candidates[0];
-      const saving = best.effectivePrice - best.price;
-      const durText = best.durationMin != null ? ` · ~${Math.round(best.durationMin)} min` : "";
-      const msg = `${best.name} — ${best.price.toFixed(1)}¢/L · ${best.dist.toFixed(1)} km${durText} (réel : ${best.effectivePrice.toFixed(1)}¢/L, +${saving.toFixed(1)}¢ trajet)`;
-      setCheapestResults({ stations: [best], message: msg });
-      if (!skipZoom) setFlyTarget({ center: [best.lat, best.lng], zoom: 15 });
-      roadRoute([latitude, longitude], [best.lat, best.lng]).then((details) => {
-        if (details) setCheapestRoute(details.path);
-      });
-    };
-    if (userPos) {
-      doSearch(userPos[0], userPos[1]);
-    } else if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (p) => {
-          setUserPos([p.coords.latitude, p.coords.longitude]);
-          doSearch(p.coords.latitude, p.coords.longitude);
-        },
-        () => {
-          setCheapestResults({ stations: [], message: "Activez la géolocalisation pour utiliser cette fonctionnalité." });
-        },
-      );
-    } else {
-      setCheapestResults({ stations: [], message: "La géolocalisation n'est pas disponible sur cet appareil." });
-    }
-  }
+  const handleToggleFavorites = useCallback(() => {
+    setShowFavorites((v) => !v);
+    setRadiusKm(0);
+    clearCheapest();
+  }, [clearCheapest]);
+
+  const handleToggleCheapest = useCallback(() => {
+    if (cheapestResults) { clearCheapest(); setRadiusKm(0); }
+    else findBestEffectivePrice();
+  }, [cheapestResults, clearCheapest, findBestEffectivePrice]);
+
+  const handleLogout = useCallback(async () => {
+    await createBrowserClient().auth.signOut();
+    setCurrentUser(null);
+  }, [setCurrentUser]);
+
+  const handleLoginClick = useCallback(() => setShowLogin(true), []);
+  const handleChangelogClick = useCallback(() => setShowChangelog(true), []);
+  const handleSuggestionClick = useCallback(() => setShowSuggestion(true), []);
+
+  const handleCycleMapStyle = useCallback(() => {
+    const styles = ["carte", "satellite", "dark"] as const;
+    setMapStyle((prev) => {
+      const idx = styles.indexOf(prev as typeof styles[number]);
+      return styles[(idx + 1) % styles.length];
+    });
+  }, []);
 
   const cities = useMemo(() => {
     if (!data) return [];
@@ -332,7 +288,7 @@ export default function Map() {
     <div style={{ position: "relative", height: "100%", width: "100%" }}>
       <FilterBar
         gasType={gasType}
-        onGasTypeChange={(v) => { setGasType(v); }}
+        onGasTypeChange={handleGasTypeChange}
         brand={brand}
         onBrandChange={handleBrandChange}
         region={region}
@@ -341,19 +297,16 @@ export default function Map() {
         onSearchChange={handleSearchChange}
         cities={cities}
         showFavorites={showFavorites}
-        onToggleFavorites={() => { setShowFavorites((v) => !v); setRadiusKm(0); setCheapestResults(null); setCheapestRoute(null); }}
+        onToggleFavorites={handleToggleFavorites}
         regionCounts={regionCounts}
         brandCounts={brandCounts}
         cityCounts={cityCounts}
         totalStations={totalStations}
-        onLoginClick={() => setShowLogin(true)}
-        onChangelogClick={() => setShowChangelog(true)}
-        onSuggestionClick={() => setShowSuggestion(true)}
+        onLoginClick={handleLoginClick}
+        onChangelogClick={handleChangelogClick}
+        onSuggestionClick={handleSuggestionClick}
         currentUser={currentUser}
-        onLogout={async () => {
-          await createBrowserClient().auth.signOut();
-          setCurrentUser(null);
-        }}
+        onLogout={handleLogout}
       />
       <MapContainer
         center={QUEBEC_CENTER}
@@ -384,7 +337,7 @@ export default function Map() {
           mapPanelOpen={mapPanelOpen}
           setMapPanelOpen={setMapPanelOpen}
           cheapestResults={cheapestResults}
-          onToggleCheapest={() => { if (cheapestResults) { setCheapestResults(null); setCheapestRoute(null); setRadiusKm(0); } else { findBestEffectivePrice(); } }}
+          onToggleCheapest={handleToggleCheapest}
           showEffectiveSettings={showEffectiveSettings}
           setShowEffectiveSettings={setShowEffectiveSettings}
           settingsBtnRef={settingsBtnRef}
@@ -401,11 +354,7 @@ export default function Map() {
           setShowPricePanel={setShowPricePanel}
           onShareLink={shareLink}
           mapStyle={mapStyle}
-          onCycleMapStyle={() => {
-            const styles = ["carte", "satellite", "dark"] as const;
-            const idx = styles.indexOf(mapStyle as typeof styles[number]);
-            setMapStyle(styles[(idx + 1) % styles.length]);
-          }}
+          onCycleMapStyle={handleCycleMapStyle}
           showCursors={showCursors}
           setShowCursors={setShowCursors}
           onlineCount={onlineCount}
@@ -418,15 +367,7 @@ export default function Map() {
         <AttributionControl position="bottomleft" />
         {userPos && (
           <>
-            <Marker
-              position={userPos}
-              icon={L.divIcon({
-                html: `<div class="user-pos-marker"><div class="user-pos-pulse"></div><div class="user-pos-dot"></div></div>`,
-                className: "",
-                iconSize: [40, 40],
-                iconAnchor: [20, 20],
-              })}
-            />
+            <Marker position={userPos} icon={USER_POS_ICON} />
             {radiusKm > 0 && showRadiusCircle && (
               <Circle
                 center={userPos}
@@ -458,16 +399,16 @@ export default function Map() {
           )}
         </AnimatePresence>
         {filtered && geoReady && <StationsLayer gasType={gasType} data={filtered} priceMin={priceMin} priceMax={priceMax} hasFilter={!!(search || region || brand || showFavorites || radiusKm > 0)} />}
-        {userPos && cheapestResults?.stations.map((s, i) => (
+        {userPos && cheapestResults?.stations.map((s) => (
           <Polyline
-            key={`cheapest-line-${i}`}
+            key={`cheapest-line-${s.name}-${s.lat}-${s.lng}`}
             positions={cheapestRoute ?? [userPos, [s.lat, s.lng]]}
             pathOptions={{ color: "#2d9a2d", weight: 5, opacity: 0.9, dashArray: "10 8" }}
           />
         ))}
-        {cheapestResults?.stations.map((s, i) => (
+        {cheapestResults?.stations.map((s) => (
           <Marker
-            key={`cheapest-${i}`}
+            key={`cheapest-${s.name}-${s.lat}-${s.lng}`}
             position={[s.lat, s.lng]}
             interactive={false}
             icon={L.divIcon({

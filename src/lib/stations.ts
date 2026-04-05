@@ -120,7 +120,7 @@ export async function roadDistances(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ type: "matrix", coords }),
     });
-    if (!res.ok) { console.error("[Mapbox Matrix]", res.status); return fallback; }
+    if (!res.ok) return fallback;
     const data = await res.json();
     const distRow = data.distances?.[0];
     const durRow = data.durations?.[0];
@@ -129,8 +129,7 @@ export async function roadDistances(
       distKm: m != null && m > 0 ? m / 1000 : null,
       durationMin: durRow?.[i + 1] != null && durRow[i + 1] > 0 ? durRow[i + 1] / 60 : null,
     }));
-  } catch (err) {
-    console.error("[Mapbox Matrix]", err);
+  } catch {
     return fallback;
   }
 }
@@ -154,7 +153,7 @@ export async function roadRoute(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ type: "directions", origin, destination }),
     });
-    if (!res.ok) { console.error("[Mapbox Directions]", res.status); return null; }
+    if (!res.ok) return null;
     const data = await res.json();
     const route = data.routes?.[0];
     if (!route?.geometry?.coordinates) return null;
@@ -163,8 +162,7 @@ export async function roadRoute(
       distKm: (route.distance ?? 0) / 1000,
       durationMin: (route.duration ?? 0) / 60,
     };
-  } catch (err) {
-    console.error("[Mapbox Directions]", err);
+  } catch {
     return null;
   }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useMemo, useState, useCallback } from "react";
+import { memo, useMemo, useState, useCallback, type ReactNode } from "react";
 import type { Feature, Point } from "geojson";
 import { AnimatePresence, motion } from "framer-motion";
 import { X, TrendingDown, TrendingUp, Minus, ArrowUpDown, Search, SlidersHorizontal, GitCompareArrows, Check } from "lucide-react";
@@ -18,6 +18,78 @@ import {
 
 type ViewMode = "region" | "city" | "compare";
 type SortKey = "price-asc" | "price-desc" | "name-asc" | "name-desc" | "delta-asc" | "delta-desc" | "count-desc";
+
+const DeltaBadge = memo(function DeltaBadge({ delta }: { delta: number }) {
+  return (
+    <span className={`inline-flex items-center gap-0.5 text-[11px] font-semibold ${delta < -0.5 ? "text-green-600 dark:text-green-400" : delta > 0.5 ? "text-red-500" : "text-[var(--text-muted)]"}`}>
+      {delta < -0.5 ? <TrendingDown className="size-3" /> : delta > 0.5 ? <TrendingUp className="size-3" /> : <Minus className="size-3" />}
+      {delta > 0 ? "+" : ""}{delta.toFixed(1)}¢
+    </span>
+  );
+});
+
+const PriceRow = memo(function PriceRow({ entry, rank, activeType, provAvg, absMin, absMax, isSelected, onToggle }: {
+  entry: MultiTypeEntry;
+  rank?: number;
+  activeType: GasTypeKey;
+  provAvg: number;
+  absMin: number;
+  absMax: number;
+  isSelected: boolean;
+  onToggle: (key: string) => void;
+}) {
+  const p = entry.prices[activeType];
+  if (!p) return null as ReactNode;
+  const delta = p.avg - provAvg;
+  const color = getPriceColor(p.avg, absMin, absMax);
+  const barPct = absMax === absMin ? 50 : ((p.avg - absMin) / (absMax - absMin)) * 100;
+  const key = entry.region ? `${entry.name}||${entry.region}` : entry.name;
+
+  return (
+    <div
+      className={`rounded-lg border px-3 py-2 hover:bg-[var(--bg-hover)] transition-colors cursor-pointer ${isSelected ? "border-[#457b9d] bg-[#457b9d]/5" : "border-[var(--divider)]"}`}
+      onClick={() => onToggle(key)}
+    >
+      <div className="flex items-center justify-between gap-2 mb-1.5">
+        <div className="flex items-center gap-2 min-w-0">
+          {rank != null && <span className="text-[11px] text-[var(--text-muted)] font-mono w-4 shrink-0">#{rank}</span>}
+          <span className="w-2.5 h-2.5 rounded-full shrink-0 relative" style={{ background: color }}>
+            {isSelected && <Check className="size-2.5 text-white absolute inset-0" />}
+          </span>
+          <span className="text-[13px] font-semibold truncate">{entry.name}</span>
+          {entry.region && <span className="text-[11px] text-[var(--text-muted)] truncate hidden sm:block">{entry.region}</span>}
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-[12px] font-bold" style={{ color }}>{p.avg.toFixed(1)}¢</span>
+          <DeltaBadge delta={delta} />
+        </div>
+      </div>
+      <div className="flex gap-2 mb-1.5">
+        {GAS_TYPES.map((gt) => {
+          const gp = entry.prices[gt.key];
+          return (
+            <div key={gt.key} className="flex items-center gap-1 text-[10px]">
+              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: gt.color }} />
+              <span className="text-[var(--text-muted)]">{gt.label.slice(0, 3)}</span>
+              <span className="font-semibold" style={{ color: gp ? gt.color : "var(--text-muted)" }}>
+                {gp ? `${gp.avg.toFixed(1)}¢` : "—"}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      <div className="h-1.5 bg-[var(--bg-hover)] rounded-full mb-1.5 overflow-hidden">
+        <div className="h-full rounded-full transition-all" style={{ width: `${barPct}%`, background: color }} />
+      </div>
+      <div className="flex gap-3 text-[11px] text-[var(--text-muted)]">
+        <span>{entry.count} station{entry.count > 1 ? "s" : ""}</span>
+        <span>Min <strong className="text-green-600 dark:text-green-400">{p.min.toFixed(1)}¢</strong></span>
+        <span>Max <strong className="text-red-500">{p.max.toFixed(1)}¢</strong></span>
+        {p.min !== p.max && <span>Écart <strong>{(p.max - p.min).toFixed(1)}¢</strong></span>}
+      </div>
+    </div>
+  );
+});
 
 const SORT_OPTIONS: Array<{ value: SortKey; label: string }> = [
   { value: "price-asc", label: "Prix croissant" },
@@ -181,71 +253,6 @@ const PricePanel = memo(function PricePanel({
 
   function entryKey(e: MultiTypeEntry) {
     return e.region ? `${e.name}||${e.region}` : e.name;
-  }
-
-  function DeltaBadge({ delta }: { delta: number }) {
-    return (
-      <span className={`inline-flex items-center gap-0.5 text-[11px] font-semibold ${delta < -0.5 ? "text-green-600 dark:text-green-400" : delta > 0.5 ? "text-red-500" : "text-[var(--text-muted)]"}`}>
-        {delta < -0.5 ? <TrendingDown className="size-3" /> : delta > 0.5 ? <TrendingUp className="size-3" /> : <Minus className="size-3" />}
-        {delta > 0 ? "+" : ""}{delta.toFixed(1)}¢
-      </span>
-    );
-  }
-
-  function PriceRow({ entry, rank }: { entry: MultiTypeEntry; rank?: number }) {
-    const p = entry.prices[activeType];
-    if (!p) return null;
-    const delta = p.avg - provAvg;
-    const color = getPriceColor(p.avg, absMin, absMax);
-    const barPct = absMax === absMin ? 50 : ((p.avg - absMin) / (absMax - absMin)) * 100;
-    const key = entryKey(entry);
-    const isSelected = compareSet.has(key);
-
-    return (
-      <div
-        className={`rounded-lg border px-3 py-2 hover:bg-[var(--bg-hover)] transition-colors cursor-pointer ${isSelected ? "border-[#457b9d] bg-[#457b9d]/5" : "border-[var(--divider)]"}`}
-        onClick={() => toggleCompare(key)}
-      >
-        <div className="flex items-center justify-between gap-2 mb-1.5">
-          <div className="flex items-center gap-2 min-w-0">
-            {rank != null && <span className="text-[11px] text-[var(--text-muted)] font-mono w-4 shrink-0">#{rank}</span>}
-            <span className="w-2.5 h-2.5 rounded-full shrink-0 relative" style={{ background: color }}>
-              {isSelected && <Check className="size-2.5 text-white absolute inset-0" />}
-            </span>
-            <span className="text-[13px] font-semibold truncate">{entry.name}</span>
-            {entry.region && <span className="text-[11px] text-[var(--text-muted)] truncate hidden sm:block">{entry.region}</span>}
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <span className="text-[12px] font-bold" style={{ color }}>{p.avg.toFixed(1)}¢</span>
-            <DeltaBadge delta={delta} />
-          </div>
-        </div>
-        {/* All 3 gas types mini-bar */}
-        <div className="flex gap-2 mb-1.5">
-          {GAS_TYPES.map((gt) => {
-            const gp = entry.prices[gt.key];
-            return (
-              <div key={gt.key} className="flex items-center gap-1 text-[10px]">
-                <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: gt.color }} />
-                <span className="text-[var(--text-muted)]">{gt.label.slice(0, 3)}</span>
-                <span className="font-semibold" style={{ color: gp ? gt.color : "var(--text-muted)" }}>
-                  {gp ? `${gp.avg.toFixed(1)}¢` : "—"}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-        <div className="h-1.5 bg-[var(--bg-hover)] rounded-full mb-1.5 overflow-hidden">
-          <div className="h-full rounded-full transition-all" style={{ width: `${barPct}%`, background: color }} />
-        </div>
-        <div className="flex gap-3 text-[11px] text-[var(--text-muted)]">
-          <span>{entry.count} station{entry.count > 1 ? "s" : ""}</span>
-          <span>Min <strong className="text-green-600 dark:text-green-400">{p.min.toFixed(1)}¢</strong></span>
-          <span>Max <strong className="text-red-500">{p.max.toFixed(1)}¢</strong></span>
-          {p.min !== p.max && <span>Écart <strong>{(p.max - p.min).toFixed(1)}¢</strong></span>}
-        </div>
-      </div>
-    );
   }
 
   return (
@@ -464,7 +471,7 @@ const PricePanel = memo(function PricePanel({
                 <div className="py-8 text-center text-[13px] text-[var(--text-muted)]">Aucun résultat trouvé.</div>
               ) : (
                 displayed.map((entry, i) => (
-                  <PriceRow key={entryKey(entry)} entry={entry} rank={view === "region" ? i + 1 : undefined} />
+                  <PriceRow key={entryKey(entry)} entry={entry} rank={view === "region" ? i + 1 : undefined} activeType={activeType} provAvg={provAvg} absMin={absMin} absMax={absMax} isSelected={compareSet.has(entryKey(entry))} onToggle={toggleCompare} />
                 ))
               )}
             </div>

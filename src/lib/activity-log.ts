@@ -15,8 +15,7 @@ export async function logActivity(
       detail: detail ?? null,
       metadata: metadata ?? {},
     });
-  } catch (error) {
+  } catch {
     // Ne jamais bloquer le flux principal si le log échoue
-    console.error("[activity-log] Échec insertion:", error);
   }
 }

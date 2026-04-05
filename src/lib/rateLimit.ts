@@ -24,7 +24,8 @@ const upstashLimiters = redis
 
 export type RateLimitProfile = "default" | "strict" | "relaxed";
 
-// Fallback in-memory pour le dev local
+// Fallback in-memory pour le dev local (LRU avec taille max)
+const MAX_KEYS = 2048;
 const memoryRequests = new Map<string, number[]>();
 
 const PROFILES: Record<RateLimitProfile, { windowMs: number; max: number }> = {
@@ -41,10 +42,16 @@ function memoryRateLimit(ip: string, profile: RateLimitProfile = "default"): boo
   const recent = timestamps.filter((t) => now - t < windowMs);
   if (recent.length >= max) return false;
   recent.push(now);
+  // LRU : supprimer puis réinsérer pour placer en fin de Map (plus récent)
+  memoryRequests.delete(key);
   memoryRequests.set(key, recent);
-  if (memoryRequests.size > 1000) {
-    for (const [k, vals] of memoryRequests) {
-      if (vals.every((t) => now - t > windowMs * 10)) memoryRequests.delete(k);
+  // Évincer les entrées les plus anciennes si on dépasse la limite
+  if (memoryRequests.size > MAX_KEYS) {
+    const keysIter = memoryRequests.keys();
+    let toDelete = memoryRequests.size - MAX_KEYS;
+    while (toDelete-- > 0) {
+      const oldest = keysIter.next().value;
+      if (oldest) memoryRequests.delete(oldest);
     }
   }
   return true;

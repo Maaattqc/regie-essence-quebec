@@ -37,7 +37,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(commits);
   } catch (error) {
-    console.error("[changelog] Échec GitHub API:", error);
     await logActivity("erreur", "Échec GitHub API (changelog)", undefined, { error: String(error) });
     return NextResponse.json([], { status: 200 });
   }

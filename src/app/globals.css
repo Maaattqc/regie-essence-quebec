@@ -1793,23 +1793,3 @@ body {
     @apply font-sans;
   }
 }
-
-/* ── Reduced motion ── */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-  /* Leaflet a besoin de ses transitions CSS pour le pan/zoom fluide */
-  .leaflet-container,
-  .leaflet-container *,
-  .leaflet-container *::before,
-  .leaflet-container *::after {
-    animation-duration: unset !important;
-    animation-iteration-count: unset !important;
-    transition-duration: unset !important;
-  }
-}

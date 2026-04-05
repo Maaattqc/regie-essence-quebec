@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Feature, Point } from "geojson";
 import {
   type StationProperties,
@@ -9,6 +9,9 @@ import {
 } from "@/lib/stations";
 
 const STATIONS_CACHE_KEY = "stations-api-cache";
+const RETRY_RATE_LIMIT_MS = 3000;
+const RETRY_FALLBACK_MS = 5000;
+const POLL_INTERVAL_MS = 5 * 60 * 1000;
 
 interface StationsApiPayload {
   ok: boolean;
@@ -36,6 +39,10 @@ export function useStationsData(callbacks: StationsCallbacks) {
   const [data, setData] = useState<GeoJSON.FeatureCollection | null>(null);
   const [favs, setFavs] = useState<Set<string>>(() => getFavorites());
 
+  // Ref stable pour les callbacks — évite de re-run l'effet quand le parent re-render
+  const cbRef = useRef(callbacks);
+  cbRef.current = callbacks;
+
   useEffect(() => {
     let cancelled = false;
     let retryTimer: number | null = null;
@@ -56,7 +63,7 @@ export function useStationsData(callbacks: StationsCallbacks) {
       try {
         const response = await fetch("/api/stations", { cache: "no-store" });
         if (!response.ok && response.status !== 202) {
-          if (response.status === 429) { retryTimer = window.setTimeout(loadStations, 3000); return; }
+          if (response.status === 429) { retryTimer = window.setTimeout(loadStations, RETRY_RATE_LIMIT_MS); return; }
           throw new Error(`HTTP ${response.status}`);
         }
         const payload = (await response.json()) as StationsApiPayload;
@@ -68,30 +75,30 @@ export function useStationsData(callbacks: StationsCallbacks) {
           applyStations(payload.data);
           return;
         }
-      } catch (error) {
-        console.error(error);
+      } catch {
+        // Silenced — retry ci-dessous
       }
 
       if (!cancelled) {
-        retryTimer = window.setTimeout(loadStations, 5000);
+        retryTimer = window.setTimeout(loadStations, RETRY_FALLBACK_MS);
       }
     };
 
     void loadStations();
-    const pollInterval = window.setInterval(loadStations, 5 * 60 * 1000);
+    const pollInterval = window.setInterval(loadStations, POLL_INTERVAL_MS);
 
     (window as unknown as Record<string, unknown>).__toggleFav = (id: string) => {
       const updated = toggleFavorite(id);
       setFavs(new Set(updated));
     };
     (window as unknown as Record<string, unknown>).__showHistory = (name: string, address: string) => {
-      callbacks.setHistoryStation({ name, address });
+      cbRef.current.setHistoryStation({ name, address });
     };
     (window as unknown as Record<string, unknown>).__showReport = (name: string, address: string) => {
-      callbacks.setReportStation({ name, address });
+      cbRef.current.setReportStation({ name, address });
     };
     (window as unknown as Record<string, unknown>).__showReviews = (name: string, address: string) => {
-      callbacks.setCommentStation({ name, address });
+      cbRef.current.setCommentStation({ name, address });
     };
     const onFavChange = () => setFavs(getFavorites());
     window.addEventListener("favorites-changed", onFavChange);
@@ -101,7 +108,6 @@ export function useStationsData(callbacks: StationsCallbacks) {
       window.clearInterval(pollInterval);
       window.removeEventListener("favorites-changed", onFavChange);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return { data, favs };

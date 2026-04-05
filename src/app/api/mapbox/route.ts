@@ -47,7 +47,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ error: "Type invalide" }, { status: 400 });
   } catch (error) {
-    console.error("[mapbox] Échec proxy Mapbox:", error);
     await logActivity("erreur", "Échec proxy Mapbox", undefined, { error: String(error) });
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }

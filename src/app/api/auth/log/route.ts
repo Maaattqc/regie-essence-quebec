@@ -28,7 +28,6 @@ export async function POST(request: NextRequest) {
     await logActivity("auth", action, email, { event: event ?? "SIGNED_IN" });
     return NextResponse.json({ ok: true });
   } catch (error) {
-    console.error("[auth/log] Échec:", error);
     await logActivity("erreur", "Échec auth/log", undefined, { error: String(error) });
     return NextResponse.json({ error: "Erreur" }, { status: 500 });
   }
