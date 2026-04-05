@@ -22,13 +22,24 @@ const LanguageContext = createContext<LanguageContextValue>({
 const STORAGE_KEY = "eq-locale";
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocale] = useState<Locale>(() => {
-    if (typeof window === "undefined") return "fr";
+  // Toujours démarrer avec "fr" pour que SSR et premier render client soient identiques.
+  // La détection réelle de la langue se fait dans useEffect, après l'hydratation,
+  // ce qui évite le mismatch hydration entre serveur (pas de navigator) et client.
+  const [locale, setLocale] = useState<Locale>("fr");
+
+  useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY) as Locale | null;
-    if (saved === "en" || saved === "fr") return saved;
-    // Auto-detect browser language — default to FR unless browser is explicitly English
-    return (navigator.language || "").startsWith("en") ? "en" : "fr";
-  });
+    const detected: Locale =
+      saved === "en" || saved === "fr"
+        ? saved
+        : (navigator.language || "").startsWith("en")
+          ? "en"
+          : "fr";
+    // Initialisation unique depuis des APIs navigateur (localStorage, navigator.language)
+    // non disponibles côté serveur — setState dans useEffect est intentionnel ici.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLocale(detected);
+  }, []);
 
   const toggle = () => {
     setLocale((prev) => {
