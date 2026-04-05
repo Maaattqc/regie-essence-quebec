@@ -319,10 +319,10 @@ export default function Map() {
           key={mapStyle}
           attribution={
             mapStyle === "satellite"
-              ? '&copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics'
+              ? '&copy; Esri &mdash; Esri, Maxar, Earthstar Geographics | Données&nbsp;: <a href="https://www.regie-energie.qc.ca" target="_blank" rel="noopener noreferrer">Régie de l\'énergie</a> | &copy; <a href="https://www.linkedin.com/in/mathieu-fournier-4977591bb" target="_blank" rel="noopener noreferrer">Mathieu Fournier</a> | <a href="/tech" target="_blank" rel="noopener noreferrer">À propos</a>'
               : mapStyle === "dark"
-              ? '&copy; <a href="https://carto.com/">CARTO</a>'
-              : '&copy; <a href="https://www.linkedin.com/in/mathieu-fournier-4977591bb" target="_blank" rel="noopener noreferrer" title="mathieufournierqc@outlook.com">Mathieu Fournier</a> | <a href="/tech" target="_blank" rel="noopener noreferrer">À propos</a>'
+              ? '&copy; <a href="https://carto.com/" target="_blank" rel="noopener noreferrer">CARTO</a> | Données&nbsp;: <a href="https://www.regie-energie.qc.ca" target="_blank" rel="noopener noreferrer">Régie de l\'énergie</a> | &copy; <a href="https://www.linkedin.com/in/mathieu-fournier-4977591bb" target="_blank" rel="noopener noreferrer">Mathieu Fournier</a> | <a href="/tech" target="_blank" rel="noopener noreferrer">À propos</a>'
+              : '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors | Données&nbsp;: <a href="https://www.regie-energie.qc.ca" target="_blank" rel="noopener noreferrer">Régie de l\'énergie</a> | &copy; <a href="https://www.linkedin.com/in/mathieu-fournier-4977591bb" target="_blank" rel="noopener noreferrer">Mathieu Fournier</a> | <a href="/tech" target="_blank" rel="noopener noreferrer">À propos</a>'
           }
           url={
             mapStyle === "satellite"
@@ -364,7 +364,7 @@ export default function Map() {
           priceMin={priceMin}
           priceMax={priceMax}
         />
-        <AttributionControl position="bottomleft" />
+        <AttributionControl position="bottomright" />
         {userPos && (
           <>
             <Marker position={userPos} icon={USER_POS_ICON} />
