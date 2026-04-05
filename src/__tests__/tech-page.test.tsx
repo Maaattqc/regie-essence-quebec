@@ -104,9 +104,9 @@ describe("TechPage", () => {
     fireEvent.click(screen.getByText("Fiche technique"));
 
     expect(screen.getByText("2 500+")).toBeInTheDocument();
-    expect(screen.getByText("< 100 ms")).toBeInTheDocument();
+    expect(screen.getByText("17ms")).toBeInTheDocument();
     expect(screen.getByText("99.9%")).toBeInTheDocument();
-    expect(screen.getByText("610")).toBeInTheDocument();
+    expect(screen.getByText("621")).toBeInTheDocument();
   });
 
   it("affiche le stack technique en mode détaillé", () => {
