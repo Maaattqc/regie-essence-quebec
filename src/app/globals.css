@@ -764,18 +764,17 @@ body {
   background: #aad3df !important;
   max-width: 100%;
 }
+/* Attribution gérée en JSX custom — on cache le widget Leaflet si jamais il apparaît */
 .leaflet-control-attribution {
-  max-width: 480px;
-  font-size: 10px !important;
-  white-space: normal;
-  line-height: 1.4;
-  text-align: right;
+  display: none !important;
 }
-@media (max-width: 640px) {
-  .leaflet-control-attribution {
-    max-width: calc(100vw - 16px);
-    font-size: 9px !important;
-  }
+
+/* Pousser le zoom au-dessus de la barre attribution (≈20px) + safe area iOS */
+.leaflet-bottom.leaflet-right {
+  padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+}
+.leaflet-bottom.leaflet-left {
+  padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
 }
 
 :root.dark .leaflet-popup-content-wrapper,

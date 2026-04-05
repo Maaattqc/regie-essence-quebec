@@ -5,7 +5,7 @@ export default function Home() {
   return (
     <>
       <section
-        className="relative h-screen w-full"
+        className="relative h-dvh w-full"
         aria-label="Carte interactive des prix d'essence au Québec"
       >
         <MapClient />
