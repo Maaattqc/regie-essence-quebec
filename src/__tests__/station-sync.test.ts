@@ -19,7 +19,7 @@ const mocks = vi.hoisted(() => {
     return chain;
   }
 
-  const from = vi.fn((_table: string) => makeChain());
+  const from = vi.fn(() => makeChain());
 
   return { from, makeChain };
 });
