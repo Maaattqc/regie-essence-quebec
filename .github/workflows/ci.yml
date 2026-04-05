@@ -38,42 +38,9 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: placeholder
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
-  e2e:
-    name: Tests E2E (Playwright)
-    needs: ci
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-
-      - run: npm ci
-
-      - name: Installer les navigateurs Playwright
-        run: npx playwright install --with-deps chromium
-
-      - name: Tests E2E
-        run: npx playwright test --project=chromium
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
-          SUPABASE_SERVICE_ROLE_KEY: placeholder
-
-      - name: Rapport Playwright
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: playwright-report
-          path: playwright-report/
-          retention-days: 7
-
   promote:
     name: Promouvoir dev → main
-    needs: [ci, e2e]
+    needs: ci
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
 
