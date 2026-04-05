@@ -12,8 +12,8 @@
  */
 
 const BASE         = process.env.LOAD_TEST_URL ?? 'http://127.0.0.1:3000';
-const CONCURRENCY  = 20;   // VUs simultanés par batch
-const DURATION_S   = 15;   // secondes par endpoint
+const CONCURRENCY  = Number(process.env.CONCURRENCY  ?? 20);   // VUs simultanés par batch
+const DURATION_S   = Number(process.env.DURATION_S   ?? 15);   // secondes par endpoint
 const BATCH_GAP_MS = 50;   // pause entre deux batches (ms)
 
 const ENDPOINTS = [
