@@ -419,8 +419,8 @@ export default function Map() {
           />
         ))}
       </MapContainer>
-      <div className="absolute left-0 right-0 z-[400] pointer-events-none flex justify-end" style={{ bottom: 'env(safe-area-inset-bottom, 0px)' }}>
-        <div className="pointer-events-auto bg-white/80 dark:bg-black/60 text-[9px] text-gray-600 dark:text-gray-400 px-2 py-0.5 leading-snug text-right">
+      <div className="absolute left-0 right-0 z-[400] pointer-events-none" style={{ bottom: 'env(safe-area-inset-bottom, 0px)' }}>
+        <div className="pointer-events-auto w-full bg-white/80 dark:bg-black/60 text-[9px] text-gray-600 dark:text-gray-400 px-2 py-0.5 leading-snug text-right">
           {mapStyle === "satellite" ? (
             <>&copy; <a href="https://leafletjs.com" target="_blank" rel="noopener noreferrer" className="underline">Leaflet</a> &nbsp;|&nbsp; &copy; Esri, Maxar &nbsp;|&nbsp; <a href="https://www.regie-energie.qc.ca" target="_blank" rel="noopener noreferrer" className="underline">Régie de l&apos;énergie</a> &nbsp;|&nbsp; &copy; <a href="https://www.linkedin.com/in/mathieu-fournier-4977591bb" target="_blank" rel="noopener noreferrer" className="underline">Mathieu Fournier</a> &nbsp;|&nbsp; <a href="/tech" target="_blank" rel="noopener noreferrer" className="underline">À propos</a></>
           ) : mapStyle === "dark" ? (
