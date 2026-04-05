@@ -16,6 +16,7 @@ const POLL_INTERVAL_MS = 5 * 60 * 1000;
 interface StationsApiPayload {
   ok: boolean;
   data: GeoJSON.FeatureCollection | null;
+  meta?: { lastCompletedAt?: string | null };
 }
 
 function decorateStationGeoJson(geojson: GeoJSON.FeatureCollection) {
@@ -38,6 +39,7 @@ interface StationsCallbacks {
 export function useStationsData(callbacks: StationsCallbacks) {
   const [data, setData] = useState<GeoJSON.FeatureCollection | null>(null);
   const [favs, setFavs] = useState<Set<string>>(() => getFavorites());
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
 
   // Ref stable pour les callbacks — évite de re-run l'effet quand le parent re-render
   const cbRef = useRef(callbacks);
@@ -73,6 +75,7 @@ export function useStationsData(callbacks: StationsCallbacks) {
             sessionStorage.setItem(STATIONS_CACHE_KEY, JSON.stringify(payload.data));
           } catch {}
           applyStations(payload.data);
+          if (payload.meta?.lastCompletedAt) setLastUpdatedAt(payload.meta.lastCompletedAt);
           return;
         }
       } catch {
@@ -110,5 +113,5 @@ export function useStationsData(callbacks: StationsCallbacks) {
     };
   }, []);
 
-  return { data, favs };
+  return { data, favs, lastUpdatedAt };
 }
