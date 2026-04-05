@@ -109,18 +109,39 @@ describe("POST /api/suggestion", () => {
     expect(res.status).toBe(500);
   });
 
-  it("log l'activité après insertion réussie", async () => {
+  it("log l'activité après insertion réussie sans PII", async () => {
     await POST(makeRequest(validBody));
     expect(mocks.logActivity).toHaveBeenCalledWith(
       "suggestion",
       "Nouvelle suggestion",
-      "Jean Tremblay",
     );
+    // Vérifier que le nom complet n'apparaît pas dans les arguments du log
+    const callArgs = mocks.logActivity.mock.calls[0];
+    expect(JSON.stringify(callArgs)).not.toContain("Jean");
+    expect(JSON.stringify(callArgs)).not.toContain("Tremblay");
   });
 
   it("ne log pas l'activité si l'insertion échoue", async () => {
     mocks.insert.mockResolvedValue({ error: { message: "fail" } });
     await POST(makeRequest(validBody));
+    expect(mocks.logActivity).not.toHaveBeenCalled();
+  });
+
+  it("retourne 400 quand le corps est vide", async () => {
+    const res = await POST(makeRequest({}));
+    expect(res.status).toBe(400);
+    expect(mocks.insert).not.toHaveBeenCalled();
+  });
+
+  it("utilise le profil strict pour le rate limiting", async () => {
+    await POST(makeRequest(validBody));
+    expect(mocks.rateLimit).toHaveBeenCalledWith(expect.any(String), "strict");
+  });
+
+  it("n'insère pas si le rate limit est dépassé", async () => {
+    mocks.rateLimit.mockReturnValue(false);
+    await POST(makeRequest(validBody));
+    expect(mocks.insert).not.toHaveBeenCalled();
     expect(mocks.logActivity).not.toHaveBeenCalled();
   });
 });

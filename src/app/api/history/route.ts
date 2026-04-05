@@ -23,7 +23,8 @@ export async function GET(request: NextRequest) {
     .eq("address", address)
     .eq("gas_type", gasType)
     .gte("snapshot_date", new Date(Date.now() - days * 86400000).toISOString().split("T")[0])
-    .order("snapshot_date", { ascending: true });
+    .order("snapshot_date", { ascending: true })
+    .limit(days);
 
   if (error) {
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });

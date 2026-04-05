@@ -623,84 +623,12 @@ describe('/api/admin', () => {
       return chain
     }
 
-    it('retourne toutes les données init pour un non-admin (masquées)', async () => {
+    it('retourne 403 pour un non-admin (données sensibles protégées)', async () => {
       setupNonAdmin()
 
-      const snapshotsCount = makeChain({ count: 100 })
-      const snapshotsLatest = makeChain({ data: [{ snapshot_at: '2026-04-01T10:00:00Z' }] })
-      const reportsCount = makeChain({ count: 3 })
-      const profilesCount = makeChain({ count: 8 })
-      const pvTotal = makeChain({ count: 500 })
-      const pvToday = makeChain({ count: 20 })
-      const pvWeek = makeChain({ count: 150 })
-      const pvMonth = makeChain({ count: 400 })
-      const profilesList = makeChain({
-        data: [{ id: 'u1', email: 'alice@example.com', created_at: '2026-01-01' }],
-      })
-      const reportsList = makeChain({
-        data: [{ id: 1, email: 'rep@test.com', first_name: 'Jean', last_name: 'Dupont', message: 'test' }],
-      })
-      const suggestionsList = makeChain({
-        data: [{ id: 1, email: 'sug@test.com', first_name: 'Marie', last_name: 'Lavoie', message: 'idée' }],
-      })
-
-      let callIndex = 0
-      const fromResults = [
-        snapshotsCount,    // price_snapshots count
-        snapshotsLatest,   // price_snapshots latest
-        reportsCount,      // reports count
-        profilesCount,     // profiles count
-        pvTotal,           // page_views total
-        pvToday,           // page_views today
-        pvWeek,            // page_views week
-        pvMonth,           // page_views month
-        profilesList,      // profiles list
-        reportsList,       // reports data
-        suggestionsList,   // suggestions data
-      ]
-
-      mocks.from.mockImplementation(() => {
-        const result = fromResults[callIndex] ?? makeChain()
-        callIndex++
-        return result as ReturnType<typeof makeChain>
-      })
-
-      mocks.rpc.mockResolvedValue({ data: { regulier: 170, super: 190, diesel: 180 } })
-      mocks.getUserById.mockResolvedValue({
-        data: { user: { email: 'alice@example.com' } },
-      })
-
       const response = await GET(makeGetRequest({ type: 'init' }))
-      expect(response.status).toBe(200)
-
-      const json = await response.json()
-      expect(json.stats).toBeDefined()
-      expect(json.stats.totalSnapshots).toBe(100)
-      expect(json.stats.lastSnapshot).toBe('2026-04-01T10:00:00Z')
-      expect(json.stats.totalReports).toBe(3)
-      expect(json.stats.totalUsers).toBe(8)
-      expect(json.stats.avgRegulier).toBe(170)
-      expect(json.stats.avgSuper).toBe(190)
-      expect(json.stats.avgDiesel).toBe(180)
-      expect(json.stats.totalPageViews).toBe(500)
-      expect(json.stats.todayPageViews).toBe(20)
-      expect(json.stats.weekPageViews).toBe(150)
-      expect(json.stats.monthPageViews).toBe(400)
-
-      // Utilisateurs masqués (non-admin)
-      expect(json.users).toHaveLength(1)
-      expect(json.users[0].email).toContain('***')
-
-      // Signalements masqués
-      expect(json.reports).toHaveLength(1)
-      expect(json.reports[0].email).toContain('***')
-      expect(json.reports[0].first_name).toContain('***')
-      expect(json.reports[0].last_name).toContain('***')
-      expect(json.reports[0].message).toBe('test')
-
-      // Suggestions masquées
-      expect(json.suggestions).toHaveLength(1)
-      expect(json.suggestions[0].email).toContain('***')
+      expect(response.status).toBe(403)
+      await expect(response.json()).resolves.toEqual({ error: 'Non autorisé' })
     })
 
     it('retourne les données non masquées pour un admin', async () => {

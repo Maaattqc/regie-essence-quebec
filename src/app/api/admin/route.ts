@@ -66,6 +66,7 @@ export async function GET(req: NextRequest) {
 
   // ── Init : tout charger en une seule requête ──
   if (type === "init") {
+    if (!isAdmin) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
     const todayStart = montrealMidnight(0);
     const weekStart = montrealMidnight(7);
     const monthStart = montrealMonthStart();

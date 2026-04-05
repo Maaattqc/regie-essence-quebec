@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => {
   const query: {
     eq: ReturnType<typeof vi.fn>
     gte: ReturnType<typeof vi.fn>
+    limit: ReturnType<typeof vi.fn>
     order: ReturnType<typeof vi.fn>
     select: ReturnType<typeof vi.fn>
   } = {} as never
@@ -14,7 +15,8 @@ const mocks = vi.hoisted(() => {
   query.select = vi.fn(() => query)
   query.eq = vi.fn(() => query)
   query.gte = vi.fn(() => query)
-  query.order = vi.fn()
+  query.order = vi.fn(() => query)
+  query.limit = vi.fn()
 
   return {
     getIP: vi.fn(),
@@ -45,13 +47,16 @@ describe('GET /api/history', () => {
     mocks.getIP.mockReset()
     mocks.query.eq.mockClear()
     mocks.query.gte.mockClear()
-    mocks.query.order.mockReset()
+    mocks.query.order.mockClear()
+    mocks.query.limit.mockReset()
     mocks.query.select.mockClear()
     mocks.rateLimit.mockReset()
     mocks.supabase.from.mockClear()
 
     mocks.getIP.mockReturnValue('203.0.113.2')
-    mocks.query.order.mockResolvedValue({
+    // La chaîne est : select → eq → eq → eq → gte → order → limit (terminal)
+    mocks.query.order.mockReturnValue(mocks.query)
+    mocks.query.limit.mockResolvedValue({
       data: [{ price: 151.3, snapshot_date: '2026-04-01' }],
       error: null,
     })
@@ -96,5 +101,28 @@ describe('GET /api/history', () => {
     expect(mocks.query.order).toHaveBeenCalledWith('snapshot_date', {
       ascending: true,
     })
+    // La requête doit être bornée par .limit() pour éviter des réponses illimitées
+    expect(mocks.query.limit).toHaveBeenCalledWith(90)
+  })
+
+  it('applique la limite correcte pour un nombre de jours valide', async () => {
+    await GET(
+      new NextRequest(
+        'http://localhost/api/history?station=Shell&address=123%20Rue&days=30',
+      ),
+    )
+
+    expect(mocks.query.limit).toHaveBeenCalledWith(30)
+  })
+
+  it('retourne 500 si Supabase echoue', async () => {
+    mocks.query.limit.mockResolvedValue({ data: null, error: { message: 'DB error' } })
+
+    const response = await GET(
+      new NextRequest('http://localhost/api/history?station=Shell&address=123%20Rue'),
+    )
+
+    expect(response.status).toBe(500)
+    await expect(response.json()).resolves.toEqual({ error: 'Erreur serveur' })
   })
 })

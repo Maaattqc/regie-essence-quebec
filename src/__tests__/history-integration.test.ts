@@ -15,7 +15,8 @@ const mocks = vi.hoisted(() => {
   const query = {
     eq: vi.fn(function (this: unknown) { return this }),
     gte: vi.fn(function (this: unknown) { return this }),
-    order: vi.fn(),
+    order: vi.fn(function (this: unknown) { return this }),
+    limit: vi.fn(),
     select: vi.fn(function (this: unknown) { return this }),
   }
 
@@ -54,7 +55,8 @@ describe('GET /api/history — intégration paramètres et erreurs', () => {
     mocks.query.select.mockReturnValue(mocks.query)
     mocks.query.eq.mockReturnValue(mocks.query)
     mocks.query.gte.mockReturnValue(mocks.query)
-    mocks.query.order.mockResolvedValue({ data: [], error: null })
+    mocks.query.order.mockReturnValue(mocks.query)
+    mocks.query.limit.mockResolvedValue({ data: [], error: null })
   })
 
   it('utilise Regulier comme gas_type par defaut quand type nest pas fourni', async () => {
@@ -107,7 +109,7 @@ describe('GET /api/history — intégration paramètres et erreurs', () => {
   })
 
   it('retourne un tableau vide quand supabase retourne data=[]', async () => {
-    mocks.query.order.mockResolvedValue({ data: [], error: null })
+    mocks.query.limit.mockResolvedValue({ data: [], error: null })
 
     const response = await GET(
       new NextRequest('http://localhost/api/history?station=Shell&address=123+Rue'),
@@ -118,7 +120,7 @@ describe('GET /api/history — intégration paramètres et erreurs', () => {
   })
 
   it('retourne les donnees triees par date quand supabase renvoie des enregistrements', async () => {
-    mocks.query.order.mockResolvedValue({
+    mocks.query.limit.mockResolvedValue({
       data: [
         { price: 151.3, snapshot_date: '2026-03-15' },
         { price: 153.9, snapshot_date: '2026-03-20' },
@@ -138,7 +140,7 @@ describe('GET /api/history — intégration paramètres et erreurs', () => {
   })
 
   it('retourne 500 quand supabase retourne une erreur', async () => {
-    mocks.query.order.mockResolvedValue({
+    mocks.query.limit.mockResolvedValue({
       data: null,
       error: { message: 'connexion perdue' },
     })
@@ -177,7 +179,7 @@ describe('GET /api/history — intégration paramètres et erreurs', () => {
   })
 
   it('ordonne les resultats par snapshot_date ascendant', async () => {
-    mocks.query.order.mockResolvedValue({ data: [], error: null })
+    mocks.query.limit.mockResolvedValue({ data: [], error: null })
 
     await GET(
       new NextRequest('http://localhost/api/history?station=Shell&address=123+Rue'),

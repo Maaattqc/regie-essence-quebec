@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 
-  await logActivity("suggestion", "Nouvelle suggestion", `${result.data.first_name} ${result.data.last_name}`);
+  await logActivity("suggestion", "Nouvelle suggestion");
 
   return NextResponse.json({ ok: true });
 }

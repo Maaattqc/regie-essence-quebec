@@ -32,11 +32,23 @@ describe('rateLimit (memoire)', () => {
 })
 
 describe('getIP', () => {
-  it('priorise x-forwarded-for', () => {
+  it('priorise x-real-ip (Vercel) sur x-forwarded-for', () => {
+    // x-real-ip est positionné par Vercel et ne peut pas être falsifié par le client.
+    // x-forwarded-for peut être injecté (IP spoofing) donc doit être en fallback.
     const request = new Request('http://localhost', {
       headers: {
         'x-forwarded-for': '192.168.0.1, 10.0.0.1',
-        'x-real-ip': '127.0.0.1',
+        'x-real-ip': '203.0.113.42',
+      },
+    })
+
+    expect(getIP(request)).toBe('203.0.113.42')
+  })
+
+  it('utilise x-forwarded-for si x-real-ip est absent', () => {
+    const request = new Request('http://localhost', {
+      headers: {
+        'x-forwarded-for': '192.168.0.1, 10.0.0.1',
       },
     })
 

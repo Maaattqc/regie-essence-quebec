@@ -74,9 +74,11 @@ export async function rateLimit(ip: string, profile: RateLimitProfile = "default
 }
 
 export function getIP(request: Request): string {
+  // x-real-ip est positionné par Vercel et ne peut pas être falsifié par le client.
+  // x-forwarded-for peut être injecté par le client (IP spoofing), on l'utilise en dernier recours.
   return (
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     request.headers.get("x-real-ip") ||
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     "unknown"
   );
 }
