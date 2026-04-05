@@ -62,7 +62,7 @@ export default function MapButtonsPanel(props: MapButtonsPanelProps) {
   return (
     <div
       className="map-buttons-panel flex flex-col gap-1.5 leaflet-control"
-      style={{ position: "absolute", bottom: 30, left: 12, zIndex: 1000, width: 170 }}
+      style={{ position: "absolute", top: "50%", transform: "translateY(-50%)", left: 12, zIndex: 1000, width: 170 }}
       ref={(el) => { if (el) L.DomEvent.disableClickPropagation(el); }}
     >
       <button
