@@ -11,6 +11,7 @@
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
+    "test:load": "node scripts/load-test.mjs",
     "test:all": "npm run test:run && npm run test:e2e",
     "prepare": "husky"
   },
