@@ -128,7 +128,7 @@ Les curseurs en temps réel (Live Cursors) et les mises à jour de prix via WebS
 
 | Critère | Niveau | Libellé | Statut | Remarque |
 |---------|--------|---------|--------|----------|
-| 2.1.1 | A | Clavier | ⚠️ | Zoom/déplacement carte = exception WCAG (mouvement continu). Accès aux prix via panneau textuel alternatif |
+| 2.1.1 | A | Clavier | ⚠️ | Déplacement carte au clavier (flèches) et zoom (+/-) fonctionnels. Navigation de marqueur en marqueur (Tab) non vérifiée — accès aux prix via panneau textuel alternatif en attendant |
 | 2.1.2 | A | Pas de piège au clavier | ✅ | Les pièges de focus dans les modaux sont intentionnels et libérables via Échap |
 | 2.1.4 | A | Raccourcis clavier | N/A | Aucun raccourci clavier à caractère unique |
 | 2.2.1 | A | Réglage du délai | N/A | Aucune limite de temps imposée à l'utilisateur |
