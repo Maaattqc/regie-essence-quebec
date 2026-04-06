@@ -78,13 +78,10 @@
 
 ## 5. Limitations connues
 
-### Carte Leaflet (limitation technique)
-La carte interactive utilise un canvas HTML — les marqueurs de stations ne sont pas accessibles au clavier ni aux lecteurs d'écran. C'est une limitation connue de la librairie Leaflet 1.9.
+### Carte Leaflet
+La navigation clavier est fonctionnelle : déplacement de la carte (flèches), zoom (+/-), navigation entre les marqueurs de stations (Tab) et activation (Entrée). Le contenu des popups de stations est accessible au clavier.
 
-**Mesures compensatoires** :
-- Le panneau de prix par région et ville offre une alternative textuelle aux données cartographiques
-- La fonction de recherche de la station la moins chère est accessible sans la carte
-- Les prix peuvent être consultés sans interaction avec la carte
+La carte n'est pas entièrement explorable par les lecteurs d'écran (NVDA, JAWS) — le contenu des marqueurs n'est pas annoncé vocalement. Une alternative textuelle complète est disponible via le panneau de prix par région et ville.
 
 ### Contenu dynamique temps réel
 Les curseurs en temps réel (Live Cursors) et les mises à jour de prix via WebSocket ne sont pas annoncés aux lecteurs d'écran (pas de `aria-live` sur ces éléments).
@@ -128,7 +125,7 @@ Les curseurs en temps réel (Live Cursors) et les mises à jour de prix via WebS
 
 | Critère | Niveau | Libellé | Statut | Remarque |
 |---------|--------|---------|--------|----------|
-| 2.1.1 | A | Clavier | ⚠️ | Déplacement carte au clavier (flèches) et zoom (+/-) fonctionnels. Navigation de marqueur en marqueur (Tab) non vérifiée — accès aux prix via panneau textuel alternatif en attendant |
+| 2.1.1 | A | Clavier | ✅ | Déplacement carte (flèches), zoom (+/-), navigation de marqueur en marqueur (Tab) et activation (Entrée) — tous fonctionnels |
 | 2.1.2 | A | Pas de piège au clavier | ✅ | Les pièges de focus dans les modaux sont intentionnels et libérables via Échap |
 | 2.1.4 | A | Raccourcis clavier | N/A | Aucun raccourci clavier à caractère unique |
 | 2.2.1 | A | Réglage du délai | N/A | Aucune limite de temps imposée à l'utilisateur |
@@ -175,8 +172,8 @@ Les curseurs en temps réel (Live Cursors) et les mises à jour de prix via WebS
 
 | Statut | Nombre de critères |
 |--------|-------------------|
-| ✅ Conforme | 35 |
-| ⚠️ Partiellement conforme | 8 |
+| ✅ Conforme | 36 |
+| ⚠️ Partiellement conforme | 7 |
 | ❌ Non conforme | 0 |
 | N/A | 9 |
 | **Total** | **52** |
