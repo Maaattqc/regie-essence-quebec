@@ -466,7 +466,7 @@ const COMPLIANCE = {
   fr: [
     ["Politique de confidentialité (Loi 25)", "Page dédiée listant les données collectées, les sous-traitants, les droits des utilisateurs et le responsable"],
     ["Conditions d'utilisation", "Conditions générales d'utilisation couvrant la responsabilité, la propriété intellectuelle et le droit applicable (Québec)"],
-    ["Déclaration d'accessibilité (SGQRI 008)", "Conformité visée WCAG 2.1 AA — lien d'évitement, navigation clavier, ARIA, focus trap, contenu alternatif"],
+    ["Déclaration d'accessibilité (SGQRI 008)", "50 critères WCAG 2.1 AA évalués — 36 conformes, 0 non-conformes. Navigation clavier carte confirmée (Tab entre marqueurs, flèches). Rapport ACCESSIBILITE.md publié sur le dépôt."],
     ["OpenAPI 3.1 (/openapi.json)", "Spécification complète de l'API REST avec schémas de requête/réponse, codes d'erreur et exemples"],
     ["security.txt (RFC 9116)", "Point de contact standardisé pour la divulgation responsable de vulnérabilités"],
     ["Données open data REQ", "Source officielle gouvernementale — aucune donnée personnelle de tiers collectée ou stockée"],
@@ -474,7 +474,7 @@ const COMPLIANCE = {
   en: [
     ["Privacy Policy (Law 25)", "Dedicated page listing collected data, sub-processors, user rights and the data controller"],
     ["Terms of use", "General terms of use covering liability, intellectual property and applicable law (Quebec)"],
-    ["Accessibility statement (SGQRI 008)", "WCAG 2.1 AA compliance target — skip link, keyboard navigation, ARIA, focus trap, alternative content"],
+    ["Accessibility statement (SGQRI 008)", "50 WCAG 2.1 AA criteria evaluated — 36 compliant, 0 non-compliant. Keyboard map navigation confirmed (Tab between markers, arrow keys). ACCESSIBILITE.md report published on the repository."],
     ["OpenAPI 3.1 (/openapi.json)", "Complete REST API specification with request/response schemas, error codes and examples"],
     ["security.txt (RFC 9116)", "Standardized contact point for responsible vulnerability disclosure"],
     ["REQ open data", "Official government source — no third-party personal data collected or stored"],
