@@ -115,7 +115,7 @@ Les curseurs en temps réel (Live Cursors) et les mises à jour de prix via WebS
 | 4.1.2 | Nom, rôle, valeur | ✅ Conforme |
 | 2.5.3 | Étiquette dans le nom | ⚠️ Non évalué manuellement |
 | 1.4.11 | Contraste des composants | ⚠️ Non évalué manuellement |
-| 2.1.x | Navigation clavier carte | ❌ Non conforme (Leaflet) |
+| 2.1.1 | Navigation clavier carte | ⚠️ Partiellement conforme — zoom/déplacement couverts par l'exception WCAG (mouvement continu) ; accès aux prix disponible via panneau textuel alternatif |
 
 ---
 
