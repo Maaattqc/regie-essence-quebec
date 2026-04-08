@@ -309,6 +309,12 @@ export default function FilterBar({
             <option key={r} value={r}>{r} ({regionCounts[r] || 0})</option>
           ))}
         </NbSelect>
+        <NbSelect value={brand} onChange={onBrandChange} icon={Building2}>
+          <option value="">{t.filterBar.allBrands} ({totalStations})</option>
+          {BRANDS.map((b) => (
+            <option key={b} value={b}>{b} ({brandCounts[b] || 0})</option>
+          ))}
+        </NbSelect>
       </div>
 
     </header>
