@@ -68,12 +68,13 @@ export function useEffectivePrice({
     const currentData = dataRef.current;
     const currentGasType = gasTypeRef.current;
     const currentUserPos = userPosRef.current;
-    const r = radiusRef.current > 0 ? radiusRef.current : DEFAULT_RADIUS_KM;
+    const savedRadius = typeof window !== "undefined" ? Number(localStorage.getItem("eff_radius")) || DEFAULT_RADIUS_KM : DEFAULT_RADIUS_KM;
+    const r = radiusRef.current > 0 ? radiusRef.current : savedRadius;
     const conso = consoRef.current;
     const tank = tankRef.current;
 
     if (!currentData) return;
-    if (radiusRef.current === 0) setRadiusKm(DEFAULT_RADIUS_KM);
+    if (radiusRef.current === 0) setRadiusKm(savedRadius);
 
     const doSearch = async (latitude: number, longitude: number) => {
       // 1) Filtrage Haversine rapide

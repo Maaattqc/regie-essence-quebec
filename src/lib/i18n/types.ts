@@ -25,6 +25,7 @@ export interface Translations {
     consumption: (v: number) => string;
     tank: (v: number) => string;
     showCircle: string;
+    apply: string;
     avgPrices: string;
     share: string;
     styleMap: string;

@@ -444,8 +444,8 @@ export async function PATCH(req: NextRequest) {
   const requestId = getRequestId(req);
   const body = await req.json();
 
-  const VALID_REPORT_STATUSES = ["pending", "resolved", "rejected", "in_progress"];
-  const VALID_SUGGESTION_STATUSES = ["pending", "approved", "rejected", "in_progress"];
+  const VALID_REPORT_STATUSES = ["nouveau", "en traitement", "résolu", "rejeté"];
+  const VALID_SUGGESTION_STATUSES = ["nouveau", "en traitement", "accepté", "refusé"];
 
   if (body.action === "report_status") {
     const { id, status } = body;

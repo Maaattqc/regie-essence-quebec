@@ -30,6 +30,7 @@ const fr: Translations = {
     consumption: (v: number) => `Consommation : ${v} L/100km`,
     tank: (v: number) => `Réservoir : ${v} L`,
     showCircle: "Afficher le cercle du rayon",
+    apply: "Appliquer",
     avgPrices: "Prix moyens",
     share: "Partager",
     styleMap: "Carte",

@@ -19,7 +19,8 @@ const mocks = vi.hoisted(() => {
     return chain;
   }
 
-  const from = vi.fn(() => makeChain());
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const from = vi.fn((_table: string): any => makeChain());
 
   return { from, makeChain };
 });
@@ -371,9 +372,9 @@ describe("syncStations", () => {
     // Verify cleanup calls were made (from() was called with the cleanup tables)
     const fromCalls = mocks.from.mock.calls.map((c: unknown[]) => c[0]);
     // After the error, catch block calls: station_dataset_versions (update failed), stations_live (delete), station_sync_state (update failed)
-    expect(fromCalls.filter((t: string) => t === "station_dataset_versions").length).toBeGreaterThanOrEqual(2);
-    expect(fromCalls.filter((t: string) => t === "stations_live").length).toBeGreaterThanOrEqual(2);
-    expect(fromCalls.filter((t: string) => t === "station_sync_state").length).toBeGreaterThanOrEqual(3);
+    expect(fromCalls.filter((t) => t === "station_dataset_versions").length).toBeGreaterThanOrEqual(2);
+    expect(fromCalls.filter((t) => t === "stations_live").length).toBeGreaterThanOrEqual(2);
+    expect(fromCalls.filter((t) => t === "station_sync_state").length).toBeGreaterThanOrEqual(3);
 
     vi.unstubAllGlobals();
   });

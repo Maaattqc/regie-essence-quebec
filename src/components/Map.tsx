@@ -210,6 +210,10 @@ export default function Map() {
     else findBestEffectivePrice();
   }, [cheapestResults, clearCheapest, findBestEffectivePrice]);
 
+  const handleApplySettings = useCallback(() => {
+    findBestEffectivePrice(true);
+  }, [findBestEffectivePrice]);
+
   const handleLogout = useCallback(async () => {
     await createBrowserClient().auth.signOut();
     setCurrentUser(null);
@@ -242,14 +246,19 @@ export default function Map() {
     if (!brand && !region && !search && !showFavorites && !(radiusKm > 0 && userPos)) return data;
 
     const q = normalize(search.trim());
+    // Toujours afficher les stations du résultat "meilleur prix" même hors filtres
+    const cheapestSet = cheapestResults?.stations.length
+      ? new Set(cheapestResults.stations.map((s) => `${s.lat},${s.lng}`))
+      : null;
 
     return {
       ...data,
       features: data.features.filter((f) => {
         const props = (f as Feature<Point, StationProperties>).properties;
+        const [lng, lat] = (f as Feature<Point>).geometry.coordinates;
+        if (cheapestSet?.has(`${lat},${lng}`)) return true;
         if (showFavorites && !favs.has(stationId(props))) return false;
         if (radiusKm > 0 && userPos) {
-          const [lng, lat] = (f as Feature<Point>).geometry.coordinates;
           if (distanceKm(userPos[0], userPos[1], lat, lng) > radiusKm) return false;
         }
         if (brand && props.brand !== brand) return false;
@@ -260,7 +269,7 @@ export default function Map() {
         return true;
       }),
     } as GeoJSON.FeatureCollection;
-  }, [data, brand, region, search, showFavorites, favs, radiusKm, userPos]);
+  }, [data, brand, region, search, showFavorites, favs, radiusKm, userPos, cheapestResults]);
 
   const { priceMin, priceMax } = useMemo(() => {
     if (!data) return { priceMin: 0, priceMax: 0 };
@@ -355,6 +364,7 @@ export default function Map() {
           setTankVolume={setTankVolume}
           showRadiusCircle={showRadiusCircle}
           setShowRadiusCircle={setShowRadiusCircle}
+          onApplySettings={handleApplySettings}
           showPricePanel={showPricePanel}
           setShowPricePanel={setShowPricePanel}
           onShareLink={shareLink}

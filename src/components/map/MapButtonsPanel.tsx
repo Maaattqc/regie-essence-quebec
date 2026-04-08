@@ -6,6 +6,7 @@ import { Slider } from "@/components/ui/slider";
 import {
   X, Share2, BarChart3, Users, ChevronLeft, ChevronRight,
   Trophy, Satellite, Moon, MapPin, Settings, Map as MapIcon,
+  RefreshCw,
 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -26,6 +27,7 @@ interface MapButtonsPanelProps {
   setTankVolume: (v: number) => void;
   showRadiusCircle: boolean;
   setShowRadiusCircle: (v: boolean) => void;
+  onApplySettings: () => void;
   showPricePanel: boolean;
   setShowPricePanel: (fn: (v: boolean) => boolean) => void;
   onShareLink: () => void;
@@ -51,6 +53,7 @@ export default function MapButtonsPanel(props: MapButtonsPanelProps) {
     consoLper100, setConsoLper100,
     tankVolume, setTankVolume,
     showRadiusCircle, setShowRadiusCircle,
+    onApplySettings,
     showPricePanel, setShowPricePanel,
     onShareLink,
     mapStyle, onCycleMapStyle,
@@ -131,18 +134,18 @@ export default function MapButtonsPanel(props: MapButtonsPanelProps) {
                       </button>
                     </div>
                     <div className="mb-2">
-                      <div className="text-[11px] text-[var(--text-muted)] mb-1">{radiusKm === 0 ? t.mapButtons.radiusAll : t.mapButtons.radiusKm(radiusKm)}</div>
+                      <div className="text-[11px] text-[var(--text-muted)] mb-1 whitespace-nowrap">{radiusKm === 0 ? t.mapButtons.radiusAll : t.mapButtons.radiusKm(radiusKm)}</div>
                       <Slider
                         min={0}
                         max={50}
                         step={5}
                         value={[radiusKm]}
-                        onValueChange={(v) => setRadiusKm(Array.isArray(v) ? v[0] : v)}
+                        onValueChange={(v) => { const val = Array.isArray(v) ? v[0] : v; setRadiusKm(val); if (val > 0) { localStorage.setItem("eff_radius", String(val)); if (!showRadiusCircle) { setShowRadiusCircle(true); localStorage.setItem("eff_showRadius", "true"); } } }}
                         className="w-full"
                       />
                     </div>
                     <div className="mb-2">
-                      <div className="text-[11px] text-[var(--text-muted)] mb-1">{t.mapButtons.consumption(consoLper100)}</div>
+                      <div className="text-[11px] text-[var(--text-muted)] mb-1 whitespace-nowrap">{t.mapButtons.consumption(consoLper100)}</div>
                       <Slider
                         min={4}
                         max={20}
@@ -153,7 +156,7 @@ export default function MapButtonsPanel(props: MapButtonsPanelProps) {
                       />
                     </div>
                     <div className="mb-2">
-                      <div className="text-[11px] text-[var(--text-muted)] mb-1">{t.mapButtons.tank(tankVolume)}</div>
+                      <div className="text-[11px] text-[var(--text-muted)] mb-1 whitespace-nowrap">{t.mapButtons.tank(tankVolume)}</div>
                       <Slider
                         min={15}
                         max={100}
@@ -172,6 +175,14 @@ export default function MapButtonsPanel(props: MapButtonsPanelProps) {
                       />
                       <span className="text-[11px] text-[var(--text-muted)]">{t.mapButtons.showCircle}</span>
                     </label>
+                    <Button
+                      size="sm"
+                      className="w-full mt-2 !bg-[#2d9a2d] hover:!bg-[#2d9a2d]/90 !text-white font-semibold text-[12px]"
+                      onClick={onApplySettings}
+                    >
+                      <RefreshCw className="size-3.5" />
+                      {t.mapButtons.apply}
+                    </Button>
                   </motion.div>
                 )}
               </AnimatePresence>

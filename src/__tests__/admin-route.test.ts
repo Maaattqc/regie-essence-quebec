@@ -15,7 +15,8 @@ const mocks = vi.hoisted(() => {
   const update = vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: null }) }))
   const insert = vi.fn().mockResolvedValue({ error: null })
   const select = vi.fn(() => ({ order, eq, gt, lt, gte, count: 0 }))
-  const from = vi.fn(() => ({ select, update, insert }))
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const from = vi.fn((): any => ({ select, update, insert }))
   const rpc = vi.fn()
   const getUser = vi.fn()
   const listUsers = vi.fn()
@@ -151,8 +152,8 @@ describe('/api/admin', () => {
 
     // Make each chainable method return the builder (thenable for await)
     for (const method of ['order', 'limit', 'range', 'eq', 'gt', 'lt', 'gte', 'is']) {
-      (queryBuilder as Record<string, ReturnType<typeof vi.fn>>)[method] ??= vi.fn();
-      (queryBuilder as Record<string, ReturnType<typeof vi.fn>>)[method].mockReturnValue(queryBuilder)
+      (queryBuilder as unknown as Record<string, ReturnType<typeof vi.fn>>)[method] ??= vi.fn();
+      (queryBuilder as unknown as Record<string, ReturnType<typeof vi.fn>>)[method].mockReturnValue(queryBuilder)
     }
 
     mocks.select.mockReturnValue(queryBuilder)
@@ -223,8 +224,7 @@ describe('/api/admin', () => {
       mocks.from.mockImplementation(() => {
         const result = fromResults[callIndex] ?? makeChain()
         callIndex++
-        return result as ReturnType<typeof makeChain>
-      })
+        return result      })
 
       mocks.rpc.mockResolvedValue({
         data: { regulier: 172.5, super: 192.3, diesel: 185.1 },
@@ -288,10 +288,8 @@ describe('/api/admin', () => {
       mocks.from.mockImplementation(() => {
         fromCallIndex++
         // First from('profiles') call is from verifyAdmin
-        if (fromCallIndex === 1) return adminProfileChain as ReturnType<typeof vi.fn>
-        // Second from('profiles') call is the actual users query
-        return chain as ReturnType<typeof vi.fn>
-      })
+        if (fromCallIndex === 1) return adminProfileChain        // Second from('profiles') call is the actual users query
+        return chain      })
     }
 
     it('retourne les emails complets pour un admin', async () => {
@@ -328,7 +326,7 @@ describe('/api/admin', () => {
       for (const method of ['select', 'order', 'limit', 'range']) {
         (chain as Record<string, ReturnType<typeof vi.fn>>)[method].mockReturnValue(chain)
       }
-      mocks.from.mockReturnValue(chain as ReturnType<typeof vi.fn>)
+      mocks.from.mockReturnValue(chain)
 
       mocks.listUsers.mockResolvedValue({
         data: { users: [
@@ -377,7 +375,7 @@ describe('/api/admin', () => {
       for (const method of ['select', 'order', 'limit', 'range']) {
         (chain as Record<string, ReturnType<typeof vi.fn>>)[method].mockReturnValue(chain)
       }
-      mocks.from.mockReturnValue(chain as ReturnType<typeof vi.fn>)
+      mocks.from.mockReturnValue(chain)
 
       const response = await GET(makeGetRequest({ type: 'reports' }))
       expect(response.status).toBe(200)
@@ -417,7 +415,7 @@ describe('/api/admin', () => {
       for (const method of ['select', 'order', 'limit', 'eq']) {
         (chain as Record<string, ReturnType<typeof vi.fn>>)[method].mockReturnValue(chain)
       }
-      mocks.from.mockReturnValue(chain as ReturnType<typeof vi.fn>)
+      mocks.from.mockReturnValue(chain)
 
       const response = await GET(makeGetRequest({ type: 'logs', category: 'admin' }))
       expect(response.status).toBe(200)
@@ -478,7 +476,7 @@ describe('/api/admin', () => {
       setupNonAdmin()
 
       const response = await PATCH(
-        makePatchRequest({ action: 'report_status', id: 1, status: 'resolved' }),
+        makePatchRequest({ action: 'report_status', id: 1, status: 'résolu' }),
       )
 
       expect(response.status).toBe(403)
@@ -518,7 +516,7 @@ describe('/api/admin', () => {
 
       const response = await PATCH(
         makePatchRequest(
-          { action: 'report_status', id: 42, status: 'resolved' },
+          { action: 'report_status', id: 42, status: 'résolu' },
           'valid-token',
         ),
       )
@@ -528,15 +526,15 @@ describe('/api/admin', () => {
       expect(json).toEqual({ ok: true })
 
       // Verify update was called
-      expect(reportsChain.update).toHaveBeenCalledWith({ status: 'resolved' })
+      expect(reportsChain.update).toHaveBeenCalledWith({ status: 'résolu' })
       expect(updateEq).toHaveBeenCalledWith('id', 42)
 
       // Verify activity was logged
       expect(mocks.logActivity).toHaveBeenCalledWith(
         'admin',
-        'Signalement #42 → resolved',
+        'Signalement #42 → résolu',
         undefined,
-        expect.objectContaining({ reportId: 42, status: 'resolved' }),
+        expect.objectContaining({ reportId: 42, status: 'résolu' }),
       )
     })
   })
@@ -565,7 +563,7 @@ describe('/api/admin', () => {
       for (const method of ['select', 'eq']) {
         (adminProfileChain as Record<string, ReturnType<typeof vi.fn>>)[method].mockReturnValue(adminProfileChain)
       }
-      mocks.from.mockReturnValue(adminProfileChain as ReturnType<typeof vi.fn>)
+      mocks.from.mockReturnValue(adminProfileChain)
 
       const response = await GET(makeGetRequest({ type: 'me' }, 'valid-token'))
       expect(response.status).toBe(200)
@@ -594,7 +592,7 @@ describe('/api/admin', () => {
       for (const method of ['select', 'order', 'range']) {
         (chain as Record<string, ReturnType<typeof vi.fn>>)[method].mockReturnValue(chain)
       }
-      mocks.from.mockReturnValue(chain as ReturnType<typeof vi.fn>)
+      mocks.from.mockReturnValue(chain)
 
       const response = await GET(makeGetRequest({ type: 'suggestions' }))
       expect(response.status).toBe(200)
@@ -659,8 +657,7 @@ describe('/api/admin', () => {
       mocks.from.mockImplementation(() => {
         const result = fromResults[callIndex] ?? makeChain()
         callIndex++
-        return result as ReturnType<typeof makeChain>
-      })
+        return result      })
       mocks.rpc.mockResolvedValue({ data: { regulier: 170, super: 190, diesel: 180 } })
       mocks.listUsers.mockResolvedValue({ data: { users: [{ id: 'u1', email: 'alice@example.com' }] } })
 
@@ -725,8 +722,7 @@ describe('/api/admin', () => {
       mocks.from.mockImplementation(() => {
         const result = fromResults[callIndex] ?? makeChain()
         callIndex++
-        return result as ReturnType<typeof makeChain>
-      })
+        return result      })
 
       mocks.rpc.mockResolvedValue({ data: { regulier: 170, super: 190, diesel: 180 } })
       mocks.listUsers.mockResolvedValue({ data: { users: [{ id: 'u1', email: 'admin@test.com' }] } })
@@ -800,7 +796,7 @@ describe('/api/admin', () => {
       ]
 
       const chain = makeDetailChain(fakeRows)
-      mocks.from.mockReturnValue(chain as ReturnType<typeof vi.fn>)
+      mocks.from.mockReturnValue(chain)
 
       const response = await GET(makeGetRequest({
         type: 'snapshot_detail',
@@ -887,7 +883,7 @@ describe('/api/admin', () => {
         (latestChain as Record<string, ReturnType<typeof vi.fn>>)[method].mockReturnValue(latestChain)
       }
 
-      mocks.from.mockReturnValue(latestChain as ReturnType<typeof vi.fn>)
+      mocks.from.mockReturnValue(latestChain)
 
       const response = await GET(makeGetRequest({
         type: 'snapshot_detail',
@@ -967,7 +963,7 @@ describe('/api/admin', () => {
         (logsChain as Record<string, ReturnType<typeof vi.fn>>)[method].mockReturnValue(logsChain)
       }
 
-      mocks.from.mockReturnValue(logsChain as ReturnType<typeof vi.fn>)
+      mocks.from.mockReturnValue(logsChain)
 
       const response = await GET(makeGetRequest({ type: 'auth_logs' }))
       expect(response.status).toBe(200)
@@ -1040,7 +1036,7 @@ describe('/api/admin', () => {
 
       const response = await PATCH(
         makePatchRequest(
-          { action: 'suggestion_status', id: 7, status: 'approved' },
+          { action: 'suggestion_status', id: 7, status: 'accepté' },
           'valid-token',
         ),
       )
@@ -1048,7 +1044,7 @@ describe('/api/admin', () => {
       expect(response.status).toBe(200)
       const json = await response.json()
       expect(json).toEqual({ ok: true })
-      expect(suggestionsChain.update).toHaveBeenCalledWith({ status: 'approved' })
+      expect(suggestionsChain.update).toHaveBeenCalledWith({ status: 'accepté' })
     })
 
     it('retourne 400 avec un statut invalide', async () => {
@@ -1062,7 +1058,7 @@ describe('/api/admin', () => {
       for (const method of ['select', 'eq']) {
         (adminProfileChain as Record<string, ReturnType<typeof vi.fn>>)[method].mockReturnValue(adminProfileChain)
       }
-      mocks.from.mockReturnValue(adminProfileChain as ReturnType<typeof vi.fn>)
+      mocks.from.mockReturnValue(adminProfileChain)
 
       const response = await PATCH(
         makePatchRequest(
@@ -1137,7 +1133,7 @@ describe('/api/admin', () => {
       for (const method of ['select', 'eq']) {
         (adminProfileChain as Record<string, ReturnType<typeof vi.fn>>)[method].mockReturnValue(adminProfileChain)
       }
-      mocks.from.mockReturnValue(adminProfileChain as ReturnType<typeof vi.fn>)
+      mocks.from.mockReturnValue(adminProfileChain)
 
       const response = await PATCH(
         makePatchRequest({ action: 'nonexistent' }, 'valid-token'),
@@ -1157,7 +1153,7 @@ describe('/api/admin', () => {
     it('retourne 429 quand le rate limit est depasse', async () => {
       mocks.rateLimit.mockReturnValue(false)
       const response = await PATCH(
-        makePatchRequest({ action: 'report_status', id: 1, status: 'resolved' }, 'valid-token'),
+        makePatchRequest({ action: 'report_status', id: 1, status: 'résolu' }, 'valid-token'),
       )
       expect(response.status).toBe(429)
     })

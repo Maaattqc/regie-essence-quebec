@@ -124,7 +124,7 @@ describe("useComments", () => {
     expect(success).toBe(true);
     // Le POST doit avoir été appelé avec les bonnes données
     const postCall = mocks.fetchMock.mock.calls.find(
-      (c: [string, RequestInit]) => c[1]?.method === "POST",
+      (c) => (c[1] as RequestInit | undefined)?.method === "POST",
     );
     expect(postCall).toBeDefined();
     const body = JSON.parse(postCall![1].body as string);
@@ -187,7 +187,7 @@ describe("useComments", () => {
     });
 
     const deleteCall = mocks.fetchMock.mock.calls.find(
-      (c: [string, RequestInit]) => c[1]?.method === "DELETE",
+      (c) => (c[1] as RequestInit | undefined)?.method === "DELETE",
     );
     expect(deleteCall).toBeDefined();
     expect(deleteCall![1].headers).toMatchObject({ Authorization: "Bearer tok-123" });
@@ -269,7 +269,7 @@ describe("useComments", () => {
 
     // Aucun nouveau fetch (DELETE) n'est fait
     const deleteCall = mocks.fetchMock.mock.calls.slice(callCountBefore).find(
-      (c: [string, RequestInit]) => c[1]?.method === "DELETE",
+      (c) => (c[1] as RequestInit | undefined)?.method === "DELETE",
     );
     expect(deleteCall).toBeUndefined();
   });

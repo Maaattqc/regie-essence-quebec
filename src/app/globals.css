@@ -355,7 +355,7 @@ body {
     position: fixed;
     top: 80px;
     left: 12px;
-    width: 220px;
+    width: 260px;
     z-index: 2000;
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
