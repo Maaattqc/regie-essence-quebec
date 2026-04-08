@@ -379,7 +379,7 @@ export default function Map() {
           </>
         )}
         <LiveCursors showCursors={showCursors} onOnlineCount={handleOnlineCount} />
-        <DragController disabled={showEffectiveSettings} />
+        <DragController disabled={false} />
         {flyTarget && <FlyTo center={flyTarget.center} zoom={flyTarget.zoom} />}
         {devPinMode && (
           <DevClickHandler onPin={(lat, lng) => {

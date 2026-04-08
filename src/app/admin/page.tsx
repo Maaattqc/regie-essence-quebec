@@ -88,6 +88,7 @@ import {
   MessageSquare,
   Check,
   X as XIcon,
+  Trash2,
 } from "lucide-react";
 
 interface Profile {
@@ -963,6 +964,8 @@ const adminUi = {
     refuse: "Refuser",
     cancel: "Annuler",
     acceptOrRefuse: "Accepter / Refuser",
+    deleteItem: "Supprimer",
+    confirmDelete: "Confirmer la suppression ?",
     // Data panel
     loadingSnapshots: "Chargement des snapshots...",
     snapshotsInBase: "snapshot(s) en base",
@@ -1177,6 +1180,8 @@ const adminUi = {
     refuse: "Refuse",
     cancel: "Cancel",
     acceptOrRefuse: "Accept / Refuse",
+    deleteItem: "Delete",
+    confirmDelete: "Confirm deletion?",
     // Data panel
     loadingSnapshots: "Loading snapshots...",
     snapshotsInBase: "snapshot(s) in database",
@@ -1294,6 +1299,7 @@ export default function AdminPage() {
   const [trafficRange, setTrafficRange] = useState<"day" | "week" | "month">("day");
   const [authLogs, setAuthLogs] = useState<AuthLog[]>([]);
   const [editingComment, setEditingComment] = useState<{ type: "report" | "suggestion"; id: number; value: string } | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState<{ type: "report" | "suggestion"; id: number } | null>(null);
 
    
   useEffect(() => {
@@ -1376,6 +1382,26 @@ export default function AdminPage() {
       headers: { ...authHeaders(), "Content-Type": "application/json" },
       body: JSON.stringify({ action: "suggestion_status", id, status, admin_comment: adminComment }),
     });
+    loadSuggestions();
+  }
+
+  async function deleteReport(id: number) {
+    await fetch("/api/admin", {
+      method: "PATCH",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "delete_report", id }),
+    });
+    setConfirmingDelete(null);
+    loadReports();
+  }
+
+  async function deleteSuggestion(id: number) {
+    await fetch("/api/admin", {
+      method: "PATCH",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "delete_suggestion", id }),
+    });
+    setConfirmingDelete(null);
     loadSuggestions();
   }
 
@@ -1964,6 +1990,21 @@ export default function AdminPage() {
                           {r.admin_comment && editingComment?.id !== r.id && (
                             <div className="text-xs text-muted-foreground mt-1 italic">{r.admin_comment}</div>
                           )}
+                          {confirmingDelete?.type === "report" && confirmingDelete.id === r.id ? (
+                            <div className="flex items-center gap-1 mt-1 p-1.5 rounded bg-destructive/10 border border-destructive/20">
+                              <span className="text-xs text-destructive font-medium flex-1">{a.confirmDelete}</span>
+                              <Button variant="destructive" size="xs" onClick={() => deleteReport(r.id)}>
+                                <Check className="size-3" />
+                              </Button>
+                              <Button variant="ghost" size="xs" onClick={() => setConfirmingDelete(null)}>
+                                <XIcon className="size-3" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <Button variant="ghost" size="xs" className="text-destructive/60 hover:text-destructive mt-1" onClick={() => setConfirmingDelete({ type: "report", id: r.id })} disabled={readOnly}>
+                              <Trash2 className="size-3" /> {a.deleteItem}
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -2039,6 +2080,21 @@ export default function AdminPage() {
                               {a.acceptOrRefuse}
                             </Button>
                           )
+                        )}
+                        {confirmingDelete?.type === "suggestion" && confirmingDelete.id === s.id ? (
+                          <div className="flex items-center gap-1 p-1.5 rounded bg-destructive/10 border border-destructive/20">
+                            <span className="text-xs text-destructive font-medium flex-1">{a.confirmDelete}</span>
+                            <Button variant="destructive" size="xs" onClick={() => deleteSuggestion(s.id)}>
+                              <Check className="size-3" />
+                            </Button>
+                            <Button variant="ghost" size="xs" onClick={() => setConfirmingDelete(null)}>
+                              <XIcon className="size-3" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button variant="ghost" size="xs" className="text-destructive/60 hover:text-destructive" onClick={() => setConfirmingDelete({ type: "suggestion", id: s.id })} disabled={readOnly}>
+                            <Trash2 className="size-3" /> {a.deleteItem}
+                          </Button>
                         )}
                       </div>
                     </CardContent>

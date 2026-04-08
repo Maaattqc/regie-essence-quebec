@@ -115,13 +115,12 @@ export default function MapButtonsPanel(props: MapButtonsPanelProps) {
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ duration: 0.15 }}
-                    className="map-settings-panel pointer-events-none rounded-lg shadow-lg overflow-hidden"
+                    className="map-settings-panel bg-[var(--bg-panel)] rounded-lg shadow-lg px-4 py-3"
                     ref={(el: HTMLDivElement | null) => {
                       const mutableRef = settingsPanelRef as React.MutableRefObject<HTMLDivElement | null>;
                       mutableRef.current = el;
                     }}
                   >
-                    <div className="pointer-events-auto bg-[var(--bg-panel)] rounded-lg px-4 py-3">
                     <div className="flex items-center justify-between mb-2">
                       <div className="text-xs font-semibold">{t.mapButtons.settings}</div>
                       <button onClick={() => setShowEffectiveSettings(() => false)} className="text-red-500 hover:text-red-700">
@@ -130,55 +129,32 @@ export default function MapButtonsPanel(props: MapButtonsPanelProps) {
                     </div>
                     <div className="mb-2">
                       <div className="text-[11px] text-[var(--text-muted)] mb-1 whitespace-nowrap">{radiusKm === 0 ? t.mapButtons.radiusAll : t.mapButtons.radiusKm(radiusKm)}</div>
-                      <Slider
-                        min={0}
-                        max={50}
-                        step={5}
-                        value={[radiusKm]}
+                      <Slider min={0} max={50} step={5} value={[radiusKm]}
                         onValueChange={(v) => { const val = Array.isArray(v) ? v[0] : v; setRadiusKm(val); if (val > 0) { localStorage.setItem("eff_radius", String(val)); if (!showRadiusCircle) { setShowRadiusCircle(true); localStorage.setItem("eff_showRadius", "true"); } } }}
-                        className="w-full"
-                      />
+                        className="w-full" />
                     </div>
                     <div className="mb-2">
                       <div className="text-[11px] text-[var(--text-muted)] mb-1 whitespace-nowrap">{t.mapButtons.consumption(consoLper100)}</div>
-                      <Slider
-                        min={4}
-                        max={20}
-                        step={0.5}
-                        value={[consoLper100]}
+                      <Slider min={4} max={20} step={0.5} value={[consoLper100]}
                         onValueChange={(v) => { const val = Array.isArray(v) ? v[0] : v; setConsoLper100(val); localStorage.setItem("eff_conso", String(val)); }}
-                        className="w-full"
-                      />
+                        className="w-full" />
                     </div>
                     <div className="mb-2">
                       <div className="text-[11px] text-[var(--text-muted)] mb-1 whitespace-nowrap">{t.mapButtons.tank(tankVolume)}</div>
-                      <Slider
-                        min={15}
-                        max={100}
-                        step={5}
-                        value={[tankVolume]}
+                      <Slider min={15} max={100} step={5} value={[tankVolume]}
                         onValueChange={(v) => { const val = Array.isArray(v) ? v[0] : v; setTankVolume(val); localStorage.setItem("eff_tank", String(val)); }}
-                        className="w-full"
-                      />
+                        className="w-full" />
                     </div>
                     <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={showRadiusCircle}
+                      <input type="checkbox" checked={showRadiusCircle}
                         onChange={(e) => { setShowRadiusCircle(e.target.checked); localStorage.setItem("eff_showRadius", String(e.target.checked)); }}
-                        className="accent-[#4285f4] w-3.5 h-3.5"
-                      />
+                        className="accent-[#4285f4] w-3.5 h-3.5" />
                       <span className="text-[11px] text-[var(--text-muted)]">{t.mapButtons.showCircle}</span>
                     </label>
-                    <Button
-                      size="sm"
-                      className="w-full mt-2 !bg-[#2d9a2d] hover:!bg-[#2d9a2d]/90 !text-white font-semibold text-[12px]"
-                      onClick={onApplySettings}
-                    >
+                    <Button size="sm" className="w-full mt-2 !bg-[#2d9a2d] hover:!bg-[#2d9a2d]/90 !text-white font-semibold text-[12px]" onClick={onApplySettings}>
                       <RefreshCw className="size-3.5" />
                       {t.mapButtons.apply}
                     </Button>
-                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>

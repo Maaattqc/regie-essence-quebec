@@ -490,5 +490,21 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
+  if (body.action === "delete_report") {
+    const { id } = body;
+    if (!id) return NextResponse.json({ error: "id requis" }, { status: 400 });
+    await supabaseAdmin.from("reports").delete().eq("id", id);
+    await logActivity("admin", `Signalement #${id} supprimé`, undefined, { reportId: id, by: user.email, requestId });
+    return NextResponse.json({ ok: true });
+  }
+
+  if (body.action === "delete_suggestion") {
+    const { id } = body;
+    if (!id) return NextResponse.json({ error: "id requis" }, { status: 400 });
+    await supabaseAdmin.from("suggestions").delete().eq("id", id);
+    await logActivity("admin", `Suggestion #${id} supprimée`, undefined, { suggestionId: id, by: user.email, requestId });
+    return NextResponse.json({ ok: true });
+  }
+
   return NextResponse.json({ error: "action inconnue" }, { status: 400 });
 }
