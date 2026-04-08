@@ -115,15 +115,13 @@ export default function MapButtonsPanel(props: MapButtonsPanelProps) {
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ duration: 0.15 }}
-                    className="map-settings-panel bg-[var(--bg-panel)] rounded-lg shadow-lg px-4 py-3 overflow-hidden"
+                    className="map-settings-panel pointer-events-none rounded-lg shadow-lg overflow-hidden"
                     ref={(el: HTMLDivElement | null) => {
                       const mutableRef = settingsPanelRef as React.MutableRefObject<HTMLDivElement | null>;
                       mutableRef.current = el;
-                      if (el) {
-                        L.DomEvent.disableClickPropagation(el);
-                      }
                     }}
                   >
+                    <div className="pointer-events-auto bg-[var(--bg-panel)] rounded-lg px-4 py-3">
                     <div className="flex items-center justify-between mb-2">
                       <div className="text-xs font-semibold">{t.mapButtons.settings}</div>
                       <button onClick={() => setShowEffectiveSettings(() => false)} className="text-red-500 hover:text-red-700">
@@ -180,6 +178,7 @@ export default function MapButtonsPanel(props: MapButtonsPanelProps) {
                       <RefreshCw className="size-3.5" />
                       {t.mapButtons.apply}
                     </Button>
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
