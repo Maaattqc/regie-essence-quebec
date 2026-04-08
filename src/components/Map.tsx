@@ -116,19 +116,6 @@ export default function Map() {
     radiusKm, setRadiusKm, consoLper100, tankVolume, setFlyTarget,
   });
 
-  useEffect(() => {
-    if (!showEffectiveSettings) return;
-    function handlePointerDown(e: PointerEvent) {
-      if (
-        settingsPanelRef.current && !settingsPanelRef.current.contains(e.target as Node) &&
-        (!settingsBtnRef.current || !settingsBtnRef.current.contains(e.target as Node))
-      ) {
-        setShowEffectiveSettings(false);
-      }
-    }
-    document.addEventListener("pointerdown", handlePointerDown);
-    return () => document.removeEventListener("pointerdown", handlePointerDown);
-  }, [showEffectiveSettings]);
 
   const shareLink = useCallback(() => {
     const params = new URLSearchParams();
