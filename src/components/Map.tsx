@@ -135,6 +135,13 @@ export default function Map() {
     setRadiusKm(0);
     clearCheapest();
     const vNorm = normalize(v);
+    if (v && brand && data) {
+      const exists = data.features.some((f) => {
+        const props = (f as Feature<Point, StationProperties>).properties;
+        return props.brand === brand && !!props._cityNorm && props._cityNorm.includes(vNorm);
+      });
+      if (!exists) setBrand("");
+    }
     if (v && data) {
       const match = data.features.find((f) => {
         const props = (f as Feature<Point, StationProperties>).properties;
@@ -162,13 +169,20 @@ export default function Map() {
     } else {
       setFlyTarget(null);
     }
-  }, [data, region, clearCheapest, setFlyTarget]);
+  }, [data, brand, region, clearCheapest, setFlyTarget]);
 
   const handleRegionChange = useCallback((v: string) => {
     setRegion(v);
     setSearch("");
     setRadiusKm(0);
     clearCheapest();
+    if (brand && v && data) {
+      const exists = data.features.some((f) => {
+        const props = (f as Feature<Point, StationProperties>).properties;
+        return props.Region === v && props.brand === brand;
+      });
+      if (!exists) setBrand("");
+    }
     if (!v) {
       setFlyTarget({ center: QUEBEC_CENTER, zoom: QUEBEC_ZOOM });
     } else if (REGION_CENTERS[v]) {
@@ -176,7 +190,7 @@ export default function Map() {
     } else {
       setFlyTarget(null);
     }
-  }, [clearCheapest, setFlyTarget]);
+  }, [brand, data, clearCheapest, setFlyTarget]);
 
   const handleBrandChange = useCallback((v: string) => {
     setBrand(v);
@@ -271,19 +285,26 @@ export default function Map() {
     return { priceMin: min === Infinity ? 0 : min, priceMax: max === -Infinity ? 0 : max };
   }, [data, gasType]);
 
-  const { regionCounts, brandCounts, cityCounts, totalStations } = useMemo(() => {
-    if (!data) return { regionCounts: {}, brandCounts: {}, cityCounts: {}, totalStations: 0 };
+  const totalStations = useMemo(() => data?.features.length ?? 0, [data]);
+
+  const { regionCounts, brandCounts, cityCounts } = useMemo(() => {
+    if (!data) return { regionCounts: {}, brandCounts: {}, cityCounts: {} };
     const rc: Record<string, number> = {};
     const bc: Record<string, number> = {};
     const cc: Record<string, number> = {};
+    const q = normalize(search.trim());
     data.features.forEach((f) => {
       const props = (f as Feature<Point, StationProperties>).properties;
-      rc[props.Region] = (rc[props.Region] || 0) + 1;
-      bc[props.brand] = (bc[props.brand] || 0) + 1;
-      if (props._city) cc[props._city] = (cc[props._city] || 0) + 1;
+      const cityMatch = !q || (!!props._cityNorm && props._cityNorm.includes(q));
+      if ((!region || props.Region === region) && cityMatch)
+        bc[props.brand] = (bc[props.brand] || 0) + 1;
+      if ((!brand || props.brand === brand) && cityMatch)
+        rc[props.Region] = (rc[props.Region] || 0) + 1;
+      if ((!region || props.Region === region) && (!brand || props.brand === brand) && props._city)
+        cc[props._city] = (cc[props._city] || 0) + 1;
     });
-    return { regionCounts: rc, brandCounts: bc, cityCounts: cc, totalStations: data.features.length };
-  }, [data]);
+    return { regionCounts: rc, brandCounts: bc, cityCounts: cc };
+  }, [data, brand, region, search]);
 
   return (
     <div style={{ position: "relative", height: "100%", width: "100%" }}>
