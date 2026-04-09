@@ -111,7 +111,7 @@ export default function Map() {
     return Number(localStorage.getItem("eff_tank")) || 40;
   });
 
-  const { cheapestResults, cheapestRoute, findBestEffectivePrice, clearCheapest } = useEffectivePrice({
+  const { cheapestResults, cheapestRoute, findBestEffectivePrice, clearCheapest, lastCacheSource } = useEffectivePrice({
     data, gasType, userPos, setUserPos, geoReady,
     radiusKm, setRadiusKm, consoLper100, tankVolume, setFlyTarget,
   });
@@ -386,6 +386,7 @@ export default function Map() {
           isDev={isDev}
           priceMin={priceMin}
           priceMax={priceMax}
+          lastCacheSource={lastCacheSource}
         />
         {userPos && (
           <>

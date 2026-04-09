@@ -5,7 +5,7 @@ import { Redis } from "@upstash/redis";
 // En dev local, on utilise toujours le fallback mémoire pour éviter les timeouts.
 const isDev = process.env.NODE_ENV === "development";
 
-const redis =
+export const redis =
   !isDev && process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN
     ? new Redis({
         url: process.env.KV_REST_API_URL,

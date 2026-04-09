@@ -147,19 +147,20 @@ describe("roadDistances", () => {
 
   it("retourne un tableau vide pour aucune destination", async () => {
     const result = await roadDistances([45.5, -73.5], []);
-    expect(result).toEqual([]);
+    expect(result.infos).toEqual([]);
+    expect(result.serverCacheHit).toBeNull();
   });
 
   it("retourne le fallback quand fetch échoue", async () => {
     vi.spyOn(globalThis, "fetch").mockRejectedValueOnce(new Error("Network error"));
     const result = await roadDistances([45.5, -73.5], [[45.6, -73.6]]);
-    expect(result).toEqual([{ distKm: null, durationMin: null }]);
+    expect(result.infos).toEqual([{ distKm: null, durationMin: null }]);
   });
 
   it("retourne le fallback quand la réponse HTTP est en erreur", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(new Response("error", { status: 500 }));
     const result = await roadDistances([45.5, -73.5], [[45.6, -73.6]]);
-    expect(result).toEqual([{ distKm: null, durationMin: null }]);
+    expect(result.infos).toEqual([{ distKm: null, durationMin: null }]);
   });
 
   it("parse les distances et durées depuis la réponse Mapbox", async () => {
@@ -167,7 +168,7 @@ describe("roadDistances", () => {
       new Response(JSON.stringify({ distances: [[0, 5000]], durations: [[0, 600]] }))
     );
     const result = await roadDistances([45.5, -73.5], [[45.6, -73.6]]);
-    expect(result).toEqual([{ distKm: 5, durationMin: 10 }]);
+    expect(result.infos).toEqual([{ distKm: 5, durationMin: 10 }]);
   });
 });
 
@@ -265,7 +266,7 @@ describe("roadDistances edge cases", () => {
       new Response(JSON.stringify({ distances: null, durations: null }))
     );
     const result = await roadDistances([45.5, -73.5], [[45.6, -73.6]]);
-    expect(result).toEqual([{ distKm: null, durationMin: null }]);
+    expect(result.infos).toEqual([{ distKm: null, durationMin: null }]);
   });
 
   it("retourne null pour les distances et durées négatives ou nulles", async () => {
@@ -273,7 +274,7 @@ describe("roadDistances edge cases", () => {
       new Response(JSON.stringify({ distances: [[0, 0]], durations: [[0, -1]] }))
     );
     const result = await roadDistances([45.5, -73.5], [[45.6, -73.6]]);
-    expect(result).toEqual([{ distKm: null, durationMin: null }]);
+    expect(result.infos).toEqual([{ distKm: null, durationMin: null }]);
   });
 });
 

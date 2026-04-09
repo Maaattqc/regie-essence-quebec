@@ -13,6 +13,7 @@ vi.mock('@/lib/rateLimit', () => ({
   rateLimit: mocks.rateLimit,
   checkCsrf: vi.fn(() => true),
   getRequestId: vi.fn(() => 'test-req-id'),
+  redis: null,
 }))
 
 vi.mock('@/lib/activity-log', () => ({

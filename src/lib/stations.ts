@@ -133,14 +133,22 @@ export type RoadInfo = {
   durationMin: number | null;
 };
 
+export type RoadDistancesResult = {
+  infos: RoadInfo[];
+  serverCacheHit: boolean | null;
+};
+
 /**
  * Distances et durées routières via proxy serveur /api/mapbox (token jamais exposé côté client).
  */
 export async function roadDistances(
   origin: [number, number],
   destinations: [number, number][],
-): Promise<RoadInfo[]> {
-  const fallback = destinations.map(() => ({ distKm: null, durationMin: null }));
+): Promise<RoadDistancesResult> {
+  const fallback: RoadDistancesResult = {
+    infos: destinations.map(() => ({ distKm: null, durationMin: null })),
+    serverCacheHit: null,
+  };
   if (destinations.length === 0) return fallback;
   try {
     const coords = [
@@ -153,14 +161,18 @@ export async function roadDistances(
       body: JSON.stringify({ type: "matrix", coords }),
     });
     if (!res.ok) return fallback;
+    const serverCacheHit = res.headers.get("X-Mapbox-Cache") === "HIT";
     const data = await res.json();
     const distRow = data.distances?.[0];
     const durRow = data.durations?.[0];
     if (!distRow) return fallback;
-    return distRow.slice(1).map((m: number | null, i: number) => ({
-      distKm: m != null && m > 0 ? m / 1000 : null,
-      durationMin: durRow?.[i + 1] != null && durRow[i + 1] > 0 ? durRow[i + 1] / 60 : null,
-    }));
+    return {
+      infos: distRow.slice(1).map((m: number | null, i: number) => ({
+        distKm: m != null && m > 0 ? m / 1000 : null,
+        durationMin: durRow?.[i + 1] != null && durRow[i + 1] > 0 ? durRow[i + 1] / 60 : null,
+      })),
+      serverCacheHit,
+    };
   } catch {
     return fallback;
   }

@@ -3,12 +3,15 @@ import type { Feature, Point } from "geojson";
 import {
   type StationProperties,
   type GasTypeKey,
+  type RoadInfo,
   parsePrice,
   distanceKm,
   effectivePrice,
   roadDistances,
   roadRoute,
 } from "@/lib/stations";
+
+export type CacheSource = "client" | "serveur" | "mapbox" | null;
 
 export interface CheapestStation {
   lat: number;
@@ -27,6 +30,16 @@ export interface CheapestResults {
 
 const MAPBOX_TOP_N = 15;
 const DEFAULT_RADIUS_KM = 5;
+const CACHE_PROXIMITY_M = 100;
+
+interface DistanceCache {
+  origin: [number, number];
+  radius: number;
+  /** Clé sérialisée des coordonnées destinations pour comparer rapidement */
+  coordsKey: string;
+  /** Map "lat,lng" → RoadInfo pour lookup par station */
+  distMap: Map<string, RoadInfo>;
+}
 
 interface UseEffectivePriceParams {
   data: GeoJSON.FeatureCollection | null;
@@ -41,12 +54,17 @@ interface UseEffectivePriceParams {
   setFlyTarget: (v: { center: [number, number]; zoom: number } | null) => void;
 }
 
+function coordKey(lat: number, lng: number): string {
+  return `${lat},${lng}`;
+}
+
 export function useEffectivePrice({
   data, gasType, userPos, setUserPos, geoReady,
   radiusKm, setRadiusKm, consoLper100, tankVolume, setFlyTarget,
 }: UseEffectivePriceParams) {
   const [cheapestResults, setCheapestResults] = useState<CheapestResults | null>(null);
   const [cheapestRoute, setCheapestRoute] = useState<[number, number][] | null>(null);
+  const [lastCacheSource, setLastCacheSource] = useState<CacheSource>(null);
 
   // Refs pour les valeurs utilisées dans findBestEffectivePrice sans re-créer le callback
   const dataRef = useRef(data);
@@ -63,6 +81,8 @@ export function useEffectivePrice({
     consoRef.current = consoLper100;
     tankRef.current = tankVolume;
   });
+
+  const distanceCacheRef = useRef<DistanceCache | null>(null);
 
   const findBestEffectivePrice = useCallback((skipZoom = false) => {
     const currentData = dataRef.current;
@@ -91,6 +111,7 @@ export function useEffectivePrice({
       });
       if (prefiltered.length === 0) {
         setCheapestResults({ stations: [], message: `Aucune station trouvée dans un rayon de ${r} km` });
+        setLastCacheSource(null);
         return;
       }
       // 2) Trier par prix effectif Haversine, garder top N pour Mapbox
@@ -99,9 +120,50 @@ export function useEffectivePrice({
         effectivePrice(b.price, b.haversineDist, conso, tank),
       );
       const top = prefiltered.slice(0, MAPBOX_TOP_N);
-      // 3) Distances + durées routières réelles (Mapbox avec trafic)
+
+      // 3) Vérifier le cache client avant d'appeler Mapbox
       const destinations = top.map((c) => [c.lat, c.lng] as [number, number]);
-      const roadInfos = await roadDistances([latitude, longitude], destinations);
+      const cache = distanceCacheRef.current;
+      const originClose = cache != null &&
+        distanceKm(latitude, longitude, cache.origin[0], cache.origin[1]) * 1000 < CACHE_PROXIMITY_M;
+
+      let roadInfos: RoadInfo[];
+      let cacheSource: CacheSource = "mapbox";
+
+      if (originClose && cache.radius === r) {
+        const cached: (RoadInfo | null)[] = destinations.map(
+          ([lat, lng]) => cache.distMap.get(coordKey(lat, lng)) ?? null,
+        );
+        if (cached.every((c) => c !== null)) {
+          roadInfos = cached as RoadInfo[];
+          cacheSource = "client";
+        } else {
+          const result = await roadDistances([latitude, longitude], destinations);
+          roadInfos = result.infos;
+          cacheSource = result.serverCacheHit ? "serveur" : "mapbox";
+        }
+      } else {
+        const result = await roadDistances([latitude, longitude], destinations);
+        roadInfos = result.infos;
+        cacheSource = result.serverCacheHit ? "serveur" : "mapbox";
+      }
+
+      // Mettre à jour le cache client
+      if (cacheSource !== "client") {
+        const distMap = new Map<string, RoadInfo>();
+        destinations.forEach(([lat, lng], i) => {
+          distMap.set(coordKey(lat, lng), roadInfos[i]);
+        });
+        if (originClose && cache) {
+          for (const [key, val] of cache.distMap) {
+            if (!distMap.has(key)) distMap.set(key, val);
+          }
+        }
+        distanceCacheRef.current = { origin: [latitude, longitude], radius: r, coordsKey: "", distMap };
+      }
+
+      setLastCacheSource(cacheSource);
+
       // 4) Recalculer avec distances réelles (fallback Haversine)
       const candidates = top.map((c, i) => {
         const dist = roadInfos[i].distKm ?? c.haversineDist;
@@ -115,6 +177,8 @@ export function useEffectivePrice({
       const msg = `${best.name} — ${best.price.toFixed(1)}¢/L · ${best.dist.toFixed(1)} km${durText} (réel : ${best.effectivePrice!.toFixed(1)}¢/L, +${saving.toFixed(1)}¢ trajet)`;
       setCheapestResults({ stations: [best], message: msg });
       if (!skipZoom) setFlyTarget({ center: [best.lat, best.lng], zoom: 15 });
+
+      // Route : aussi cacheable si même destination
       roadRoute([latitude, longitude], [best.lat, best.lng]).then((details) => {
         if (details) setCheapestRoute(details.path);
       });
@@ -140,6 +204,7 @@ export function useEffectivePrice({
   const clearCheapest = useCallback(() => {
     setCheapestResults(null);
     setCheapestRoute(null);
+    setLastCacheSource(null);
   }, []);
 
   // Auto-search au premier chargement (setState intentionnel en réponse aux données)
@@ -162,5 +227,5 @@ export function useEffectivePrice({
     }
   }, [gasType, cheapestResults, userPos, data, findBestEffectivePrice]);
 
-  return { cheapestResults, cheapestRoute, findBestEffectivePrice, clearCheapest };
+  return { cheapestResults, cheapestRoute, findBestEffectivePrice, clearCheapest, lastCacheSource };
 }

@@ -41,6 +41,7 @@ interface MapButtonsPanelProps {
   isDev: boolean;
   priceMin: number;
   priceMax: number;
+  lastCacheSource: "client" | "serveur" | "mapbox" | null;
 }
 
 export default function MapButtonsPanel(props: MapButtonsPanelProps) {
@@ -60,7 +61,7 @@ export default function MapButtonsPanel(props: MapButtonsPanelProps) {
     showCursors, setShowCursors,
     onlineCount,
     devPinMode, setDevPinMode, isDev,
-    priceMin, priceMax,
+    priceMin, priceMax, lastCacheSource,
   } = props;
 
   const { t } = useLanguage();
@@ -97,6 +98,15 @@ export default function MapButtonsPanel(props: MapButtonsPanelProps) {
                 >
                   <Trophy className="size-4" />
                   <span className="map-btn-label">{cheapestResults ? t.mapButtons.hidePanel : t.mapButtons.bestPrice}</span>
+                  {process.env.NODE_ENV === "development" && lastCacheSource != null && (
+                    <span className={`ml-1 px-1 py-0.5 rounded text-[9px] font-bold uppercase ${
+                      lastCacheSource === "client" ? "bg-green-500/20 text-green-400"
+                        : lastCacheSource === "serveur" ? "bg-blue-500/20 text-blue-400"
+                        : "bg-orange-500/20 text-orange-400"
+                    }`}>
+                      {lastCacheSource}
+                    </span>
+                  )}
                 </Button>
                 <Button
                   ref={settingsBtnRef}

@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { rateLimit, getIP, checkCsrf } from "@/lib/rateLimit";
+import { rateLimit, getIP, checkCsrf, redis } from "@/lib/rateLimit";
 import { logActivity } from "@/lib/activity-log";
 import { z } from "zod";
 
 const MAPBOX_TOKEN = process.env.MAPBOX_TOKEN ?? "";
 const MAPBOX_BASE = "https://api.mapbox.com";
+const MATRIX_CACHE_TTL = 900; // 15 minutes
 
 const bodySchema = z.union([
   z.object({ type: z.literal("matrix"), coords: z.string().max(2000) }),
@@ -14,6 +15,17 @@ const bodySchema = z.union([
     destination: z.tuple([z.number(), z.number()]),
   }),
 ]);
+
+/** Arrondir chaque coordonnée à 4 décimales (~10m) pour regrouper les positions proches. */
+function quantizeCoords(coords: string): string {
+  return coords
+    .split(";")
+    .map((pair) => {
+      const [lng, lat] = pair.split(",").map(Number);
+      return `${lng.toFixed(4)},${lat.toFixed(4)}`;
+    })
+    .join(";");
+}
 
 // Proxy Mapbox Matrix API (distances multi-destinations)
 export async function POST(request: NextRequest) {
@@ -30,11 +42,29 @@ export async function POST(request: NextRequest) {
 
   try {
     if (body.type === "matrix") {
+      // Cache serveur Redis pour les requêtes Matrix
+      const quantized = quantizeCoords(body.coords);
+      const cacheKey = `mapbox:matrix:${quantized}`;
+
+      if (redis) {
+        const cached = await redis.get<string>(cacheKey);
+        if (cached) {
+          const data = typeof cached === "string" ? JSON.parse(cached) : cached;
+          return NextResponse.json(data, { headers: { "X-Mapbox-Cache": "HIT" } });
+        }
+      }
+
       const res = await fetch(
         `${MAPBOX_BASE}/directions-matrix/v1/mapbox/driving/${body.coords}?sources=0&annotations=distance,duration&access_token=${MAPBOX_TOKEN}`,
       );
       if (!res.ok) return NextResponse.json({ error: "Erreur Mapbox" }, { status: 502 });
-      return NextResponse.json(await res.json());
+      const data = await res.json();
+
+      if (redis) {
+        await redis.set(cacheKey, JSON.stringify(data), { ex: MATRIX_CACHE_TTL });
+      }
+
+      return NextResponse.json(data, { headers: { "X-Mapbox-Cache": "MISS" } });
     }
 
     if (body.type === "directions") {

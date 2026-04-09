@@ -93,11 +93,14 @@ describe("useEffectivePrice", () => {
     mocks.parsePrice.mockReset().mockImplementation(
       (s: string) => parseFloat(s.replace("\u00A2", "")),
     );
-    mocks.roadDistances.mockReset().mockResolvedValue([
-      { distKm: 3.2, durationMin: 5 },
-      { distKm: 4.1, durationMin: 7 },
-      { distKm: 15.0, durationMin: 18 },
-    ]);
+    mocks.roadDistances.mockReset().mockResolvedValue({
+      infos: [
+        { distKm: 3.2, durationMin: 5 },
+        { distKm: 4.1, durationMin: 7 },
+        { distKm: 15.0, durationMin: 18 },
+      ],
+      serverCacheHit: false,
+    });
     mocks.roadRoute.mockReset().mockResolvedValue({
       path: [[45.5, -73.6], [45.51, -73.61]],
       distKm: 3.2,
@@ -142,10 +145,13 @@ describe("useEffectivePrice", () => {
     );
 
     // Seules 2 stations restent après filtrage
-    mocks.roadDistances.mockResolvedValue([
-      { distKm: 3.2, durationMin: 5 },
-      { distKm: 4.1, durationMin: 7 },
-    ]);
+    mocks.roadDistances.mockResolvedValue({
+      infos: [
+        { distKm: 3.2, durationMin: 5 },
+        { distKm: 4.1, durationMin: 7 },
+      ],
+      serverCacheHit: false,
+    });
 
     const params = defaultParams();
     const { result } = renderHook(() => useEffectivePrice(params));
@@ -182,11 +188,14 @@ describe("useEffectivePrice", () => {
   it("findBestEffectivePrice trie par prix effectif", async () => {
     // Station B (170¢) est moins chère que A (175.9¢), même distance
     mocks.distanceKm.mockReturnValue(3);
-    mocks.roadDistances.mockResolvedValue([
-      { distKm: 3.0, durationMin: 5 },
-      { distKm: 3.0, durationMin: 5 },
-      { distKm: 3.0, durationMin: 5 },
-    ]);
+    mocks.roadDistances.mockResolvedValue({
+      infos: [
+        { distKm: 3.0, durationMin: 5 },
+        { distKm: 3.0, durationMin: 5 },
+        { distKm: 3.0, durationMin: 5 },
+      ],
+      serverCacheHit: false,
+    });
 
     const params = defaultParams();
     const { result } = renderHook(() => useEffectivePrice(params));
