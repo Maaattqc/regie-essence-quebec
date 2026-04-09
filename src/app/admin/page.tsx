@@ -1926,7 +1926,7 @@ export default function AdminPage() {
                         <div>{r.first_name} {r.last_name}</div>
                         <div className="text-xs text-muted-foreground">{r.email}</div>
                       </TableCell>
-                      <TableCell className="max-w-[200px]">
+                      <TableCell className="max-w-[200px] break-words">
                         <TruncatedText text={r.message} />
                       </TableCell>
                       <TableCell>
@@ -1947,8 +1947,8 @@ export default function AdminPage() {
                           {r.status}
                         </Badge>
                       </TableCell>
-                      <TableCell>{formatDate(r.created_at)}</TableCell>
-                      <TableCell>
+                      <TableCell className="whitespace-nowrap">{formatDate(r.created_at)}</TableCell>
+                      <TableCell className="max-w-[220px]">
                         <div className="flex flex-col gap-1">
                           {r.status === "nouveau" && (
                             <Button variant="outline" size="xs" onClick={() => updateReportStatus(r.id, "en traitement")} disabled={readOnly}>
@@ -1988,7 +1988,9 @@ export default function AdminPage() {
                             </Button>
                           )}
                           {r.admin_comment && editingComment?.id !== r.id && (
-                            <div className="text-xs text-muted-foreground mt-1 italic">{r.admin_comment}</div>
+                            <div className="text-xs text-muted-foreground mt-1 italic max-w-[200px] break-words">
+                              <TruncatedText text={r.admin_comment} limit={60} />
+                            </div>
                           )}
                           {confirmingDelete?.type === "report" && confirmingDelete.id === r.id ? (
                             <div className="flex items-center gap-1 mt-1 p-1.5 rounded bg-destructive/10 border border-destructive/20">
@@ -2045,9 +2047,9 @@ export default function AdminPage() {
                           {s.status}
                         </Badge>
                       </div>
-                      <div className="text-sm mb-2 whitespace-pre-wrap">{s.message}</div>
+                      <div className="text-sm mb-2 whitespace-pre-wrap break-words overflow-hidden">{s.message}</div>
                       {s.admin_comment && (
-                        <div className="text-xs text-muted-foreground italic border-l-2 border-primary/30 pl-2 mb-2">{s.admin_comment}</div>
+                        <div className="text-xs text-muted-foreground italic border-l-2 border-primary/30 pl-2 mb-2 break-words overflow-hidden">{s.admin_comment}</div>
                       )}
                       <div className="flex gap-1.5 flex-wrap">
                         {s.status === "nouveau" && (
