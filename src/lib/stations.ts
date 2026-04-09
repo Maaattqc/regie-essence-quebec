@@ -69,6 +69,38 @@ export const REGIONS = [
 
 export const PRICE_COLORS = ["#2d9a2d", "#6fbf3b", "#f0c808", "#ef8a17", "#e63946"];
 
+/**
+ * Corrections manuelles de coordonnées pour les stations mal positionnées
+ * dans la source de données de la Régie de l'énergie.
+ * Clé : "Name::Address" (même format que buildStationKey).
+ * Valeur : [longitude, latitude].
+ */
+export const COORDINATE_OVERRIDES: Record<string, [number, number]> = {
+  // Beauceville — 800m trop au nord (avant le pont)
+  "9396-2041 QUEBEC INC::575 boul. Renault, BEAUCEVILLE": [-70.7747, 46.2106],
+  // Lévis — coords dupliquées entre 2 stations
+  "9470-3162 Québec Inc.::659 rte du Président-Kennedy, Lévis": [-71.1337, 46.7659],
+  "Harnois Énergies Inc.::1785 rte des Rivières, Lévis": [-71.2911, 46.7112],
+  // Granby — 30km trop à l'est (longitude erronée dans la source)
+  "Couche-Tard Inc.::351 rue Saint-Charles sud, Granby": [-72.7354, 45.3888],
+  // Sept-Îles — 25km d'écart
+  "Dan Esso::200 rte Jacques-Cartier, Sept-Îles": [-66.2068, 50.2202],
+  // Laval Sainte-Rose — 8.5km trop au sud
+  "Couche-Tard Inc.::225 boul. Curé-Labelle, Laval": [-73.7899, 45.6019],
+  // Sainte-Victoire-de-Sorel — 7.1km trop au nord
+  "9198-7131 Québec inc.::1547 ch. des Patriotes, Sainte-Victoire-de-Sorel": [-73.1366, 45.9864],
+  // Montréal Côte-Vertu — 6.9km d'écart
+  "9475-0270 Quebec Inc::200 de la Côte-Vertu, MONTRÉAL": [-73.7235, 45.4793],
+  // Saint-Dominique — 6.6km trop au nord
+  "7766670 Canada inc.::1147 rue Principale, Saint-Dominique": [-72.8544, 45.5657],
+  // Salaberry-de-Valleyfield — 6.5km d'écart
+  "Les Gestions L.P.Fillion inc.::275 rue Jacques-Cartier, Salaberry-de-Valleyfield": [-74.1212, 45.2456],
+  // Saint-Hyacinthe — 5.5km trop au nord
+  "Harnois Énergies Inc.::17090 av. Saint-Louis, Saint-Hyacinthe": [-72.9274, 45.6202],
+  // Saint-Paul d'Abbotsford — 5.3km trop au nord
+  "Dépanneur PH Garneau inc.::2115 rue Principale, Saint-Paul d'Abbotsford": [-72.8392, 45.4304],
+};
+
 export function stationId(props: StationProperties): string {
   return `${props.Name}|${props.Address}`;
 }

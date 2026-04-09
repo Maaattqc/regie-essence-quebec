@@ -1,0 +1,976 @@
+{
+  "note": "Stations avec écart >5km entre la position source (Régie) et le géocodage Nominatim. INCERTAIN: le géocodeur n'a pas trouvé de match exact (numéro civique ou commerce). Ces écarts peuvent être causés par des routes longues, des adresses ambiguës, ou de vraies erreurs. Vérification manuelle sur Google Maps recommandée avant correction.",
+  "generatedAt": "2026-04-09T20:52:43.683Z",
+  "count": 57,
+  "stations": [
+    {
+      "stationKey": "Couche-Tard Inc.::14 rte 138, Forestville",
+      "name": "Couche-Tard Inc.",
+      "brand": "Esso",
+      "address": "14 rte 138, Forestville",
+      "region": "Côte-Nord",
+      "distKm": 43.4,
+      "sourceCoords": [
+        -69.412029,
+        48.330449
+      ],
+      "geocodedCoords": [
+        -69.091908,
+        48.6577959
+      ],
+      "geocodedName": "Route 138, Portneuf-sur-Mer, La Haute-Côte-Nord, Côte-Nord, Québec, G0T 1P0, Canada"
+    },
+    {
+      "stationKey": "EQUIPE DE C INC::440 32 est, Montréal",
+      "name": "EQUIPE DE C INC",
+      "brand": "Petro-Canada",
+      "address": "440 32 est, Montréal",
+      "region": "Montréal",
+      "distKm": 26.2,
+      "sourceCoords": [
+        -73.691421,
+        45.437906
+      ],
+      "geocodedCoords": [
+        -73.4977437,
+        45.6309797
+      ],
+      "geocodedName": "Montréal-Est, Agglomération de Montréal, Montréal (région administrative), Québec, Canada"
+    },
+    {
+      "stationKey": "Épicerie Rivard/ 9305-5929 Québec Inc.::6796 rue Témiscamingue, Rouyn-Noranda",
+      "name": "Épicerie Rivard/ 9305-5929 Québec Inc.",
+      "brand": "Petro-Canada",
+      "address": "6796 rue Témiscamingue, Rouyn-Noranda",
+      "region": "Abitibi-Témiscamingue",
+      "distKm": 26.1,
+      "sourceCoords": [
+        -79.151307,
+        48.112606
+      ],
+      "geocodedCoords": [
+        -79.0319982,
+        48.3339234
+      ],
+      "geocodedName": "Rue Saguenay, Duprat, D'Alembert, Rouyn-Noranda, Abitibi-Témiscamingue, Québec, Canada"
+    },
+    {
+      "stationKey": "L'Escale Montbeillard::9762 boul. Rideau, Rouyn-Noranda",
+      "name": "L'Escale Montbeillard",
+      "brand": "Aucun",
+      "address": "9762 boul. Rideau, Rouyn-Noranda",
+      "region": "Abitibi-Témiscamingue",
+      "distKm": 24,
+      "sourceCoords": [
+        -79.256942,
+        48.043671
+      ],
+      "geocodedCoords": [
+        -79.1250603,
+        48.2404452
+      ],
+      "geocodedName": "Boulevard Rideau, Évain, Rouyn-Noranda, Abitibi-Témiscamingue, Québec, J0Z 1Y1, Canada"
+    },
+    {
+      "stationKey": "9173-4996 QUEBEC INC::4510 boul. Saint-Charles sud, Montréal",
+      "name": "9173-4996 QUEBEC INC",
+      "brand": "Shell",
+      "address": "4510 boul. Saint-Charles sud, Montréal",
+      "region": "Montréal",
+      "distKm": 23.4,
+      "sourceCoords": [
+        -73.870387,
+        45.462617
+      ],
+      "geocodedCoords": [
+        -73.5720709,
+        45.4852522
+      ],
+      "geocodedName": "Boulevard Georges-Vanier, Pointe-Saint-Charles, Le Sud-Ouest, Montréal, Agglomération de Montréal, Montréal (région administrative), Québec, H3J 2B4, Canada"
+    },
+    {
+      "stationKey": "Couche-Tard Inc.::2 rte 249, Windsor",
+      "name": "Couche-Tard Inc.",
+      "brand": "Esso",
+      "address": "2 rte 249, Windsor",
+      "region": "Estrie",
+      "distKm": 21.4,
+      "sourceCoords": [
+        -72.011317,
+        45.567295
+      ],
+      "geocodedCoords": [
+        -71.9418866,
+        45.7532572
+      ],
+      "geocodedName": "2, Route 249, Danville, Les Sources, Québec, J1T 4K4, Canada"
+    },
+    {
+      "stationKey": "2972-1024 QUEBEC INC::183 route 199, Les Îles-de-la-Madeleine",
+      "name": "2972-1024 QUEBEC INC",
+      "brand": "Ultramar",
+      "address": "183 route 199, Les Îles-de-la-Madeleine",
+      "region": "Gaspésie-Îles-de-la-Madeleine",
+      "distKm": 18.3,
+      "sourceCoords": [
+        -61.896551,
+        47.243049
+      ],
+      "geocodedCoords": [
+        -61.8246911,
+        47.4002162
+      ],
+      "geocodedName": "Route 199, Les Îles-de-la-Madeleine, Communauté maritime des Îles-de-la-Madeleine, Gaspésie–Îles-de-la-Madeleine, Québec, G4T 5A4, Canada"
+    },
+    {
+      "stationKey": "Garage Daniel Gosselin::499 rue Principale, Saint-Sébastien",
+      "name": "Garage Daniel Gosselin",
+      "brand": "Miraco",
+      "address": "499 rue Principale, Saint-Sébastien",
+      "region": "Estrie",
+      "distKm": 17.9,
+      "sourceCoords": [
+        -70.74323,
+        45.783895
+      ],
+      "geocodedCoords": [
+        -70.9745506,
+        45.784117
+      ],
+      "geocodedName": "499, Rue Principale, Saint-Sébastien, Le Granit, Québec, Canada"
+    },
+    {
+      "stationKey": "9836578 Canada Inc.::1711 rte 105, Chelsea",
+      "name": "9836578 Canada Inc.",
+      "brand": "Shell",
+      "address": "1711 rte 105, Chelsea",
+      "region": "Outaouais",
+      "distKm": 17.3,
+      "sourceCoords": [
+        -75.900064,
+        45.598362
+      ],
+      "geocodedCoords": [
+        -75.751254,
+        45.4829283
+      ],
+      "geocodedName": "Route 105, Chelsea, Les Collines-de-l'Outaouais, Outaouais, Québec, J8Z 3G7, Canada"
+    },
+    {
+      "stationKey": "Unoria Coopérative::2683 rte 132 est, Rimouski",
+      "name": "Unoria Coopérative",
+      "brand": "Shell",
+      "address": "2683 rte 132 est, Rimouski",
+      "region": "Bas-Saint-Laurent",
+      "distKm": 15.3,
+      "sourceCoords": [
+        -68.693461,
+        48.377016
+      ],
+      "geocodedCoords": [
+        -68.8648513,
+        48.3002497
+      ],
+      "geocodedName": "Route 132 Est, Saint-Fabien, Rimouski-Neigette, Bas-Saint-Laurent, Québec, G0L 2Z0, Canada"
+    },
+    {
+      "stationKey": "Couche-Tard Inc.::10735 boul. Henri-Bourassa est, Montréal",
+      "name": "Couche-Tard Inc.",
+      "brand": "Couche-Tard",
+      "address": "10735 boul. Henri-Bourassa est, Montréal",
+      "region": "Montréal",
+      "distKm": 14.8,
+      "sourceCoords": [
+        -73.537037,
+        45.652573
+      ],
+      "geocodedCoords": [
+        -73.6677233,
+        45.5558718
+      ],
+      "geocodedName": "Boulevard Henri-Bourassa Est, Ahuntsic, Ahuntsic-Cartierville, Montréal, Agglomération de Montréal, Montréal (région administrative), Québec, H2C 1E1, Canada"
+    },
+    {
+      "stationKey": "9058-0697 Quebec Inc::117 route 132 ouest, CARLETON-SUR-MER",
+      "name": "9058-0697 Quebec Inc",
+      "brand": "Crevier",
+      "address": "117 route 132 ouest, CARLETON-SUR-MER",
+      "region": "Gaspésie-Îles-de-la-Madeleine",
+      "distKm": 14.3,
+      "sourceCoords": [
+        -66.223382,
+        48.110815
+      ],
+      "geocodedCoords": [
+        -66.0437464,
+        48.1572125
+      ],
+      "geocodedName": "117, Route du 2e-Rang, Maria-Ouest, Maria, Avignon, Gaspésie–Îles-de-la-Madeleine, Québec, Canada"
+    },
+    {
+      "stationKey": "9395-0368 Québec Inc.::47 rte 337, Sainte-Julienne",
+      "name": "9395-0368 Québec Inc.",
+      "brand": "Harnois",
+      "address": "47 rte 337, Sainte-Julienne",
+      "region": "Lanaudière",
+      "distKm": 13.4,
+      "sourceCoords": [
+        -73.755782,
+        45.896282
+      ],
+      "geocodedCoords": [
+        -73.7121924,
+        46.0129586
+      ],
+      "geocodedName": "Route 337, Sainte-Julienne, Montcalm, Lanaudière, Québec, J0K 2T0, Canada"
+    },
+    {
+      "stationKey": "Les Motels de l'Énergie inc.::Km 211 rte 389, Baie-Comeau",
+      "name": "Les Motels de l'Énergie inc.",
+      "brand": "Pétro-Québec",
+      "address": "Km 211 rte 389, Baie-Comeau",
+      "region": "Côte-Nord",
+      "distKm": 13.2,
+      "sourceCoords": [
+        -68.194628,
+        49.232003
+      ],
+      "geocodedCoords": [
+        -68.3245965,
+        49.3147183
+      ],
+      "geocodedName": "Route Trans-Québec–Labrador, Baie-Comeau, Manicouagan, Côte-Nord, Québec, G4Z 0A7, Canada"
+    },
+    {
+      "stationKey": "Centre de liquidation Raynat inc.::2236 rte 125, Notre-Dame-de-la-Merci",
+      "name": "Centre de liquidation Raynat inc.",
+      "brand": "Sonic",
+      "address": "2236 rte 125, Notre-Dame-de-la-Merci",
+      "region": "Lanaudière",
+      "distKm": 12.4,
+      "sourceCoords": [
+        -74.105496,
+        46.248822
+      ],
+      "geocodedCoords": [
+        -74.0231172,
+        46.1532847
+      ],
+      "geocodedName": "Route 125, Notre-Dame-de-la-Merci, Matawinie, Lanaudière, Québec, Canada"
+    },
+    {
+      "stationKey": "Harnois Énergies Inc.::20800 boul. Henri-Bourassa, Québec",
+      "name": "Harnois Énergies Inc.",
+      "brand": "Esso",
+      "address": "20800 boul. Henri-Bourassa, Québec",
+      "region": "Capitale-Nationale",
+      "distKm": 11.2,
+      "sourceCoords": [
+        -71.318758,
+        46.906209
+      ],
+      "geocodedCoords": [
+        -71.2193866,
+        46.8321099
+      ],
+      "geocodedName": "Boulevard Henri-Bourassa, Maizerets, La Cité-Limoilou, Québec, Agglomération de Québec, Capitale-Nationale, Québec, G1J 3V9, Canada"
+    },
+    {
+      "stationKey": "CHIASSON SERVICE INC.::418 route 169, SAINTE-JEANNE-D'ARC",
+      "name": "CHIASSON SERVICE INC.",
+      "brand": "Ultramar",
+      "address": "418 route 169, SAINTE-JEANNE-D'ARC",
+      "region": "Saguenay-Lac-Saint-Jean",
+      "distKm": 10.9,
+      "sourceCoords": [
+        -72.2344068,
+        48.8173302
+      ],
+      "geocodedCoords": [
+        -72.098894,
+        48.857685
+      ],
+      "geocodedName": "Crevier, 418, Route 169, Sainte-Jeanne-d'Arc, Maria-Chapdelaine, Saguenay–Lac-Saint-Jean, Québec, G0W 1E0, Canada"
+    },
+    {
+      "stationKey": "AU COIN DE L'OURS (2006) INC.::654 route 111, TRÉCESSON",
+      "name": "AU COIN DE L'OURS (2006) INC.",
+      "brand": "Crevier",
+      "address": "654 route 111, TRÉCESSON",
+      "region": "Abitibi-Témiscamingue",
+      "distKm": 10.7,
+      "sourceCoords": [
+        -78.225704,
+        48.616876
+      ],
+      "geocodedCoords": [
+        -78.3689154,
+        48.6318988
+      ],
+      "geocodedName": "Route 111, Trécesson, Abitibi, Abitibi-Témiscamingue, Québec, Canada"
+    },
+    {
+      "stationKey": "Épicerie Nutashkuan::159 rte 138, Natashquan",
+      "name": "Épicerie Nutashkuan",
+      "brand": "Axco",
+      "address": "159 rte 138, Natashquan",
+      "region": "Côte-Nord",
+      "distKm": 10.7,
+      "sourceCoords": [
+        -61.800723,
+        50.134744
+      ],
+      "geocodedCoords": [
+        -61.65338,
+        50.1528447
+      ],
+      "geocodedName": "Route 138, Natashquan, Minganie, Côte-Nord, Québec, Canada"
+    },
+    {
+      "stationKey": "9377-1046 Québec Inc::2681 Boul. du Royaume, SAGUENAY",
+      "name": "9377-1046 Québec Inc",
+      "brand": "Ultramar",
+      "address": "2681 Boul. du Royaume, SAGUENAY",
+      "region": "Saguenay-Lac-Saint-Jean",
+      "distKm": 10.5,
+      "sourceCoords": [
+        -71.171977,
+        48.404702
+      ],
+      "geocodedCoords": [
+        -71.3129764,
+        48.4195789
+      ],
+      "geocodedName": "Boulevard du Royaume, La Ratière, Arrondissement de Jonquière, Saguenay, Saguenay–Lac-Saint-Jean, Québec, Canada"
+    },
+    {
+      "stationKey": "La Société Canadian Tire Ltée::3575 boul. des Forges, Trois-Rivières",
+      "name": "La Société Canadian Tire Ltée",
+      "brand": "Canadian Tire",
+      "address": "3575 boul. des Forges, Trois-Rivières",
+      "region": "Mauricie",
+      "distKm": 10.4,
+      "sourceCoords": [
+        -72.58204,
+        46.352886
+      ],
+      "geocodedCoords": [
+        -72.6919959,
+        46.4078294
+      ],
+      "geocodedName": "Boulevard des Forges, Les Vieilles-Forges, Trois-Rivières, Mauricie, Québec, G9A 5E1, Canada"
+    },
+    {
+      "stationKey": "FLAMAND HOLDING INC::49 route 138, FORESTVILLE",
+      "name": "FLAMAND HOLDING INC",
+      "brand": "Ultramar",
+      "address": "49 route 138, FORESTVILLE",
+      "region": "Côte-Nord",
+      "distKm": 9.9,
+      "sourceCoords": [
+        -69.085512,
+        48.747042
+      ],
+      "geocodedCoords": [
+        -69.091908,
+        48.6577959
+      ],
+      "geocodedName": "Route 138, Portneuf-sur-Mer, La Haute-Côte-Nord, Côte-Nord, Québec, G0T 1P0, Canada"
+    },
+    {
+      "stationKey": "9334-4760 Québec inc.::9061 rte Sir-Wilfrid-Laurier, Mirabel",
+      "name": "9334-4760 Québec inc.",
+      "brand": "Harnois",
+      "address": "9061 rte Sir-Wilfrid-Laurier, Mirabel",
+      "region": "Laurentides",
+      "distKm": 9.5,
+      "sourceCoords": [
+        -74.09984,
+        45.701764
+      ],
+      "geocodedCoords": [
+        -73.9992198,
+        45.7506167
+      ],
+      "geocodedName": "Route Sir-Wilfrid-Laurier, Saint-Antoine-des-Laurentides, Mirabel, Laurentides, Québec, J7Z 7L2, Canada"
+    },
+    {
+      "stationKey": "Groupe Mondot (Lavaltrie)::5 ch. de Lavaltrie, Lavaltrie",
+      "name": "Groupe Mondot (Lavaltrie)",
+      "brand": "Sonic",
+      "address": "5 ch. de Lavaltrie, Lavaltrie",
+      "region": "Lanaudière",
+      "distKm": 9.5,
+      "sourceCoords": [
+        -73.287303,
+        45.88896
+      ],
+      "geocodedCoords": [
+        -73.3875758,
+        45.9376115
+      ],
+      "geocodedName": "5, Chemin de Lavaltrie, Saint-Paul, Joliette (MRC), Lanaudière, Québec, J5T 3L3, Canada"
+    },
+    {
+      "stationKey": "Dépanneur Au Petit Castor::5993 boul. Rideau, Rouyn-Noranda",
+      "name": "Dépanneur Au Petit Castor",
+      "brand": "Harnois",
+      "address": "5993 boul. Rideau, Rouyn-Noranda",
+      "region": "Abitibi-Témiscamingue",
+      "distKm": 9.4,
+      "sourceCoords": [
+        -79.253972,
+        48.197571
+      ],
+      "geocodedCoords": [
+        -79.1417903,
+        48.2369549
+      ],
+      "geocodedName": "Boulevard Rideau, Évain, Rouyn-Noranda, Abitibi-Témiscamingue, Québec, J0Z 1Y1, Canada"
+    },
+    {
+      "stationKey": "9541-1591 Québec inc.::101 rte 169, Hébertville",
+      "name": "9541-1591 Québec inc.",
+      "brand": "Petro-Canada",
+      "address": "101 rte 169, Hébertville",
+      "region": "Saguenay-Lac-Saint-Jean",
+      "distKm": 9.2,
+      "sourceCoords": [
+        -71.684335,
+        48.375282
+      ],
+      "geocodedCoords": [
+        -71.7808671,
+        48.4281305
+      ],
+      "geocodedName": "Route 169, Hébertville, Métabetchouan–Lac-à-la-Croix, Lac-Saint-Jean-Est, Saguenay–Lac-Saint-Jean, Québec, Canada"
+    },
+    {
+      "stationKey": "Couche-Tard Inc.::5220 rue Notre-Dame, Laval",
+      "name": "Couche-Tard Inc.",
+      "brand": "Esso",
+      "address": "5220 rue Notre-Dame, Laval",
+      "region": "Laval",
+      "distKm": 9.2,
+      "sourceCoords": [
+        -73.779308,
+        45.531781
+      ],
+      "geocodedCoords": [
+        -73.6833005,
+        45.5807291
+      ],
+      "geocodedName": "Rue Notre-Dame-de-Fatima, Pont-Viau, Laval (région administrative), Québec, H7G 3R9, Canada"
+    },
+    {
+      "stationKey": "9102-7342 QUEBEC INC::17505 Charles , Mirabel",
+      "name": "9102-7342 QUEBEC INC",
+      "brand": "Petro-Canada",
+      "address": "17505 Charles , Mirabel",
+      "region": "Laurentides",
+      "distKm": 9.1,
+      "sourceCoords": [
+        -73.936256,
+        45.694343
+      ],
+      "geocodedCoords": [
+        -73.9053091,
+        45.615356
+      ],
+      "geocodedName": "17505, Chemin du Grand-Saint-Charles, Petit Saint-Charles, Mirabel, Deux-Montagnes (MRC), Laurentides, Québec, J7P 0A1, Canada"
+    },
+    {
+      "stationKey": "9442-8422 Québec Inc::100 Boul. Bourque, SHERBROOKE",
+      "name": "9442-8422 Québec Inc",
+      "brand": "Ultramar",
+      "address": "100 Boul. Bourque, SHERBROOKE",
+      "region": "Estrie",
+      "distKm": 9,
+      "sourceCoords": [
+        -71.996293,
+        45.36803
+      ],
+      "geocodedCoords": [
+        -72.079672,
+        45.3127526
+      ],
+      "geocodedName": "Boulevard Bourque, Rock Forest–Saint-Élie–Deauville, Brompton–Rock Forest–Saint-Élie–Deauville, Sherbrooke, Estrie, Québec, J1N 0G2, Canada"
+    },
+    {
+      "stationKey": "9470-4269 Québec Inc.::341 av. du Pont nord, Alma",
+      "name": "9470-4269 Québec Inc.",
+      "brand": "Harnois",
+      "address": "341 av. du Pont nord, Alma",
+      "region": "Saguenay-Lac-Saint-Jean",
+      "distKm": 9,
+      "sourceCoords": [
+        -71.639324,
+        48.554354
+      ],
+      "geocodedCoords": [
+        -71.6850745,
+        48.6298069
+      ],
+      "geocodedName": "Avenue du Pont Nord, Saint-Coeur-de-Marie, Alma, Lac-Saint-Jean-Est, Saguenay–Lac-Saint-Jean, Québec, G8E 1T1, Canada"
+    },
+    {
+      "stationKey": "Station-service Léon Noël::4900 rte 255, Saint-Lucien",
+      "name": "Station-service Léon Noël",
+      "brand": "Pétro Gaz",
+      "address": "4900 rte 255, Saint-Lucien",
+      "region": "Centre-du-Québec",
+      "distKm": 8.7,
+      "sourceCoords": [
+        -72.275418,
+        45.879013
+      ],
+      "geocodedCoords": [
+        -72.2198636,
+        45.8113381
+      ],
+      "geocodedName": "Route 255, Saint-Félix-de-Kingsey, Drummond, Centre-du-Québec, Québec, J0B 2T0, Canada"
+    },
+    {
+      "stationKey": "Épicerie Steeve Gagné inc.::46 rte 138, Baie-Trinité",
+      "name": "Épicerie Steeve Gagné inc.",
+      "brand": "Petro-Canada",
+      "address": "46 rte 138, Baie-Trinité",
+      "region": "Côte-Nord",
+      "distKm": 8.5,
+      "sourceCoords": [
+        -67.287633,
+        49.423774
+      ],
+      "geocodedCoords": [
+        -67.2334948,
+        49.4915592
+      ],
+      "geocodedName": "46, Route 138, Baie-Trinité-Est, Baie-Trinité, Manicouagan, Côte-Nord, Québec, Canada"
+    },
+    {
+      "stationKey": "9428-4726 Quebec Inc.::2439 rue Sainte-Sophie, SAINTE-SOPHIE",
+      "name": "9428-4726 Quebec Inc.",
+      "brand": "Ultramar",
+      "address": "2439 rue Sainte-Sophie, SAINTE-SOPHIE",
+      "region": "Laurentides",
+      "distKm": 8.4,
+      "sourceCoords": [
+        -73.904782,
+        45.816195
+      ],
+      "geocodedCoords": [
+        -74.0028653,
+        45.8473323
+      ],
+      "geocodedName": "Rue du Haut-Sainte-Sophie, Sainte-Sophie, La Rivière-du-Nord, Laurentides, Québec, J5J 0P4, Canada"
+    },
+    {
+      "stationKey": "Filgo Cabano::274-B rue Michaud, Témiscouata-sur-le-Lac",
+      "name": "Filgo Cabano",
+      "brand": "Shell",
+      "address": "274-B rue Michaud, Témiscouata-sur-le-Lac",
+      "region": "Bas-Saint-Laurent",
+      "distKm": 8.4,
+      "sourceCoords": [
+        -68.868763,
+        47.670474
+      ],
+      "geocodedCoords": [
+        -68.7987056,
+        47.6114087
+      ],
+      "geocodedName": "Rue Michaud, Notre-Dame-du-Lac, Témiscouata-sur-le-Lac, Témiscouata, Bas-Saint-Laurent, Québec, G0L 1X0, Canada"
+    },
+    {
+      "stationKey": "9086-6922 QUEBEC INC::5200 Métropolitain est, Montréal",
+      "name": "9086-6922 QUEBEC INC",
+      "brand": "Petro-Canada",
+      "address": "5200 Métropolitain est, Montréal",
+      "region": "Montréal",
+      "distKm": 8.1,
+      "sourceCoords": [
+        -73.589776,
+        45.58035
+      ],
+      "geocodedCoords": [
+        -73.5341159,
+        45.6420753
+      ],
+      "geocodedName": "Boulevard Métropolitain, Montréal-Est, Agglomération de Montréal, Montréal (région administrative), Québec, H1B 4W3, Canada"
+    },
+    {
+      "stationKey": "Filgo Ste-Sophie::1040 boul. Sainte-Sophie, Sainte-Sophie",
+      "name": "Filgo Ste-Sophie",
+      "brand": "Shell",
+      "address": "1040 boul. Sainte-Sophie, Sainte-Sophie",
+      "region": "Laurentides",
+      "distKm": 7.7,
+      "sourceCoords": [
+        -73.881174,
+        45.832178
+      ],
+      "geocodedCoords": [
+        -73.9533765,
+        45.7850484
+      ],
+      "geocodedName": "Boulevard Sainte-Sophie, Saint-Antoine-des-Laurentides, Mirabel, La Rivière-du-Nord, Laurentides, Québec, J5J 2P2, Canada"
+    },
+    {
+      "stationKey": "9378-3702 Québec inc.::101 ch. de Lavaltrie, Lavaltrie",
+      "name": "9378-3702 Québec inc.",
+      "brand": "Shell",
+      "address": "101 ch. de Lavaltrie, Lavaltrie",
+      "region": "Lanaudière",
+      "distKm": 7.6,
+      "sourceCoords": [
+        -73.29826,
+        45.894215
+      ],
+      "geocodedCoords": [
+        -73.3790645,
+        45.9324821
+      ],
+      "geocodedName": "101, Chemin de Lavaltrie, Saint-Paul, Joliette (MRC), Lanaudière, Québec, J5T 3L3, Canada"
+    },
+    {
+      "stationKey": "9161-7373 Québec Inc.::444 rue Lafleur, Montréal",
+      "name": "9161-7373 Québec Inc.",
+      "brand": "Shell",
+      "address": "444 rue Lafleur, Montréal",
+      "region": "Montréal",
+      "distKm": 7.4,
+      "sourceCoords": [
+        -73.646773,
+        45.43287
+      ],
+      "geocodedCoords": [
+        -73.5646768,
+        45.4670293
+      ],
+      "geocodedName": "Rue Lafleur, Verdun, Montréal, Agglomération de Montréal, Montréal (région administrative), Québec, H4G 1T3, Canada"
+    },
+    {
+      "stationKey": "Garage Serge Lirette inc.::803 rue de la Station, Saint-Basile",
+      "name": "Garage Serge Lirette inc.",
+      "brand": "Eko",
+      "address": "803 rue de la Station, Saint-Basile",
+      "region": "Capitale-Nationale",
+      "distKm": 6.8,
+      "sourceCoords": [
+        -71.802263,
+        46.735302
+      ],
+      "geocodedCoords": [
+        -71.8827041,
+        46.7091621
+      ],
+      "geocodedName": "803, Rue Saint-Charles, Pont-de-la-Noreau, Portneuf, Portneuf (MRC), Capitale-Nationale, Québec, G0A 2Y0, Canada"
+    },
+    {
+      "stationKey": "Gestion MSDL Inc.::1632 ch. de Sainte-Lucie, Sainte-Lucie-des-Laurentides",
+      "name": "Gestion MSDL Inc.",
+      "brand": "Harnois",
+      "address": "1632 ch. de Sainte-Lucie, Sainte-Lucie-des-Laurentides",
+      "region": "Laurentides",
+      "distKm": 6.8,
+      "sourceCoords": [
+        -74.190188,
+        46.121148
+      ],
+      "geocodedCoords": [
+        -74.2598112,
+        46.0836536
+      ],
+      "geocodedName": "Chemin de Sainte-Lucie, Sainte-Agathe-des-Monts, Les Laurentides, Laurentides, Québec, J8C 3W2, Canada"
+    },
+    {
+      "stationKey": "Harnois Énergies Inc.::1468 rte 117, Mont- Blanc",
+      "name": "Harnois Énergies Inc.",
+      "brand": "Esso",
+      "address": "1468 rte 117, Mont- Blanc",
+      "region": "Laurentides",
+      "distKm": 6.7,
+      "sourceCoords": [
+        -74.45289,
+        46.122099
+      ],
+      "geocodedCoords": [
+        -74.5384935,
+        46.1125865
+      ],
+      "geocodedName": "Route 117, Mont-Tremblant, Les Laurentides, Laurentides, Québec, J8E 2X2, Canada"
+    },
+    {
+      "stationKey": "9411-6092 Québec Inc.::480 boul. Curé-Labelle, Laval",
+      "name": "9411-6092 Québec Inc.",
+      "brand": "Shell",
+      "address": "480 boul. Curé-Labelle, Laval",
+      "region": "Laval",
+      "distKm": 6.6,
+      "sourceCoords": [
+        -73.788382,
+        45.58017
+      ],
+      "geocodedCoords": [
+        -73.7309654,
+        45.5358973
+      ],
+      "geocodedName": "Boulevard Curé-Labelle, Chomedey, Laval (région administrative), Québec, H7V 1E8, Canada"
+    },
+    {
+      "stationKey": "Dépanneur Reli inc.::2724 boul. L'Ange-Gardien nord, L'Assomption",
+      "name": "Dépanneur Reli inc.",
+      "brand": "Harnois",
+      "address": "2724 boul. L'Ange-Gardien nord, L'Assomption",
+      "region": "Lanaudière",
+      "distKm": 6.6,
+      "sourceCoords": [
+        -73.431425,
+        45.896229
+      ],
+      "geocodedCoords": [
+        -73.4142741,
+        45.8384083
+      ],
+      "geocodedName": "Banque Nationale, 821, Boulevard de l'Ange-Gardien Nord, L'Assomption, L'Assomption (MRC), Lanaudière, Québec, J5W 1P6, Canada"
+    },
+    {
+      "stationKey": "Harnois Énergies Inc.::148 ch. Saint-Gabriel, Saint-Gabriel-de-Brandon",
+      "name": "Harnois Énergies Inc.",
+      "brand": "Harnois",
+      "address": "148 ch. Saint-Gabriel, Saint-Gabriel-de-Brandon",
+      "region": "Lanaudière",
+      "distKm": 6.6,
+      "sourceCoords": [
+        -73.381711,
+        46.290876
+      ],
+      "geocodedCoords": [
+        -73.4198063,
+        46.237493
+      ],
+      "geocodedName": "Chemin Saint-Gabriel, Saint-Cléophas-de-Brandon, D'Autray, Lanaudière, Québec, Canada"
+    },
+    {
+      "stationKey": "Dépanneur St-David::141 boul. Martel, Saint-David-de-Falardeau",
+      "name": "Dépanneur St-David",
+      "brand": "Petro-Canada",
+      "address": "141 boul. Martel, Saint-David-de-Falardeau",
+      "region": "Saguenay-Lac-Saint-Jean",
+      "distKm": 6.5,
+      "sourceCoords": [
+        -71.107997,
+        48.627986
+      ],
+      "geocodedCoords": [
+        -71.067992,
+        48.5754019
+      ],
+      "geocodedName": "Boulevard Martel, Saint-Honoré, Le Fjord-du-Saguenay, Saguenay–Lac-Saint-Jean, Québec, Canada"
+    },
+    {
+      "stationKey": "EQUIPE DE C INC::7250 Saint-Jacques ouest, Montréal",
+      "name": "EQUIPE DE C INC",
+      "brand": "Petro-Canada",
+      "address": "7250 Saint-Jacques ouest, Montréal",
+      "region": "Montréal",
+      "distKm": 6.3,
+      "sourceCoords": [
+        -73.632543,
+        45.454907
+      ],
+      "geocodedCoords": [
+        -73.570516,
+        45.4908026
+      ],
+      "geocodedName": "Rue Saint-Jacques, Le Sud-Ouest, Montréal, Agglomération de Montréal, Montréal (région administrative), Québec, H3J 1T4, Canada"
+    },
+    {
+      "stationKey": "GESTION BRANRICK INC::5005 route 329 nord, SAINTE-AGATHE-DES-MONTS",
+      "name": "GESTION BRANRICK INC",
+      "brand": "Ultramar",
+      "address": "5005 route 329 nord, SAINTE-AGATHE-DES-MONTS",
+      "region": "Laurentides",
+      "distKm": 6.2,
+      "sourceCoords": [
+        -74.288539,
+        46.118676
+      ],
+      "geocodedCoords": [
+        -74.2887816,
+        46.0631475
+      ],
+      "geocodedName": "Route 329 Nord, Sainte-Agathe-des-Monts, Les Laurentides, Laurentides, Québec, J8C 3W2, Canada"
+    },
+    {
+      "stationKey": "Société de développement de la Baie-James::Km 381 rte Billy-Diamond, Baie-James",
+      "name": "Société de développement de la Baie-James",
+      "brand": "SDBJ",
+      "address": "Km 381 rte Billy-Diamond, Baie-James",
+      "region": "Nord-du-Québec",
+      "distKm": 6.2,
+      "sourceCoords": [
+        -77.0656,
+        52.1726
+      ],
+      "geocodedCoords": [
+        -77.064147,
+        52.2286331
+      ],
+      "geocodedName": "KM 381, Route Billy-Diamond, ᐄᔨᔨᐤ ᐊᔅᒌ ᒉᐃᒥᔅ ᐯᐃ Eeyou Istchee Baie-James, Jamésie, Nord-du-Québec, Québec, Canada"
+    },
+    {
+      "stationKey": "Dépanneur Sabrevois::1156 rte 133, Saint-Anne de Sabrevois",
+      "name": "Dépanneur Sabrevois",
+      "brand": "Beausoir",
+      "address": "1156 rte 133, Saint-Anne de Sabrevois",
+      "region": "Montérégie",
+      "distKm": 6.1,
+      "sourceCoords": [
+        -73.229793,
+        45.207459
+      ],
+      "geocodedCoords": [
+        -73.2296616,
+        45.2620845
+      ],
+      "geocodedName": "Route 133, Saint-Athanase, Saint-Jean-sur-Richelieu, Le Haut-Richelieu, Montérégie, Québec, J2X 4C5, Canada"
+    },
+    {
+      "stationKey": "GAZONORD INC::2301 rte 109 nord, AMOS",
+      "name": "GAZONORD INC",
+      "brand": "Crevier",
+      "address": "2301 rte 109 nord, AMOS",
+      "region": "Abitibi-Témiscamingue",
+      "distKm": 6.1,
+      "sourceCoords": [
+        -78.112793,
+        48.597185
+      ],
+      "geocodedCoords": [
+        -78.1141265,
+        48.6523101
+      ],
+      "geocodedName": "Route 109 Nord, Saint-Félix-de-Dalquier, Amos, Abitibi, Abitibi-Témiscamingue, Québec, Canada"
+    },
+    {
+      "stationKey": "9013-5971 Quebec Inc.::1990 av. du Pont, ALMA",
+      "name": "9013-5971 Quebec Inc.",
+      "brand": "Crevier",
+      "address": "1990 av. du Pont, ALMA",
+      "region": "Saguenay-Lac-Saint-Jean",
+      "distKm": 6,
+      "sourceCoords": [
+        -71.654226,
+        48.522258
+      ],
+      "geocodedCoords": [
+        -71.6320386,
+        48.57403
+      ],
+      "geocodedName": "Avenue du Pont, De Quen-Est, Alma, Lac-Saint-Jean-Est, Saguenay–Lac-Saint-Jean, Québec, G8B 5G2, Canada"
+    },
+    {
+      "stationKey": "9391-0123 Québec inc.::6655 Boul. Métropolitain est, MONTRÉAL",
+      "name": "9391-0123 Québec inc.",
+      "brand": "Ultramar",
+      "address": "6655 Boul. Métropolitain est, MONTRÉAL",
+      "region": "Montréal",
+      "distKm": 6,
+      "sourceCoords": [
+        -73.576841,
+        45.595216
+      ],
+      "geocodedCoords": [
+        -73.535262,
+        45.6410448
+      ],
+      "geocodedName": "Boulevard Métropolitain, Montréal-Est, Agglomération de Montréal, Montréal (région administrative), Québec, H1B 4W3, Canada"
+    },
+    {
+      "stationKey": "9120-1780 QUEBEC INC::1835 Boul. Laure, SEPT-ÎLES",
+      "name": "9120-1780 QUEBEC INC",
+      "brand": "Ultramar",
+      "address": "1835 Boul. Laure, SEPT-ÎLES",
+      "region": "Côte-Nord",
+      "distKm": 5.9,
+      "sourceCoords": [
+        -66.4156,
+        50.215038
+      ],
+      "geocodedCoords": [
+        -66.4054403,
+        50.2674987
+      ],
+      "geocodedName": "Ultramar, 1835, Boulevard Laure, Sept-Îles, Sept-Rivières, Côte-Nord, Québec, G4R 1Z1, Canada"
+    },
+    {
+      "stationKey": "Dépanneur Sprint Laterrière::2382 rte 170, Saguenay",
+      "name": "Dépanneur Sprint Laterrière",
+      "brand": "Petro-Canada",
+      "address": "2382 rte 170, Saguenay",
+      "region": "Saguenay-Lac-Saint-Jean",
+      "distKm": 5.7,
+      "sourceCoords": [
+        -71.055264,
+        48.356563
+      ],
+      "geocodedCoords": [
+        -70.9812951,
+        48.3414136
+      ],
+      "geocodedName": "Route 170, Arrondissement de La Baie, Saguenay, Saguenay–Lac-Saint-Jean, Québec, G0V 1A0, Canada"
+    },
+    {
+      "stationKey": "9089-3801 Québec Inc.::3337 boul. Taschereau, Longueuil",
+      "name": "9089-3801 Québec Inc.",
+      "brand": "Shell",
+      "address": "3337 boul. Taschereau, Longueuil",
+      "region": "Montérégie",
+      "distKm": 5.3,
+      "sourceCoords": [
+        -73.479209,
+        45.49399
+      ],
+      "geocodedCoords": [
+        -73.5219186,
+        45.5309053
+      ],
+      "geocodedName": "Boulevard Taschereau, Le Vieux-Longueuil, Longueuil, Agglomération de Longueuil, Montérégie, Québec, J4K 2T8, Canada"
+    },
+    {
+      "stationKey": "Dépanneur Robin Tremblay inc.::2225 rte du Fleuve, Les Éboulements",
+      "name": "Dépanneur Robin Tremblay inc.",
+      "brand": "Esso",
+      "address": "2225 rte du Fleuve, Les Éboulements",
+      "region": "Capitale-Nationale",
+      "distKm": 5.3,
+      "sourceCoords": [
+        -70.32321,
+        47.478758
+      ],
+      "geocodedCoords": [
+        -70.2635687,
+        47.5044229
+      ],
+      "geocodedName": "Route du Fleuve, Les Éboulements, Charlevoix, Capitale-Nationale, Québec, G0A 2M0, Canada"
+    },
+    {
+      "stationKey": "TEBO20 Inc::2581 av. Royale, QUÉBEC",
+      "name": "TEBO20 Inc",
+      "brand": "Ultramar",
+      "address": "2581 av. Royale, QUÉBEC",
+      "region": "Capitale-Nationale",
+      "distKm": 5.2,
+      "sourceCoords": [
+        -71.149245,
+        46.892122
+      ],
+      "geocodedCoords": [
+        -71.1955365,
+        46.8574874
+      ],
+      "geocodedName": "Avenue Royale, Parc Girardin, Vieux-Bourg, Beauport, Québec, Agglomération de Québec, Capitale-Nationale, Québec, G1E 5A8, Canada"
+    }
+  ]
+}

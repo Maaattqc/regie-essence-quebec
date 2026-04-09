@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { extractCity, normalize, parsePrice, STATIONS_URL } from "@/lib/stations";
+import { COORDINATE_OVERRIDES, extractCity, normalize, parsePrice, STATIONS_URL } from "@/lib/stations";
 import { supabaseAdmin } from "@/lib/supabase";
 
 const STATION_SYNC_MAX_AGE_MS = 5 * 60 * 1000;
@@ -229,22 +229,26 @@ function decorateProperties(properties: RemoteStationProperties) {
 function hydrateGeoJson(rows: StationLiveRow[]): RemoteStationGeoJson {
   return {
     type: "FeatureCollection",
-    features: rows.map((row) => ({
-      type: "Feature",
-      geometry: {
-        type: "Point",
-        coordinates: [row.longitude, row.latitude],
-      },
-      properties: decorateProperties({
-        Name: row.name,
-        brand: row.brand,
-        Status: row.status,
-        Address: row.address,
-        PostalCode: row.postal_code,
-        Region: row.region,
-        Prices: row.prices,
-      }),
-    })),
+    features: rows.map((row) => {
+      const override = COORDINATE_OVERRIDES[buildStationKey(row.name, row.address)];
+      const [lng, lat] = override ?? [row.longitude, row.latitude];
+      return {
+        type: "Feature",
+        geometry: {
+          type: "Point",
+          coordinates: [lng, lat],
+        },
+        properties: decorateProperties({
+          Name: row.name,
+          brand: row.brand,
+          Status: row.status,
+          Address: row.address,
+          PostalCode: row.postal_code,
+          Region: row.region,
+          Prices: row.prices,
+        }),
+      };
+    }),
   };
 }
 
@@ -259,9 +263,11 @@ function normalizeRemoteGeoJson(
   const snapshots: PriceSnapshotRow[] = [];
 
   geojson.features.forEach((feature) => {
-    const [longitude, latitude] = feature.geometry.coordinates;
+    let [longitude, latitude] = feature.geometry.coordinates;
     const { Name, brand, Status, Address, PostalCode, Region, Prices } =
       feature.properties;
+    const override = COORDINATE_OVERRIDES[buildStationKey(Name, Address)];
+    if (override) [longitude, latitude] = override;
     const safeBrand = brand ?? "Aucun";
 
     stations.push({

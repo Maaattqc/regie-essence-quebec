@@ -36,6 +36,7 @@ vi.mock("@/lib/stations", () => ({
   normalize: (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
   parsePrice: (p: string) => parseFloat(p.replace(",", ".")),
   STATIONS_URL: "https://regieessencequebec.ca/stations.geojson.gz",
+  COORDINATE_OVERRIDES: {},
 }));
 
 import {
