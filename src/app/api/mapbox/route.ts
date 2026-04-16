@@ -8,7 +8,7 @@ const MAPBOX_BASE = "https://api.mapbox.com";
 const MATRIX_CACHE_TTL = 900; // 15 minutes
 
 const bodySchema = z.union([
-  z.object({ type: z.literal("matrix"), coords: z.string().max(2000) }),
+  z.object({ type: z.literal("matrix"), coords: z.string().max(2000).regex(/^[-0-9.,;]+$/) }),
   z.object({
     type: z.literal("directions"),
     origin: z.tuple([z.number(), z.number()]),
@@ -29,8 +29,11 @@ function quantizeCoords(coords: string): string {
 
 // Proxy Mapbox Matrix API (distances multi-destinations)
 export async function POST(request: NextRequest) {
+  if (request.headers.get("x-app-request") !== "1") {
+    return NextResponse.json({ error: "Requête non autorisée" }, { status: 403 });
+  }
   if (!checkCsrf(request)) return NextResponse.json({ error: "Requête invalide" }, { status: 403 });
-  if (!(await rateLimit(getIP(request)))) {
+  if (!(await rateLimit(getIP(request), "mapbox"))) {
     return NextResponse.json({ error: "Trop de requêtes" }, { status: 429 });
   }
 
@@ -42,6 +45,11 @@ export async function POST(request: NextRequest) {
 
   try {
     if (body.type === "matrix") {
+      const coordsCount = body.coords.split(";").length;
+      if (coordsCount > 20) {
+        return NextResponse.json({ error: "Trop de coordonnées" }, { status: 400 });
+      }
+
       // Cache serveur Redis pour les requêtes Matrix
       const quantized = quantizeCoords(body.coords);
       const cacheKey = `mapbox:matrix:${quantized}`;

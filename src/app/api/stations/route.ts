@@ -9,6 +9,10 @@ import { rateLimit, getIP } from "@/lib/rateLimit";
 export const maxDuration = 120;
 
 export async function GET(request: Request) {
+  if (request.headers.get("x-app-request") !== "1") {
+    return NextResponse.json({ error: "Requête non autorisée" }, { status: 403 });
+  }
+
   if (!(await rateLimit(getIP(request), "relaxed"))) {
     return NextResponse.json({ error: "Trop de requêtes" }, { status: 429 });
   }

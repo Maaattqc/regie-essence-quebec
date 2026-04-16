@@ -36,6 +36,7 @@ describe('POST /api/mapbox', () => {
 
     const request = new NextRequest('http://localhost/api/mapbox', {
       method: 'POST',
+      headers: { 'x-app-request': '1' },
       body: JSON.stringify({ type: 'matrix', coords: '1,2;3,4' }),
     })
     const response = await POST(request)
@@ -46,6 +47,7 @@ describe('POST /api/mapbox', () => {
   it('retourne 400 pour un body invalide', async () => {
     const request = new NextRequest('http://localhost/api/mapbox', {
       method: 'POST',
+      headers: { 'x-app-request': '1' },
       body: JSON.stringify({ type: 'invalid' }),
     })
     const response = await POST(request)
@@ -61,6 +63,7 @@ describe('POST /api/mapbox', () => {
 
     const request = new NextRequest('http://localhost/api/mapbox', {
       method: 'POST',
+      headers: { 'x-app-request': '1' },
       body: JSON.stringify({ type: 'matrix', coords: '-73.5,45.5;-73.6,45.6' }),
     })
     const response = await POST(request)
@@ -75,6 +78,7 @@ describe('POST /api/mapbox', () => {
 
     const request = new NextRequest('http://localhost/api/mapbox', {
       method: 'POST',
+      headers: { 'x-app-request': '1' },
       body: JSON.stringify({ type: 'matrix', coords: '-73.5,45.5;-73.6,45.6' }),
     })
     const response = await POST(request)
@@ -90,6 +94,7 @@ describe('POST /api/mapbox', () => {
 
     const request = new NextRequest('http://localhost/api/mapbox', {
       method: 'POST',
+      headers: { 'x-app-request': '1' },
       body: JSON.stringify({ type: 'directions', origin: [45.5, -73.5], destination: [45.6, -73.6] }),
     })
     const response = await POST(request)
@@ -102,6 +107,7 @@ describe('POST /api/mapbox', () => {
 
     const request = new NextRequest('http://localhost/api/mapbox', {
       method: 'POST',
+      headers: { 'x-app-request': '1' },
       body: JSON.stringify({ type: 'matrix', coords: '-73.5,45.5;-73.6,45.6' }),
     })
     const response = await POST(request)

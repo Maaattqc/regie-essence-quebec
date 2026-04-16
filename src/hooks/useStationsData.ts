@@ -63,7 +63,10 @@ export function useStationsData(callbacks: StationsCallbacks) {
 
     const loadStations = async () => {
       try {
-        const response = await fetch("/api/stations", { cache: "no-store" });
+        const response = await fetch("/api/stations", { 
+          cache: "no-store",
+          headers: { "x-app-request": "1" }
+        });
         if (!response.ok && response.status !== 202) {
           if (response.status === 429) { retryTimer = window.setTimeout(loadStations, RETRY_RATE_LIMIT_MS); return; }
           throw new Error(`HTTP ${response.status}`);

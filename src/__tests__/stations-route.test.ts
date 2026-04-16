@@ -65,7 +65,7 @@ describe('GET /api/stations', () => {
   it('retourne 429 quand le rate limit est depasse', async () => {
     mocks.rateLimit.mockReturnValue(false)
 
-    const response = await GET(new Request('http://localhost/api/stations'))
+    const response = await GET(new Request('http://localhost/api/stations', { headers: { 'x-app-request': '1' } }))
 
     expect(response.status).toBe(429)
     await expect(response.json()).resolves.toEqual({ error: 'Trop de requêtes' })
@@ -78,7 +78,7 @@ describe('GET /api/stations', () => {
     })
     mocks.shouldQueueStationRefresh.mockReturnValue(true)
 
-    const response = await GET(new Request('http://localhost/api/stations'))
+    const response = await GET(new Request('http://localhost/api/stations', { headers: { 'x-app-request': '1' } }))
 
     expect(response.status).toBe(202)
     expect(response.headers.get('Cache-Control')).toBe('no-store')
@@ -102,7 +102,7 @@ describe('GET /api/stations', () => {
       meta: baseMeta,
     })
 
-    const response = await GET(new Request('http://localhost/api/stations'))
+    const response = await GET(new Request('http://localhost/api/stations', { headers: { 'x-app-request': '1' } }))
 
     expect(response.status).toBe(200)
     expect(response.headers.get('Cache-Control')).toBe('public, s-maxage=60, stale-while-revalidate=240')
@@ -127,7 +127,7 @@ describe('GET /api/stations', () => {
     })
     mocks.shouldQueueStationRefresh.mockReturnValue(true)
 
-    const response = await GET(new Request('http://localhost/api/stations'))
+    const response = await GET(new Request('http://localhost/api/stations', { headers: { 'x-app-request': '1' } }))
 
     expect(response.status).toBe(200)
     expect(mocks.after).toHaveBeenCalledTimes(1)

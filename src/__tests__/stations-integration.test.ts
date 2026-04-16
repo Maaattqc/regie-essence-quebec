@@ -68,7 +68,7 @@ describe('GET /api/stations — intégration Cache-Control, format et sync', () 
       meta: readyMeta,
     })
 
-    const response = await GET(new Request('http://localhost/api/stations'))
+    const response = await GET(new Request('http://localhost/api/stations', { headers: { 'x-app-request': '1' } }))
 
     expect(response.status).toBe(200)
     expect(response.headers.get('Cache-Control')).toBe('public, s-maxage=60, stale-while-revalidate=240')
@@ -78,7 +78,7 @@ describe('GET /api/stations — intégration Cache-Control, format et sync', () 
     mocks.getStationFeed.mockResolvedValue({ data: null, meta: readyMeta })
     mocks.shouldQueueStationRefresh.mockReturnValue(true)
 
-    const response = await GET(new Request('http://localhost/api/stations'))
+    const response = await GET(new Request('http://localhost/api/stations', { headers: { 'x-app-request': '1' } }))
 
     expect(response.status).toBe(202)
     expect(response.headers.get('Cache-Control')).toBe('no-store')
@@ -99,7 +99,7 @@ describe('GET /api/stations — intégration Cache-Control, format et sync', () 
     }
     mocks.getStationFeed.mockResolvedValue({ data: featureCollection, meta: readyMeta })
 
-    const response = await GET(new Request('http://localhost/api/stations'))
+    const response = await GET(new Request('http://localhost/api/stations', { headers: { 'x-app-request': '1' } }))
 
     expect(response.status).toBe(200)
     const body = await response.json()
@@ -113,7 +113,7 @@ describe('GET /api/stations — intégration Cache-Control, format et sync', () 
     mocks.getStationFeed.mockResolvedValue({ data: null, meta: readyMeta })
     mocks.shouldQueueStationRefresh.mockReturnValue(true)
 
-    const response = await GET(new Request('http://localhost/api/stations'))
+    const response = await GET(new Request('http://localhost/api/stations', { headers: { 'x-app-request': '1' } }))
 
     expect(response.status).toBe(202)
     const body = await response.json()
@@ -128,7 +128,7 @@ describe('GET /api/stations — intégration Cache-Control, format et sync', () 
       meta: readyMeta,
     })
 
-    const response = await GET(new Request('http://localhost/api/stations'))
+    const response = await GET(new Request('http://localhost/api/stations', { headers: { 'x-app-request': '1' } }))
 
     expect(response.headers.get('content-type')).toMatch(/application\/json/)
   })
@@ -136,7 +136,7 @@ describe('GET /api/stations — intégration Cache-Control, format et sync', () 
   it('reponse 429 a un Content-Type application/json et error string', async () => {
     mocks.rateLimit.mockReturnValue(false)
 
-    const response = await GET(new Request('http://localhost/api/stations'))
+    const response = await GET(new Request('http://localhost/api/stations', { headers: { 'x-app-request': '1' } }))
 
     expect(response.status).toBe(429)
     expect(response.headers.get('content-type')).toMatch(/application\/json/)
@@ -150,7 +150,7 @@ describe('GET /api/stations — intégration Cache-Control, format et sync', () 
     mocks.getStationFeed.mockResolvedValue({ data: null, meta: readyMeta })
     mocks.shouldQueueStationRefresh.mockReturnValue(true)
 
-    await GET(new Request('http://localhost/api/stations'))
+    await GET(new Request('http://localhost/api/stations', { headers: { 'x-app-request': '1' } }))
 
     expect(mocks.syncStations).toHaveBeenCalledWith({ reason: 'serve-empty' })
   })
@@ -162,7 +162,7 @@ describe('GET /api/stations — intégration Cache-Control, format et sync', () 
     })
     mocks.shouldQueueStationRefresh.mockReturnValue(true)
 
-    await GET(new Request('http://localhost/api/stations'))
+    await GET(new Request('http://localhost/api/stations', { headers: { 'x-app-request': '1' } }))
 
     expect(mocks.syncStations).toHaveBeenCalledWith({ reason: 'serve-stale' })
   })
@@ -174,7 +174,7 @@ describe('GET /api/stations — intégration Cache-Control, format et sync', () 
     })
     mocks.shouldQueueStationRefresh.mockReturnValue(false)
 
-    await GET(new Request('http://localhost/api/stations'))
+    await GET(new Request('http://localhost/api/stations', { headers: { 'x-app-request': '1' } }))
 
     expect(mocks.syncStations).not.toHaveBeenCalled()
     expect(mocks.after).not.toHaveBeenCalled()
@@ -184,7 +184,7 @@ describe('GET /api/stations — intégration Cache-Control, format et sync', () 
     mocks.getStationFeed.mockResolvedValue({ data: null, meta: readyMeta })
     mocks.shouldQueueStationRefresh.mockReturnValue(true)
 
-    await GET(new Request('http://localhost/api/stations'))
+    await GET(new Request('http://localhost/api/stations', { headers: { 'x-app-request': '1' } }))
 
     expect(mocks.after).toHaveBeenCalledTimes(1)
   })

@@ -157,7 +157,10 @@ export async function roadDistances(
     ].join(";");
     const res = await fetch("/api/mapbox", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json",
+        "x-app-request": "1"
+      },
       body: JSON.stringify({ type: "matrix", coords }),
     });
     if (!res.ok) return fallback;
@@ -194,7 +197,10 @@ export async function roadRoute(
   try {
     const res = await fetch("/api/mapbox", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json",
+        "x-app-request": "1"
+      },
       body: JSON.stringify({ type: "directions", origin, destination }),
     });
     if (!res.ok) return null;

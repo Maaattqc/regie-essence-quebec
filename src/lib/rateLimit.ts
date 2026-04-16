@@ -19,10 +19,11 @@ const upstashLimiters = redis
       default: new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(5, "1 s") }),
       strict: new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(2, "1 s") }),
       relaxed: new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(10, "1 s") }),
+      mapbox: new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(15, "1 m") }),
     }
   : null;
 
-export type RateLimitProfile = "default" | "strict" | "relaxed";
+export type RateLimitProfile = "default" | "strict" | "relaxed" | "mapbox";
 
 // Fallback in-memory pour le dev local (LRU avec taille max)
 const MAX_KEYS = 2048;
@@ -32,6 +33,7 @@ const PROFILES: Record<RateLimitProfile, { windowMs: number; max: number }> = {
   default: { windowMs: 1000, max: 5 },
   strict: { windowMs: 1000, max: 2 },
   relaxed: { windowMs: 1000, max: 10 },
+  mapbox: { windowMs: 60000, max: 15 },
 };
 
 function memoryRateLimit(ip: string, profile: RateLimitProfile = "default"): boolean {
