@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { checkBotId } from "botid/server";
 import { rateLimit, getIP, checkCsrf, redis } from "@/lib/rateLimit";
 import { logActivity } from "@/lib/activity-log";
 import { z } from "zod";
@@ -34,11 +33,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Requête non autorisée" }, { status: 403 });
   }
   if (!checkCsrf(request)) return NextResponse.json({ error: "Requête invalide" }, { status: 403 });
-
-  const verification = await checkBotId();
-  if (verification.isBot) {
-    return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
-  }
 
   if (!(await rateLimit(getIP(request), "mapbox"))) {
     return NextResponse.json({ error: "Trop de requêtes" }, { status: 429 });
