@@ -2,9 +2,15 @@ import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { Analytics } from "@vercel/analytics/next";
+import { BotIdClient } from "botid/client";
 import PageTracker from "@/components/PageTracker";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import "./globals.css";
+
+const botIdProtectedRoutes = [
+  { path: "/api/stations", method: "GET" as const },
+  { path: "/api/mapbox", method: "POST" as const },
+];
 
 const inter = Inter({
   variable: "--font-inter",
@@ -83,6 +89,9 @@ export default function RootLayout({
       className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
+      <head>
+        <BotIdClient protect={botIdProtectedRoutes} />
+      </head>
       <body className="min-h-full flex flex-col">
         <script
           type="application/ld+json"

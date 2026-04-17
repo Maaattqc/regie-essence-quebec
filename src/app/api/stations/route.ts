@@ -1,4 +1,5 @@
 import { after, NextResponse } from "next/server";
+import { checkBotId } from "botid/server";
 import {
   getStationFeed,
   shouldQueueStationRefresh,
@@ -11,6 +12,11 @@ export const maxDuration = 120;
 export async function GET(request: Request) {
   if (request.headers.get("x-app-request") !== "1") {
     return NextResponse.json({ error: "Requête non autorisée" }, { status: 403 });
+  }
+
+  const verification = await checkBotId();
+  if (verification.isBot) {
+    return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   }
 
   if (!(await rateLimit(getIP(request), "relaxed"))) {
@@ -51,7 +57,7 @@ export async function GET(request: Request) {
     },
     {
       headers: {
-        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=240",
+        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
       },
     }
   );
