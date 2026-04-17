@@ -52,6 +52,7 @@ export async function GET(request: Request) {
     {
       headers: {
         "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+        "Vary": "x-app-request, accept-language",
       },
     }
   );
