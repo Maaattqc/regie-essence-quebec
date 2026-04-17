@@ -33,6 +33,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Requête non autorisée" }, { status: 403 });
   }
   if (!checkCsrf(request)) return NextResponse.json({ error: "Requête invalide" }, { status: 403 });
+
   if (!(await rateLimit(getIP(request), "mapbox"))) {
     return NextResponse.json({ error: "Trop de requêtes" }, { status: 429 });
   }

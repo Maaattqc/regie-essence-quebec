@@ -71,7 +71,7 @@ describe('GET /api/stations — intégration Cache-Control, format et sync', () 
     const response = await GET(new Request('http://localhost/api/stations', { headers: { 'x-app-request': '1' } }))
 
     expect(response.status).toBe(200)
-    expect(response.headers.get('Cache-Control')).toBe('public, s-maxage=60, stale-while-revalidate=240')
+    expect(response.headers.get('Cache-Control')).toBe('public, s-maxage=300, stale-while-revalidate=600')
   })
 
   it('inclut Cache-Control: no-store dans la reponse 202', async () => {

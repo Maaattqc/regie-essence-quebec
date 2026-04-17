@@ -9,9 +9,9 @@ import {
 } from "@/lib/stations";
 
 const STATIONS_CACHE_KEY = "stations-api-cache";
-const RETRY_RATE_LIMIT_MS = 3000;
-const RETRY_FALLBACK_MS = 5000;
 const POLL_INTERVAL_MS = 5 * 60 * 1000;
+const MAX_RETRIES = 3;
+const RETRY_BACKOFF_MS = [3000, 10000, 30000];
 
 interface StationsApiPayload {
   ok: boolean;
@@ -48,6 +48,8 @@ export function useStationsData(callbacks: StationsCallbacks) {
   useEffect(() => {
     let cancelled = false;
     let retryTimer: number | null = null;
+    let pollInterval: number | null = null;
+    let retryCount = 0;
 
     const applyStations = (geojson: GeoJSON.FeatureCollection) => {
       if (cancelled) return;
@@ -61,14 +63,21 @@ export function useStationsData(callbacks: StationsCallbacks) {
       } catch {}
     }
 
+    const scheduleRetry = () => {
+      if (cancelled || retryCount >= MAX_RETRIES) return;
+      const delay = RETRY_BACKOFF_MS[retryCount] ?? RETRY_BACKOFF_MS[RETRY_BACKOFF_MS.length - 1];
+      retryCount += 1;
+      retryTimer = window.setTimeout(loadStations, delay);
+    };
+
     const loadStations = async () => {
+      if (cancelled || document.hidden) return;
       try {
-        const response = await fetch("/api/stations", { 
+        const response = await fetch("/api/stations", {
           cache: "no-store",
           headers: { "x-app-request": "1" }
         });
         if (!response.ok && response.status !== 202) {
-          if (response.status === 429) { retryTimer = window.setTimeout(loadStations, RETRY_RATE_LIMIT_MS); return; }
           throw new Error(`HTTP ${response.status}`);
         }
         const payload = (await response.json()) as StationsApiPayload;
@@ -79,19 +88,44 @@ export function useStationsData(callbacks: StationsCallbacks) {
           } catch {}
           applyStations(payload.data);
           if (payload.meta?.lastCompletedAt) setLastUpdatedAt(payload.meta.lastCompletedAt);
+          retryCount = 0;
           return;
         }
       } catch {
-        // Silenced — retry ci-dessous
+        // Silenced — retry borné ci-dessous
       }
 
-      if (!cancelled) {
-        retryTimer = window.setTimeout(loadStations, RETRY_FALLBACK_MS);
+      scheduleRetry();
+    };
+
+    const startPolling = () => {
+      if (pollInterval !== null) return;
+      pollInterval = window.setInterval(loadStations, POLL_INTERVAL_MS);
+    };
+
+    const stopPolling = () => {
+      if (pollInterval === null) return;
+      window.clearInterval(pollInterval);
+      pollInterval = null;
+    };
+
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        stopPolling();
+        if (retryTimer !== null) {
+          window.clearTimeout(retryTimer);
+          retryTimer = null;
+        }
+      } else {
+        retryCount = 0;
+        void loadStations();
+        startPolling();
       }
     };
 
     void loadStations();
-    const pollInterval = window.setInterval(loadStations, POLL_INTERVAL_MS);
+    startPolling();
+    document.addEventListener("visibilitychange", onVisibilityChange);
 
     (window as unknown as Record<string, unknown>).__toggleFav = (id: string) => {
       const updated = toggleFavorite(id);
@@ -111,7 +145,8 @@ export function useStationsData(callbacks: StationsCallbacks) {
     return () => {
       cancelled = true;
       if (retryTimer !== null) window.clearTimeout(retryTimer);
-      window.clearInterval(pollInterval);
+      stopPolling();
+      document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener("favorites-changed", onFavChange);
     };
   }, []);
