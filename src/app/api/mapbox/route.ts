@@ -6,6 +6,10 @@ import { z } from "zod";
 const OSRM_BASE = process.env.OSRM_BASE ?? "https://router.project-osrm.org";
 const MATRIX_CACHE_TTL = 900; // 15 minutes
 
+// --- Fallback Mapbox (décommenter + définir MAPBOX_TOKEN pour réactiver) ---
+// const MAPBOX_TOKEN = process.env.MAPBOX_TOKEN ?? "";
+// const MAPBOX_BASE = "https://api.mapbox.com";
+
 const bodySchema = z.union([
   z.object({ type: z.literal("matrix"), coords: z.string().max(2000).regex(/^[-0-9.,;]+$/) }),
   z.object({
@@ -62,6 +66,13 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      // Fallback Mapbox Matrix (décommenter pour réactiver) :
+      // const res = await fetch(
+      //   `${MAPBOX_BASE}/directions-matrix/v1/mapbox/driving/${body.coords}?sources=0&annotations=distance,duration&access_token=${MAPBOX_TOKEN}`,
+      // );
+      // if (!res.ok) return NextResponse.json({ error: "Erreur Mapbox" }, { status: 502 });
+      // const data = await res.json();
+
       const res = await fetch(
         `${OSRM_BASE}/table/v1/driving/${body.coords}?sources=0&annotations=distance,duration`,
       );
@@ -80,6 +91,14 @@ export async function POST(request: NextRequest) {
 
     if (body.type === "directions") {
       const c = `${body.origin[1]},${body.origin[0]};${body.destination[1]},${body.destination[0]}`;
+
+      // Fallback Mapbox Directions avec trafic temps réel (décommenter pour réactiver) :
+      // const res = await fetch(
+      //   `${MAPBOX_BASE}/directions/v5/mapbox/driving-traffic/${c}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`,
+      // );
+      // if (!res.ok) return NextResponse.json({ error: "Erreur Mapbox" }, { status: 502 });
+      // return NextResponse.json(await res.json());
+
       const res = await fetch(
         `${OSRM_BASE}/route/v1/driving/${c}?geometries=geojson&overview=full`,
       );
