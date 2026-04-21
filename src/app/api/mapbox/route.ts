@@ -3,8 +3,7 @@ import { rateLimit, getIP, checkCsrf, redis } from "@/lib/rateLimit";
 import { logActivity } from "@/lib/activity-log";
 import { z } from "zod";
 
-const MAPBOX_TOKEN = process.env.MAPBOX_TOKEN ?? "";
-const MAPBOX_BASE = "https://api.mapbox.com";
+const OSRM_BASE = process.env.OSRM_BASE ?? "https://router.project-osrm.org";
 const MATRIX_CACHE_TTL = 900; // 15 minutes
 
 const bodySchema = z.union([
@@ -27,7 +26,7 @@ function quantizeCoords(coords: string): string {
     .join(";");
 }
 
-// Proxy Mapbox Matrix API (distances multi-destinations)
+// Proxy routage OSRM (Matrix + Directions, gratuit, sans clé)
 export async function POST(request: NextRequest) {
   if (request.headers.get("x-app-request") !== "1") {
     return NextResponse.json({ error: "Requête non autorisée" }, { status: 403 });
@@ -53,7 +52,7 @@ export async function POST(request: NextRequest) {
 
       // Cache serveur Redis pour les requêtes Matrix
       const quantized = quantizeCoords(body.coords);
-      const cacheKey = `mapbox:matrix:${quantized}`;
+      const cacheKey = `osrm:matrix:${quantized}`;
 
       if (redis) {
         const cached = await redis.get<string>(cacheKey);
@@ -64,10 +63,13 @@ export async function POST(request: NextRequest) {
       }
 
       const res = await fetch(
-        `${MAPBOX_BASE}/directions-matrix/v1/mapbox/driving/${body.coords}?sources=0&annotations=distance,duration&access_token=${MAPBOX_TOKEN}`,
+        `${OSRM_BASE}/table/v1/driving/${body.coords}?sources=0&annotations=distance,duration`,
       );
-      if (!res.ok) return NextResponse.json({ error: "Erreur Mapbox" }, { status: 502 });
+      if (!res.ok) return NextResponse.json({ error: "Erreur routage" }, { status: 502 });
       const data = await res.json();
+      if (data.code && data.code !== "Ok") {
+        return NextResponse.json({ error: "Erreur routage" }, { status: 502 });
+      }
 
       if (redis) {
         await redis.set(cacheKey, JSON.stringify(data), { ex: MATRIX_CACHE_TTL });
@@ -79,15 +81,19 @@ export async function POST(request: NextRequest) {
     if (body.type === "directions") {
       const c = `${body.origin[1]},${body.origin[0]};${body.destination[1]},${body.destination[0]}`;
       const res = await fetch(
-        `${MAPBOX_BASE}/directions/v5/mapbox/driving-traffic/${c}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`,
+        `${OSRM_BASE}/route/v1/driving/${c}?geometries=geojson&overview=full`,
       );
-      if (!res.ok) return NextResponse.json({ error: "Erreur Mapbox" }, { status: 502 });
-      return NextResponse.json(await res.json());
+      if (!res.ok) return NextResponse.json({ error: "Erreur routage" }, { status: 502 });
+      const data = await res.json();
+      if (data.code && data.code !== "Ok") {
+        return NextResponse.json({ error: "Erreur routage" }, { status: 502 });
+      }
+      return NextResponse.json(data);
     }
 
     return NextResponse.json({ error: "Type invalide" }, { status: 400 });
   } catch (error) {
-    await logActivity("erreur", "Échec proxy Mapbox", undefined, { error: String(error) });
+    await logActivity("erreur", "Échec proxy routage", undefined, { error: String(error) });
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }

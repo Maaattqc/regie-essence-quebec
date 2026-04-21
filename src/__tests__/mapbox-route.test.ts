@@ -113,6 +113,6 @@ describe('POST /api/mapbox', () => {
     const response = await POST(request)
 
     expect(response.status).toBe(500)
-    expect(mocks.logActivity).toHaveBeenCalledWith('erreur', 'Échec proxy Mapbox', undefined, expect.any(Object))
+    expect(mocks.logActivity).toHaveBeenCalledWith('erreur', 'Échec proxy routage', undefined, expect.any(Object))
   })
 })
