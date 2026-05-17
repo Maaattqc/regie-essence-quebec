@@ -54,7 +54,8 @@ export function useGeolocation({ data, setRegion, setSearch, setFlyTarget }: Use
         setFlyTarget({ center: [latitude, longitude], zoom: geoZoom });
         setGeoReady(true);
       },
-      () => setGeoReady(true)
+      () => setGeoReady(true),
+      { enableHighAccuracy: true, maximumAge: 60_000, timeout: 10_000 }
     );
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data]);
