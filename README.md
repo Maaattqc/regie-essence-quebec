@@ -112,3 +112,10 @@ src/
 ## Licence
 
 Tous droits réservés.
+
+
+---
+
+## Author
+
+**Mathieu Fournier** · mathieufournierqc@outlook.com — [@Maaattqc](https://github.com/Maaattqc)
